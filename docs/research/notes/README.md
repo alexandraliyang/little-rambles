@@ -1,0 +1,1 @@
+One file per interview: `research/notes/2026-08-XX-participant-N.md`, using the scoring sheet at the bottom of interview-guide.md. Fill within 1 hour of the conversation. Verbatim quotes > paraphrase. Ambiguous gate signals count as NO.
