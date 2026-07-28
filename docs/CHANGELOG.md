@@ -26,6 +26,12 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versioning: SemVer. Two 
 ## [Unreleased]
 Candidates for App 0.4.0 (selection driven by Phase 1 field notes, per ROADMAP): logistics/nap layer (design doc §8) · time-budget input · photo attach · expanded archetype library · journal export.
 
+## App 0.4.0 — 2026-07-27 [ASSUMPTION-driven per ADR-0009]
+### Added
+- **Discover deck** (optional swipe mode): right = save 💛 (+2 weak parent-taste signal), left = not-for-us 👋 (−2, never a ban); drag gestures or buttons; age-gated ideas excluded; restartable; entry on Explore always and on Today while rated visits < 3 (cold-start placement). Copy states the signal hierarchy: swipes tune, child's ratings rule. PRD: `docs/prds/2026-07-27-v0-4-variety-discover.md`.
+### Changed
+- **Variety guarantees** (founder-identified defect): last outing can never lead Today again (−6); recency penalty now counts unrated/pending visits; Today's visible top-4 spans distinct categories (backfill only if fewer are open). Explore/exploit stance: diversity governs the mix, preference governs rank within it.
+
 ## App 0.3.0 — 2026-07-27
 ### Added
 - Location "spots": free-text address/neighbourhood redirects all Maps queries (appointment mode); active-spot pill on Today and Explore; last 5 spots remembered; one-tap return to home; visits record their spot, shown in journal.
