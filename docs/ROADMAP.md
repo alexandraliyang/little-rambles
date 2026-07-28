@@ -52,7 +52,7 @@ Twenty beta families (recruited from interviews + local parent groups). Instrume
 
 **Entry gate:** Phase 3 both gates passed. This is deliberately the most de-risked expensive build.
 
-The Places API pipeline from design doc §5.2: candidate generation within travel-time budgets (fed by the nap/logistics layer), nightly hours cache (respecting ~30-day caching terms), geocoded spots with address autocomplete, venue-level ranking with diversity, weather integration. One integration unblocks the four queued features (real hours, timezone-correct away mode, autocomplete, distance-aware ranking).
+The Places API pipeline from design doc §5.2 — **re-framed 2026-07-27: this is a MEMORY feature as much as discovery** (when the app, not Google, presents the specific venue, tap-to-go logs the exact place with zero friction — restoring journal specificity the founder identified as gutted by category-only logging): candidate generation within travel-time budgets (fed by the nap/logistics layer), nightly hours cache (respecting ~30-day caching terms), geocoded spots with address autocomplete, venue-level ranking with diversity, weather integration. One integration unblocks the four queued features (real hours, timezone-correct away mode, autocomplete, distance-aware ranking).
 
 **Exit gate:** recommendations are venue-level, hours-accurate (>95% "open now" correctness spot-checked), and away-mode works in a different city.
 

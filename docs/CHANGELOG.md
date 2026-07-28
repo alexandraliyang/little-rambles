@@ -26,6 +26,14 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versioning: SemVer. Two 
 ## [Unreleased]
 Candidates for App 0.4.0 (selection driven by Phase 1 field notes, per ROADMAP): logistics/nap layer (design doc §8) · time-budget input · photo attach · expanded archetype library · journal export.
 
+## App 0.5.0 — 2026-07-27 [ASSUMPTION-driven per ADR-0009]
+### Added
+- **"Which place?"** optional field at check-in; journal now leads with the actual venue name, category + location as subtitle. Origin: founder-identified defect — category-only logging stored the question, not the answer. PRD: `docs/prds/2026-07-27-v0-5-place-names-photos.md`.
+- **Photo journal:** up to 3 photos per visit, compressed on-device (~900px JPEG), persisted per-visit with graceful storage-failure handling, thumbnail strip in Memories.
+- `docs/STATUS.md` — the PM board (externalized parallel-stream state, read at session open, updated at every touch).
+### Deferred (logged)
+- Video capture → Phase 2 (requires real cloud storage). Place autocomplete → Phase 4 Places pipeline, now re-framed in ROADMAP scope as a MEMORY feature (venue-level tap-to-go restores zero-friction specificity).
+
 ## Docs — 2026-07-27 (team charter)
 ### Added
 - **ADR-0010 + docs/TEAM.md:** role-based team structure — Founder as Owner/CEO, Manual Test Lead, and exclusive Evidence Owner; Claude in nine checklisted roles; Science Advisor designated external-human-only (D2); release Definition-of-Done with per-role sign-offs adopted.
