@@ -26,6 +26,11 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versioning: SemVer. Two 
 ## [Unreleased]
 Candidates for App 0.4.0 (selection driven by Phase 1 field notes, per ROADMAP): logistics/nap layer (design doc §8) · time-budget input · photo attach · expanded archetype library · journal export.
 
+## Docs — 2026-07-27 (team charter)
+### Added
+- **ADR-0010 + docs/TEAM.md:** role-based team structure — Founder as Owner/CEO, Manual Test Lead, and exclusive Evidence Owner; Claude in nine checklisted roles; Science Advisor designated external-human-only (D2); release Definition-of-Done with per-role sign-offs adopted.
+- `docs/qa/v0-4-test-script.md` — first QA deliverable under the new structure; awaiting Founder execution.
+
 ## App 0.4.0 — 2026-07-27 [ASSUMPTION-driven per ADR-0009]
 ### Added
 - **Discover deck** (optional swipe mode): right = save 💛 (+2 weak parent-taste signal), left = not-for-us 👋 (−2, never a ban); drag gestures or buttons; age-gated ideas excluded; restartable; entry on Explore always and on Today while rated visits < 3 (cold-start placement). Copy states the signal hierarchy: swipes tune, child's ratings rule. PRD: `docs/prds/2026-07-27-v0-4-variety-discover.md`.

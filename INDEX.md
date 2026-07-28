@@ -30,6 +30,8 @@ Updated: 2026-07-27 · **This file is the map of everything.** If an artifact is
 | `app/developmental-map-v1.json` | Science layer v1.0.0 — **now carries verificationStatus flag (D2)** | [AI-GEN from cited frameworks; weights provisional] | Canonical; expert review pending (Phase 2) |
 | `app/little-rambles-v0-4.jsx` | Current working prototype (variety rules + Discover deck) | [AI-GEN, ASSUMPTION-driven] | Canonical build |
 | `docs/prds/` | One-page PRDs written before each feature build (Rule 4) | [DECISION + AI-GEN] | Canonical |
+| `docs/TEAM.md` | Team charter: roles, decision rights, release Definition-of-Done | [DECISION + AI-GEN] | Canonical |
+| `docs/qa/` | Per-release test scripts, written by QA, executed by Founder | [AI-GEN script + EVIDENCE results] | Canonical |
 | `app/little-rambles-v0-3.jsx`, `v0-2.jsx`, `v0-1.jsx`, `prototype.jsx` | Prior versions | [AI-GEN] | Superseded — git history is now the real archive |
 
 ## Open debts (mirror of ROADMAP debt ledger)
