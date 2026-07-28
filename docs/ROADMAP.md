@@ -1,6 +1,6 @@
 # Little Rambles — Roadmap
 
-**Updated:** 2026-07-27 · **Current position: PHASE 1 (Pain Validation) — just entered.**
+**Updated:** 2026-07-27 · **Current position: PHASE 1 + PHASE 2 RUNNING IN PARALLEL (per ADR-0009).** Phase 1's exit gate is now a **binding merge checkpoint**: build proceeds on assumption set A1, and no Phase 3 (external families) until survey+interview evidence is reconciled against A1 with the pre-committed numbers.
 
 Design of this roadmap: every phase has an entry gate, an exit gate with *pre-committed, measurable* criteria, and explicit kill/pivot criteria. Gates are decided **before** the phase runs so results can't be rationalized afterward. Cheap kills come first; expensive builds come last. The organizing principle, in the founder's words: *things need to kill the real pain point* — so nothing expensive happens until the pain is confirmed.
 
@@ -28,7 +28,7 @@ Remaining item: founder field-test week (rolls into Phase 1).
 
 ## Phase 2 — Real Software (target: 4–8 weeks after gate)
 
-**Entry gate (amended per Phase 0 gate review, 2026-07-27):** Phase 1 exit gate passed **AND** children's-data compliance baseline complete (D3: privacy policy, deletion path, minimal-collection audit — COPPA/PIPEDA). **The question:** can the loop survive outside the founder's phone?
+**Entry gate (re-amended per ADR-0009, 2026-07-27):** parallel start authorized on assumption set A1; Phase 1 gate converts to a merge checkpoint that is **blocking before Phase 3**. D3 compliance baseline (privacy policy, deletion path, minimal-collection audit — COPPA/PIPEDA) remains required before any external family's data is stored. **The question:** can the loop survive outside the founder's phone?
 
 Port from chat-artifact to a deployed **progressive web app** (installable, push-capable, no app-store friction for beta). Recommended stack for a solo founder building with AI assistance: Next.js + Supabase (auth, Postgres, storage) + Vercel hosting — boring, cheap (~$0–25/mo at beta scale), massively documented. Build method: Claude Code, with this docs folder in the repo from commit #1.
 

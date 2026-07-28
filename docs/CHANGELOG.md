@@ -1,6 +1,10 @@
 # Changelog
 Format: [Keep a Changelog](https://keepachangelog.com). Versioning: SemVer. Two tracks: **App** and **Dev-Map** (science layer, independent cycle). Docs events recorded here too.
 
+## Docs — 2026-07-27 (parallel-tracks amendment)
+### Changed
+- **ADR-0009:** Phase 1 and Phase 2 now run in parallel per founder decision; founder vision recorded as explicit assumption set A1 (pain real / dev-fit valued / logging used / WTP ~$6–8/mo); Phase 1 gate converted to a binding merge checkpoint, blocking before Phase 3. Kill/pivot thresholds unchanged and frozen. ROADMAP amended same-sitting per Rule 7.
+
 ## Docs — 2026-07-27 (Phase 1 method amendment)
 ### Changed
 - **ADR-0008:** Phase 1 shifts to survey-first mixed method (public survey for breadth + ≥5 funneled stranger interviews for depth) — founder network too thin for 10 warm interviews. ROADMAP Track B and gate math amended same-sitting per Rule 7.
