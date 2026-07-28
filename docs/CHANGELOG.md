@@ -26,6 +26,11 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versioning: SemVer. Two 
 ## [Unreleased]
 Candidates for App 0.4.0 (selection driven by Phase 1 field notes, per ROADMAP): logistics/nap layer (design doc §8) · time-budget input · photo attach · expanded archetype library · journal export.
 
+## App 0.5.1 — 2026-07-27 (patch)
+### Fixed
+- **Founder defect report (first Manual Test Lead catch):** check-in fields (place, photos, note) sat BELOW the rating buttons, but tapping a rating submits and closes — fields after the submit action were effectively undiscoverable. Modal reordered: place → photos → note → labeled "tapping saves everything above" → ratings.
+- No visible version indicator → version badge added to header. Root cause of confusion: multiple look-alike artifact builds in chat with no way to distinguish them.
+
 ## App 0.5.0 — 2026-07-27 [ASSUMPTION-driven per ADR-0009]
 ### Added
 - **"Which place?"** optional field at check-in; journal now leads with the actual venue name, category + location as subtitle. Origin: founder-identified defect — category-only logging stored the question, not the answer. PRD: `docs/prds/2026-07-27-v0-5-place-names-photos.md`.

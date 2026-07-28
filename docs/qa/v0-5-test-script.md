@@ -1,5 +1,6 @@
-# QA Test Script — App 0.5.0 (place names + photos)
+# QA Test Script — App 0.5.x (place names + photos)
 Executed by: Manual Test Lead · ~6 min · builds on v0.4 script (run that first if not done)
+0. Header shows badge "v0.5.1" (you are on the right build)? __
 1. Log a visit → evening check-in → type a place name ("Jump Gym Kitsilano") → rate → Memories shows the PLACE as title with category as subtitle? __
 2. Check-in WITHOUT a place name → Memories shows category as before (no blanks/guesses)? __
 3. Check-in: 📷 Add photos → pick 2 from camera roll → thumbnails preview in modal before rating? __

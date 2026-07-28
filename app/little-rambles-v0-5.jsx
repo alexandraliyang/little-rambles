@@ -1,7 +1,12 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 
 /* ================================================================
-   Little Rambles v0.5
+   Little Rambles v0.5.1 (patch)
+   FIXES vs 0.5.0 (founder defect report):
+   - Visible version badge in header (you can now tell which build runs)
+   - Check-in modal reordered: place/photos/note BEFORE ratings, because
+     tapping a rating submits — fields after the submit action were
+     effectively invisible.
    NEW vs v0.4 (PRD: docs/prds/2026-07-27-v0-5-place-names-photos.md):
    6. Check-in captures WHICH place (optional name field) - journal leads
       with the real venue, category becomes subtitle.
@@ -376,7 +381,7 @@ export default function App() {
       <style>{css}</style>
       <div className="phone">
         <header className="hdr">
-          <div className="hdr-brand"><span className="hdr-logo">〰️</span><span className="hdr-name">Little Rambles</span></div>
+          <div className="hdr-brand"><span className="hdr-logo">〰️</span><span className="hdr-name">Little Rambles</span><span className="ver">v0.5.1</span></div>
           <button className="hdr-baby" onClick={() => setEditingProfile(true)}>{baby.name} · {months} mo</button>
         </header>
 
@@ -556,6 +561,13 @@ export default function App() {
             <div className="modal" onClick={(e) => e.stopPropagation()}>
               <div className="modal-eyebrow">Quick check-in</div>
               <h3 className="modal-title">How was {checkInFor.name}?</h3>
+              <input className="note-input" placeholder={'Which place? e.g. "Jump Gym Kitsilano" (optional)'} value={checkInPlace} onChange={(e) => setCheckInPlace(e.target.value)} />
+              <label className="photo-pick">📷 Add photos ({checkInPhotos.length}/3)
+                <input type="file" accept="image/*" multiple style={{ display: "none" }} onChange={handlePickPhotos} />
+              </label>
+              {checkInPhotos.length > 0 && (<div className="photo-strip">{checkInPhotos.map((ph, i) => (<img key={i} src={ph} className="photo-img" alt="" />))}</div>)}
+              <input className="note-input" placeholder="Anything worth remembering? (optional)" value={checkInNote} onChange={(e) => setCheckInNote(e.target.value)} />
+              <div className="rate-label">How did it go? — tapping saves everything above</div>
               <div className="rate-row">
                 {Object.entries(RATING_META).map(([key, m]) => (
                   <button key={key} className={"rate-btn " + m.cls} onClick={() => submitCheckIn(key)}>
@@ -563,12 +575,6 @@ export default function App() {
                   </button>
                 ))}
               </div>
-              <input className="note-input" placeholder={'Which place? e.g. "Jump Gym Kitsilano" (optional)'} value={checkInPlace} onChange={(e) => setCheckInPlace(e.target.value)} />
-              <input className="note-input" placeholder="Anything worth remembering? (optional)" value={checkInNote} onChange={(e) => setCheckInNote(e.target.value)} />
-              <label className="photo-pick">📷 Add photos ({checkInPhotos.length}/3)
-                <input type="file" accept="image/*" multiple style={{ display: "none" }} onChange={handlePickPhotos} />
-              </label>
-              {checkInPhotos.length > 0 && (<div className="photo-strip">{checkInPhotos.map((ph, i) => (<img key={i} src={ph} className="photo-img" alt="" />))}</div>)}
               <button className="ghost small" onClick={() => setCheckInFor(null)}>Not now</button>
             </div>
           </div>
@@ -646,6 +652,8 @@ const css = `
 .hdr-brand { display: flex; align-items: center; gap: 8px; }
 .hdr-logo { font-size: 18px; }
 .hdr-name { font-family: 'Fraunces', Georgia, serif; font-weight: 600; font-size: 19px; }
+.ver { font-size: 10.5px; font-weight: 700; color: #8A8875; background: #ECEAE0; border-radius: 999px; padding: 3px 7px; margin-left: 7px; }
+.rate-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #8A8875; margin: 4px 0 8px; }
 .hdr-baby { font-size: 13px; font-weight: 700; color: #F6F5EF; background: #29382F; border-radius: 999px; padding: 5px 12px; border: none; cursor: pointer; font-family: 'Karla', sans-serif; }
 .scroll { flex: 1; overflow-y: auto; padding-bottom: 76px; }
 .pad { padding: 6px 18px 24px; }
