@@ -1,7 +1,11 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 
 /* ================================================================
-   Little Rambles v0.6
+   Little Rambles v0.6.1 (patch)
+   FIX vs 0.6.0 (defect #2): artifact sandbox blocks the geolocation API
+   entirely - pin now fails with an honest environment message instead of
+   implying a user error. Feature verified at Phase 2 (PWA) per the
+   environment capability matrix (docs/qa/).
    NEW vs 0.5.1 (ADR-0011 rung 1): one-tap on-site pin -> coordinates
    stored, journal gets a see-on-map link; retroactive naming when the
    Phase 4 pipeline lands. No typing, no background tracking.
@@ -348,7 +352,7 @@ export default function App() {
         setVisits((vs) => vs.map((v) => (v.id === visit.id ? { ...v, pin: { lat: +pos.coords.latitude.toFixed(6), lng: +pos.coords.longitude.toFixed(6) } } : v)));
         showToast("Pinned 📍 Even if you forget the name, the map won't.");
       },
-      () => showToast("Couldn't get location — check permission and try again."),
+      () => showToast("Heads up: the chat preview blocks location (platform limit, not your settings). Pinning goes live in the Phase 2 installed app — everything else about this visit still works."),
       { enableHighAccuracy: true, timeout: 8000 }
     );
   };
@@ -395,7 +399,7 @@ export default function App() {
       <style>{css}</style>
       <div className="phone">
         <header className="hdr">
-          <div className="hdr-brand"><span className="hdr-logo">〰️</span><span className="hdr-name">Little Rambles</span><span className="ver">v0.6</span></div>
+          <div className="hdr-brand"><span className="hdr-logo">〰️</span><span className="hdr-name">Little Rambles</span><span className="ver">v0.6.1</span></div>
           <button className="hdr-baby" onClick={() => setEditingProfile(true)}>{baby.name} · {months} mo</button>
         </header>
 

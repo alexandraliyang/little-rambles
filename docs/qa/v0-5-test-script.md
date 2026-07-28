@@ -9,8 +9,7 @@ Executed by: Manual Test Lead · ~6 min · builds on v0.4 script (run that first
 6. Fully close and reopen the app → place names AND photos persisted? __
 7. Rapid double-tap on a rating button → only one visit updated, no duplicate? __
 8. Very long place name (50+ chars) → layout survives? __
-9. (v0.6) On the pending card, tap "📍 Pin where we are" → permission prompt → card shows "📍 Pinned"? __
-10. (v0.6) After check-in, the Memories entry shows "· 📍 map"; tapping opens Google Maps at your actual location? __
-11. (v0.6) Deny location permission → friendly toast, no crash, button still retryable? __
+9. (v0.6.1) Pending card shows "📍 Pin where we are"; tapping it yields the honest environment-blocked toast (NOT a user-error message), no crash? __
+10–11. [ENV-BLOCKED, per capability matrix] True pin capture + map link verified at Phase 2 PWA, not here. Logged, not skipped silently.
 ## Result
-Date: ____ · Pass __/11 · Defects:
+Date: ____ · Pass __/9 (+2 deferred to Phase 2 env) · Defects:

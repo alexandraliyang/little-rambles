@@ -26,6 +26,10 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versioning: SemVer. Two 
 ## [Unreleased]
 Candidates for App 0.4.0 (selection driven by Phase 1 field notes, per ROADMAP): logistics/nap layer (design doc §8) · time-budget input · photo attach · expanded archetype library · journal export.
 
+## App 0.6.1 — 2026-07-27 (patch)
+### Fixed
+- **Defect #2 (Manual Test Lead):** pin untestable — the chat-artifact sandbox blocks the geolocation API outright (no prompt possible). Error message corrected from implied user error to honest environment limit; feature remains built, verification deferred to Phase 2 PWA. Root cause: QA checked syntax, not sandbox permissions → new standing QA rule + `docs/qa/environment-capability-matrix.md` created (device-API features are matrix-checked before build).
+
 ## App 0.6.0 — 2026-07-27 [ASSUMPTION-driven per ADR-0009]
 ### Added
 - **📍 Pin where we are** (ADR-0011 rung 1): one tap on the pending-visit card while on-site stores coordinates — no typing; journal entries with a pin get a "· 📍 map" link opening Google Maps at the exact spot (forgot-the-name recovery without re-search); pins persist and will resolve to venue names retroactively when the Phase 4 pipeline lands.
