@@ -1,0 +1,123 @@
+{
+  "meta": {
+    "name": "Little Rambles Developmental Map",
+    "version": "1.0.0",
+    "lastReviewed": "2026-07",
+    "verificationStatus": "FRAMEWORK-DERIVED, NOT EXPERT-VERIFIED (debt D2, Phase 0 gate review 2026-07-27). Band structure and skills derived from the cited frameworks; affordance weights are provisional product inventions. Professional review by an early-childhood educator or pediatric OT is required before this map is exposed to families beyond the founder (scheduled: Phase 2, before Phase 3 beta). Until then, treat all weights as hypotheses.",
+    "reviewCadenceMonths": 12,
+    "editorialRules": [
+      "NOT DIAGNOSTIC: This map describes emerging skills (opportunities), never expected achievements (judgments). No content may imply a child is behind.",
+      "Milestones are wide ranges. Band boundaries are soft; children straddle bands constantly and that is normal.",
+      "Serve-and-return framing: every affordance description should center caregiver-child interaction, not passive exposure.",
+      "When sources disagree or evidence is thin, prefer the more conservative, lower-pressure claim.",
+      "Refresh procedure: re-check CDC checklist ages, AAP Bright Futures edition, and Zero to Three guidance annually; bump minor version for wording, major version for structural changes."
+    ],
+    "sources": [
+      { "id": "CDC2022", "name": "CDC 'Learn the Signs. Act Early.' milestone checklists (2022 revision; milestones = what most children, ~75%+, do by that age)" },
+      { "id": "AAP-BF", "name": "AAP Bright Futures: Guidelines for Health Supervision, 4th ed. (periodicity + anticipatory guidance)" },
+      { "id": "ZTT", "name": "Zero to Three — age-based development and everyday-activity guidance" },
+      { "id": "HCDC", "name": "Harvard Center on the Developing Child — serve-and-return, core capabilities" },
+      { "id": "WHO-MGRS", "name": "WHO Motor Development Study — windows of achievement for gross motor milestones" }
+    ]
+  },
+
+  "affordanceVocabulary": {
+    "water_play": "Safe water to splash, pour, and observe — high-yield cause-and-effect material",
+    "cause_effect": "Objects/exhibits that respond to the child's action (drop, push, splash, press)",
+    "gross_motor_low": "Safe surfaces for tummy time, crawling, cruising, early toddling",
+    "climb_run": "Open space and low structures for confident walking, running, climbing",
+    "fine_motor": "Graspable, pinchable, stackable, pourable materials",
+    "sensory_textures": "Varied safe textures, smells, temperatures, sights at child height",
+    "naming_targets": "A dense field of distinct, pointable, nameable things (animals, produce, vehicles)",
+    "story_language": "Songs, rhymes, books, narrated routines — rich serve-and-return language",
+    "music_rhythm": "Rhythm, repetition, instruments, action songs",
+    "peer_faces": "Other babies/children and adults to watch and interact with",
+    "animal_watch": "Animals observable at the child's pace and chosen distance",
+    "animal_touch": "Gentle supervised animal contact",
+    "calm_regulation": "Low-stimulation, warm, predictable environments good for co-regulation",
+    "pretend_play": "Props and settings that invite imitation and pretend scenarios",
+    "art_materials": "Open-ended messy materials (paint, dough, chalk)",
+    "attention_span_long": "DEMANDS sustained attention / following a narrative (a cost until ~2.5y, then an affordance)"
+  },
+
+  "bands": [
+    {
+      "range": [0, 6],
+      "label": "0–6 months",
+      "theme": "Faces, voices, and gentle motion are the whole world. Anywhere calm counts.",
+      "emergingSkills": ["visual tracking and face preference", "responding to voices; cooing back", "head control toward rolling", "soothing with a caregiver (co-regulation)"],
+      "wants": { "calm_regulation": 3, "peer_faces": 2, "music_rhythm": 2, "story_language": 2, "sensory_textures": 1 },
+      "caution": "Stimulation ceilings are low; leaving early is success, not failure.",
+      "sources": ["CDC2022", "HCDC", "ZTT"]
+    },
+    {
+      "range": [6, 9],
+      "label": "6–9 months",
+      "theme": "Sitting up changes everything — new sightlines, grabbing, and the first cause-and-effect games.",
+      "emergingSkills": ["sitting and reaching from sitting", "transferring objects hand to hand", "babbling chains; responding to name", "banging/dropping to see what happens"],
+      "wants": { "sensory_textures": 3, "cause_effect": 2, "gross_motor_low": 2, "peer_faces": 2, "music_rhythm": 2, "story_language": 2, "water_play": 1 },
+      "caution": "Everything goes in the mouth; choose venues accordingly.",
+      "sources": ["CDC2022", "ZTT", "WHO-MGRS"]
+    },
+    {
+      "range": [9, 12],
+      "label": "9–12 months",
+      "theme": "Object permanence and cruising. Peekaboo is science; pulling up on things is the sport.",
+      "emergingSkills": ["crawling, pulling to stand, cruising", "pincer grasp", "understanding simple words; gestures like waving", "searching for hidden objects"],
+      "wants": { "gross_motor_low": 3, "cause_effect": 3, "story_language": 2, "music_rhythm": 2, "water_play": 2, "sensory_textures": 2, "peer_faces": 2, "animal_watch": 1 },
+      "caution": "Newly mobile + zero judgment: floor-level hazard scan is the venue test.",
+      "sources": ["CDC2022", "WHO-MGRS", "ZTT"]
+    },
+    {
+      "range": [12, 15],
+      "label": "12–15 months",
+      "theme": "Cause-and-effect play is peaking — splash, drop, watch, repeat. First words are brewing.",
+      "emergingSkills": ["first independent steps", "deliberate experiments (pouring, dropping, splashing)", "first words; following simple directions", "pointing to ask and to share attention"],
+      "wants": { "cause_effect": 3, "water_play": 3, "gross_motor_low": 2, "naming_targets": 2, "music_rhythm": 2, "story_language": 2, "sensory_textures": 2, "climb_run": 1, "animal_watch": 1 },
+      "caution": "Attention runs in short loops; repetition IS the learning, not a rut.",
+      "sources": ["CDC2022", "ZTT", "HCDC"]
+    },
+    {
+      "range": [15, 18],
+      "label": "15–18 months",
+      "theme": "The pointing-and-naming burst. The world becomes a picture book she wants labeled.",
+      "emergingSkills": ["pointing at everything for names", "vocabulary climbing week over week", "confident walking; carrying while walking", "simple imitation of household actions"],
+      "wants": { "naming_targets": 3, "story_language": 2, "animal_watch": 2, "climb_run": 2, "water_play": 2, "cause_effect": 2, "music_rhythm": 2, "animal_touch": 1, "pretend_play": 1 },
+      "caution": "Prime window to RETRY previously failed outings — the same aquarium is a new place now.",
+      "sources": ["CDC2022", "ZTT"]
+    },
+    {
+      "range": [18, 24],
+      "label": "18–24 months",
+      "theme": "Pretend play sparks, climbing gets serious, and 'again!' becomes a lifestyle.",
+      "emergingSkills": ["running, climbing, kicking balls", "two-word combinations emerging", "early pretend play (feeding a doll)", "strong preferences and first negotiations"],
+      "wants": { "climb_run": 3, "pretend_play": 2, "naming_targets": 2, "animal_touch": 2, "water_play": 2, "music_rhythm": 2, "story_language": 2, "art_materials": 1, "peer_faces": 2 },
+      "caution": "Big feelings era: exits, snacks, and nap windows shape success more than the venue does.",
+      "sources": ["CDC2022", "ZTT", "AAP-BF"]
+    },
+    {
+      "range": [24, 30],
+      "label": "24–30 months",
+      "theme": "Two-word sentences, real running, and following simple stories. Group activities start to land.",
+      "emergingSkills": ["short sentences; naming friends", "parallel play shifting toward interactive play", "jumping, stairs with support", "following two-step directions"],
+      "wants": { "pretend_play": 3, "story_language": 3, "peer_faces": 2, "art_materials": 2, "climb_run": 2, "animal_touch": 2, "naming_targets": 1, "cause_effect": 1 },
+      "caution": "Wild variance in language pace here is normal; never surface comparisons.",
+      "sources": ["CDC2022", "ZTT"]
+    },
+    {
+      "range": [30, 42],
+      "label": "30–42 months",
+      "theme": "Why-questions, imaginative worlds, and longer attention. 'Real' museums start paying off.",
+      "emergingSkills": ["sustained pretend scenarios", "following a simple narrative or show", "questions, questions, questions", "drawing with intent; early scissors"],
+      "wants": { "pretend_play": 3, "story_language": 3, "attention_span_long": 2, "art_materials": 2, "climb_run": 2, "cause_effect": 2, "naming_targets": 1, "peer_faces": 2 },
+      "caution": "This is where science centres, theatre, and exhibit museums flip from 'not yet' to 'finally'.",
+      "sources": ["CDC2022", "ZTT", "AAP-BF"]
+    }
+  ],
+
+  "tuningNotes": {
+    "howToTune": "Adjust band 'wants' weights (1–3) based on observed rating patterns across users; never edit emergingSkills to fit engagement metrics — science layer and tuning layer stay separate.",
+    "personalization": "Per-child preference signals (loved/paused categories) are applied ON TOP of this map at runtime, never written into it.",
+    "futureWork": ["Split bands by season fit", "Per-affordance caregiver scripts ('what to say/do here')", "Accessibility/sensory-sensitivity overlays as a parallel map"]
+  }
+}
