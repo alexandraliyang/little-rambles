@@ -26,6 +26,12 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versioning: SemVer. Two 
 ## [Unreleased]
 Candidates for App 0.4.0 (selection driven by Phase 1 field notes, per ROADMAP): logistics/nap layer (design doc §8) · time-budget input · photo attach · expanded archetype library · journal export.
 
+## App 0.6.0 — 2026-07-27 [ASSUMPTION-driven per ADR-0009]
+### Added
+- **📍 Pin where we are** (ADR-0011 rung 1): one tap on the pending-visit card while on-site stores coordinates — no typing; journal entries with a pin get a "· 📍 map" link opening Google Maps at the exact spot (forgot-the-name recovery without re-search); pins persist and will resolve to venue names retroactively when the Phase 4 pipeline lands.
+### Decided
+- **ADR-0011:** hybrid photo architecture (originals stay in user's camera roll; app hosts compressed journal copies from Phase 2 — infra cost is pennies/user/yr, the real weight is children's-photo custody → folded into D3 scope) + the four-rung auto-capture ladder (pin now → share-target/reverse-geocode Phase 2 → in-app venue selection Phase 4 → opt-in native visit detection + photo time-window auto-suggest Phase 5).
+
 ## App 0.5.1 — 2026-07-27 (patch)
 ### Fixed
 - **Founder defect report (first Manual Test Lead catch):** check-in fields (place, photos, note) sat BELOW the rating buttons, but tapping a rating submits and closes — fields after the submit action were effectively undiscoverable. Modal reordered: place → photos → note → labeled "tapping saves everything above" → ratings.

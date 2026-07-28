@@ -7,7 +7,7 @@ Rule: read at every session open; update at every touch. A stream not on this bo
 | Track A: founder dogfooding | Evidence Owner | v0.5 ready | Daily use + field notes in 2026-W31 file | Founder |
 | Track B: survey | Research | Spec frozen, form not built | Build Google Form from spec; send link back | Founder (~15 min) |
 | v0.4 QA sign-off | Manual Test Lead | Script written, unexecuted | Run docs/qa/v0-4-test-script.md on device | Founder (~10 min) |
-| v0.5 QA sign-off | Manual Test Lead | Script written, unexecuted | Run docs/qa/v0-5-test-script.md | Founder |
+| v0.5.x–0.6 QA sign-off | Manual Test Lead | Script covers 0.5.1+0.6 (11 checks) | Run docs/qa/v0-5-test-script.md on v0.6 | Founder |
 | Interview funnel | Research | 0 volunteers | Post survey (r/SampleSize first), log postings | Survey link |
 
 ## Scheduled / blocked
@@ -20,7 +20,7 @@ Rule: read at every session open; update at every touch. A stream not on this bo
 | Video in journal | Logged Phase 2 backend item | Real cloud storage exists |
 
 ## Done this cycle
-Repo live (27→ files) · Phase 0 closed w/ debts · D4 competitive scan · ADR-0008 survey method · ADR-0009 parallel tracks · ADR-0010 team charter · v0.4 (variety + deck) · v0.5 (place names + photos)
+Repo live (27→ files) · Phase 0 closed w/ debts · D4 competitive scan · ADR-0008 survey method · ADR-0009 parallel tracks · ADR-0010 team charter · v0.4 (variety + deck) · v0.5.1 (defect fix) · v0.6 (on-site pin, ADR-0011)
 
 ## Founder decision queue (empty = good)
 — none pending —

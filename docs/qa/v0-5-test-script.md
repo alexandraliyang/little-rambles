@@ -9,5 +9,8 @@ Executed by: Manual Test Lead · ~6 min · builds on v0.4 script (run that first
 6. Fully close and reopen the app → place names AND photos persisted? __
 7. Rapid double-tap on a rating button → only one visit updated, no duplicate? __
 8. Very long place name (50+ chars) → layout survives? __
+9. (v0.6) On the pending card, tap "📍 Pin where we are" → permission prompt → card shows "📍 Pinned"? __
+10. (v0.6) After check-in, the Memories entry shows "· 📍 map"; tapping opens Google Maps at your actual location? __
+11. (v0.6) Deny location permission → friendly toast, no crash, button still retryable? __
 ## Result
-Date: ____ · Pass __/8 · Defects:
+Date: ____ · Pass __/11 · Defects:
