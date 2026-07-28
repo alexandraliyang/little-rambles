@@ -1,6 +1,14 @@
 # Changelog
 Format: [Keep a Changelog](https://keepachangelog.com). Versioning: SemVer. Two tracks: **App** and **Dev-Map** (science layer, independent cycle). Docs events recorded here too.
 
+## Docs — 2026-07-27 (Phase 1 method amendment)
+### Changed
+- **ADR-0008:** Phase 1 shifts to survey-first mixed method (public survey for breadth + ≥5 funneled stranger interviews for depth) — founder network too thin for 10 warm interviews. ROADMAP Track B and gate math amended same-sitting per Rule 7.
+### Added
+- `docs/research/survey-v1-spec.md` — pre-registered survey (Q1 "last Saturday" precedes all pain content; frozen coding rubric; amended gate thresholds; platform etiquette).
+- `docs/research/recruiting-posts.md` — Reddit/FB/DM recruiting copy with posting log; neutral language, contented-parents invitation mandatory.
+- **Tool decision:** Google Forms (free, unlimited responses, CSV export, no respondent login). MS Forms rejected: personal free tier caps ~200 responses and export is clunkier; Typeform rejected: 10 responses/mo free cap. Tally noted as acceptable prettier alternative.
+
 ## Docs — 2026-07-27 (correction release)
 ### Fixed
 - **Drift correction (found by founder audit):** Phase 0 gate review had *declared* roadmap amendments (D2 scheduling, D3 as Phase 2 entry gate) without applying them to ROADMAP.md; review was also missing from the kit; dev-map carried no verification flag. All three now applied. Root cause: "declared but not applied" — amendments written in a review doc, target files never edited. New rule adopted in docs/README: **a review's amendments are applied to their target files in the same sitting, or the review is not filed.**

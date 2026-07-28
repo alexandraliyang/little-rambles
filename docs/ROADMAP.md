@@ -17,14 +17,14 @@ Remaining item: founder field-test week (rolls into Phase 1).
 
 **Track A — Founder dogfooding.** Use v0.3 for real, daily-ish, including one appointment-day away-mode test. Keep the two-list field notes (template in `templates/`): *moments it helped* / *moments I ignored it and used Google or instinct*. The second list is the gold.
 
-**Track B — Ten caregiver interviews.** Guide in `research/interview-guide.md`. Non-negotiable rule: never pitch before the final section. The interviews hunt disconfirming evidence.
+**Track B — Survey-first mixed method (amended 2026-07-27 per ADR-0008; was: ten warm interviews).** An anonymous ~5-min public survey (FB parent groups, Reddit incl. r/SampleSize; spec pre-registered in `research/survey-v1-spec.md`) provides breadth and recruits volunteers; ≥5 stranger interviews from the volunteer funnel provide depth using the unchanged guide. Non-negotiable rules: the open-ended "last Saturday" question comes before any pain-themed content; no concept pitch or willingness-to-pay hypotheticals anywhere; recruiting copy explicitly invites contented-routine parents; coding rubric frozen before data arrives.
 
-**Exit gate (pre-committed):**
-- ≥6/10 interviewees describe the core pain **unprompted** when walking through how they decide outings.
-- ≥4/10 currently **spend money** on adjacent solutions (classes, memberships, apps, subscriptions).
+**Exit gate (amended per ADR-0008, pre-committed):**
+- Survey: n ≥ 60 valid; ≥30% of Q1 ("last Saturday") open-text carries a spontaneous pain code per the frozen rubric; ≥40% report current adjacent spend (Q7).
+- Interviews: ≥8 volunteers from the funnel → ≥5 conducted; ≥3/5 show unprompted pain in conversation.
 - Founder is still opening the app voluntarily in week 3.
 
-**Kill/pivot criteria:** <4/10 unprompted pain → the "samey weekends" framing is a vitamin; pivot the pain hypothesis to whichever adjacent pain interviewees *did* voice with heat (guilt / mental load / memory-keeping — same product skeleton, different product), and re-run 5 interviews on the new framing. Zero heat on any framing → stop; two weeks spent, two years saved. That outcome is a win and gets written up honestly.
+**Kill/pivot criteria (amended per ADR-0008):** Q1 spontaneous pain <20% → the "samey weekends" framing is a vitamin; pivot the pain hypothesis to whichever code dominated Q2/Q9 (FATIGUE / GUILT / MEMORY / AGE-FIT — same skeleton, different product) and re-run a focused 5-interview round. 20–30% → documented judgment call weighted by the interviews. Zero heat anywhere → stop; weeks spent, years saved — written up honestly either way.
 
 ## Phase 2 — Real Software (target: 4–8 weeks after gate)
 
