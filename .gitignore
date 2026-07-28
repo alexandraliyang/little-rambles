@@ -1,0 +1,12 @@
+# OS junk
+.DS_Store
+Thumbs.db
+# Editors
+.vscode/
+.idea/
+# Future app builds (Phase 2+)
+node_modules/
+.next/
+.env
+.env.*
+!.env.example
