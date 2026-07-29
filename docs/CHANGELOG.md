@@ -26,6 +26,14 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versioning: SemVer. Two 
 ## [Unreleased]
 Candidates for App 0.4.0 (selection driven by Phase 1 field notes, per ROADMAP): logistics/nap layer (design doc §8) · time-budget input · photo attach · expanded archetype library · journal export.
 
+## App 0.13.0 + Dev-Map 1.1.0 — 2026-07-27 [ADR-0012]
+### Added
+- **Age range 0–7y:** bands 42–60 ("preschool leap") and 60–84 ("big kid, wide world" — flagged lower-evidence, beyond CDC checklist coverage; D2 reviewer scope extended); affordances `rule_games`, `big_kid_challenge`.
+- **Six big-kid ideas:** bike/pump track 🚲 · bowling 🎳 · kids climbing gym 🧗 · family skate ⛸️ · u-pick berry farm 🍓 (seasonal Jun–Sep) · library LEGO/maker club 🧱 (after-school weekday hours modeled).
+- Age display grows up: "3y 2m" instead of "38 mo" across header, badges, copy.
+### Consequences
+- Customer lifetime ~2.3× per child; sibling households now core → multi-child support elevated in Phase 2 scope.
+
 ## App 0.12.0 — 2026-07-27 [ASSUMPTION-driven per ADR-0009]
 ### Added
 - **Edit any memory** (✏️ on every entry): notes/journal text; place name (visits); add photos (cap 6) and remove photos (✕ on thumbnail); rating correction on visits — flows into the engine as a corrected child-response record (legitimate, unlike swipes); two-tap delete with photo-storage cleanup on both delete and photo-empty saves. PRD: `docs/prds/2026-07-27-v0-12-edit-memories.md`.

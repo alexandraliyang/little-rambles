@@ -27,13 +27,13 @@ Updated: 2026-07-27 · **This file is the map of everything.** If an artifact is
 | `docs/research/2026-07-27-competitive-scan.md` | Condensed competitive landscape archive (closes D4) | [AI-RESEARCH] | Filed; fully-cited original in project chat — export on migration |
 | `docs/templates/` | ADR / PRD / field-notes blanks | [AI-GEN] | Canonical |
 | `docs/learning/software-development-primer.md` | Founder education: how software gets built + how to audit the work | [AI-GEN] | Canonical, living |
-| `app/developmental-map-v1.json` | Science layer v1.0.0 — **now carries verificationStatus flag (D2)** | [AI-GEN from cited frameworks; weights provisional] | Canonical; expert review pending (Phase 2) |
-| `app/little-rambles-v0-12.jsx` | Current working prototype (editable Memories hub + rich scenes + Snap + pin) | [AI-GEN, ASSUMPTION-driven] | Canonical build |
+| `app/developmental-map-v1.json` | Science layer v1.1.0 (0–84mo) — **now carries verificationStatus flag (D2)** | [AI-GEN from cited frameworks; weights provisional] | Canonical; expert review pending (Phase 2) |
+| `app/little-rambles-v0-13.jsx` | Current working prototype (age 0–7 + big-kid ideas + editable Memories hub) | [AI-GEN, ASSUMPTION-driven] | Canonical build |
 | `docs/STATUS.md` | PM board — parallel-stream state, session-open reading | [AI-GEN] | Canonical, living |
 | `docs/prds/` | One-page PRDs written before each feature build (Rule 4) | [DECISION + AI-GEN] | Canonical |
 | `docs/TEAM.md` | Team charter: roles, decision rights, release Definition-of-Done | [DECISION + AI-GEN] | Canonical |
 | `docs/qa/` | Per-release test scripts, written by QA, executed by Founder | [AI-GEN script + EVIDENCE results] | Canonical |
-| `app/little-rambles-v0-11.jsx`, `v0-10.jsx`, `v0-9.jsx`, `v0-8.jsx`, `v0-7.jsx`, `v0-6.jsx`, `v0-5.jsx`, `v0-4.jsx`, `v0-3.jsx`, `v0-2.jsx`, `v0-1.jsx`, `prototype.jsx` | Prior versions | [AI-GEN] | Superseded — git history is now the real archive |
+| `app/little-rambles-v0-12.jsx`, `v0-11.jsx`, `v0-10.jsx`, `v0-9.jsx`, `v0-8.jsx`, `v0-7.jsx`, `v0-6.jsx`, `v0-5.jsx`, `v0-4.jsx`, `v0-3.jsx`, `v0-2.jsx`, `v0-1.jsx`, `prototype.jsx` | Prior versions | [AI-GEN] | Superseded — git history is now the real archive |
 
 ## Open debts (mirror of ROADMAP debt ledger)
 D1 platform (auto-resolves Phase 2) · D2 map verification (Phase 2, flag embedded in map file) · D3 compliance = Phase 2 entry gate · D4 **closed** 2026-07-27.

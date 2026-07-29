@@ -7,20 +7,21 @@ Rule: read at every session open; update at every touch. A stream not on this bo
 | Track A: founder dogfooding | Evidence Owner | v0.5 ready | Daily use + field notes in 2026-W31 file | Founder |
 | Track B: survey | Research | Spec frozen, form not built | Build Google Form from spec; send link back | Founder (~15 min) |
 | v0.4 QA sign-off | Manual Test Lead | Script written, unexecuted | Run docs/qa/v0-4-test-script.md on device | Founder (~10 min) |
-| v0.5.x–0.6 QA sign-off | Manual Test Lead | Script covers 0.5.1→0.12 (27 checks) | Run docs/qa/v0-5-test-script.md on v0.6 | Founder |
+| v0.5.x–0.6 QA sign-off | Manual Test Lead | Script covers 0.5.1→0.13 (29 checks) | Run docs/qa/v0-5-test-script.md on v0.6 | Founder |
 | Interview funnel | Research | 0 volunteers | Post survey (r/SampleSize first), log postings | Survey link |
 
 ## Scheduled / blocked
 | Stream | State | Unblocks when |
 |---|---|---|
-| D2 map expert review | Debt, scheduled Phase 2 | Founder sources an early-childhood educator / pediatric OT |
+| D2 map expert review | Debt, scheduled Phase 2 — SCOPE GREW: bands to 84mo incl. lower-evidence 60–84 | Founder sources an early-childhood educator / pediatric OT |
+| Multi-child support | ELEVATED in Phase 2 scope (ADR-0012: sibling households core) | Phase 2 build |
 | D3 compliance baseline | Phase 2 entry requirement | Before any external family's data is stored |
 | Phase 2 dev environment (VS Code + Claude Code) | Decided, not started | Founder chooses to run setup (~1 hr) |
 | Phase 4 Places pipeline | Re-scoped: MEMORY feature as much as discovery (venue-level tap-to-go = specific auto-logging) | After merge checkpoint |
 | Video in journal | Logged Phase 2 backend item | Real cloud storage exists |
 
 ## Done this cycle
-Repo live (27→ files) · Phase 0 closed w/ debts · D4 competitive scan · ADR-0008 survey method · ADR-0009 parallel tracks · ADR-0010 team charter · v0.4 (variety + deck) · v0.5.1 · v0.6/0.6.1 (pin + env matrix) · v0.7 (Snap) · v0.8 (illustrated banners) · v0.9 (photos dormant per QA-19) · v0.10 (rich illustrations) · v0.11 (Memories hub) · v0.12 (edit/delete memories)
+Repo live (27→ files) · Phase 0 closed w/ debts · D4 competitive scan · ADR-0008 survey method · ADR-0009 parallel tracks · ADR-0010 team charter · v0.4 (variety + deck) · v0.5.1 · v0.6/0.6.1 (pin + env matrix) · v0.7 (Snap) · v0.8 (illustrated banners) · v0.9 (photos dormant per QA-19) · v0.10 (rich illustrations) · v0.11 (Memories hub) · v0.12 (edit memories) · v0.13 + Map 1.1.0 (age 0–7, big-kid ideas)
 
 ## Founder decision queue (empty = good)
 — none pending —

@@ -27,5 +27,7 @@ Executed by: Manual Test Lead · ~6 min · builds on v0.4 script (run that first
 25. (v0.12) ✏️ on a visit → change note + place + rating → Save → entry updates; insights recompute if rating changed? __
 26. (v0.12) Edit: remove a photo via ✕, add another → Save → strip reflects it; survives restart? __
 27. (v0.12) Delete: first tap shows "Tap again"; second tap removes entry AND its photos; stats header counts drop? __
+28. (v0.13) Edit profile → set birthdate ~5 years ago → header shows "5y Xm"; Today's band note reads "Big kid, wide world"; bowling/climbing/skate rank up; science centre badge is "Great" not "later"? __
+29. (v0.13) Set birthdate back to her real one → everything returns to toddler-appropriate; data intact? __
 ## Result
-Date: ____ · Pass __/25 (+2 deferred to Phase 2 env) · Defects:
+Date: ____ · Pass __/27 (+2 deferred to Phase 2 env) · Defects:
