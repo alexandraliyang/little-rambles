@@ -7,6 +7,7 @@ Created 2026-07-27 after defect #2 (pin blocked by artifact sandbox). QA rule: a
 | Persistent storage | ✅ (window.storage, 5MB/key) | ✅ (real DB) | ✅ |
 | Open external links (Maps) | ✅ | ✅ | ✅ |
 | **Geolocation (foreground)** | ❌ **sandbox-blocked — defect #2** | ✅ with permission | ✅ |
+| **External images (hotlinked photos)** | ❌ **VERIFIED blocked — founder QA-19, 2026-07-27** (all 9 Unsplash banners fell back to illustrations; fallback worked, zero broken UI) | ✅ | ✅ |
 | Push notifications | ❌ | ⚠️ Android yes; iOS limited | ✅ |
 | Share-target (receive from Maps) | ❌ | ⚠️ Android only | ✅ |
 | Background location / visit detection | ❌ | ❌ | ✅ opt-in (ADR-0011 rung 4) |

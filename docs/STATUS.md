@@ -20,7 +20,7 @@ Rule: read at every session open; update at every touch. A stream not on this bo
 | Video in journal | Logged Phase 2 backend item | Real cloud storage exists |
 
 ## Done this cycle
-Repo live (27→ files) · Phase 0 closed w/ debts · D4 competitive scan · ADR-0008 survey method · ADR-0009 parallel tracks · ADR-0010 team charter · v0.4 (variety + deck) · v0.5.1 · v0.6/0.6.1 (pin + env matrix) · v0.7 (Snap) · v0.8 (illustrated banners) · v0.9 (photo banners + fallback, QA-19 probe pending)
+Repo live (27→ files) · Phase 0 closed w/ debts · D4 competitive scan · ADR-0008 survey method · ADR-0009 parallel tracks · ADR-0010 team charter · v0.4 (variety + deck) · v0.5.1 · v0.6/0.6.1 (pin + env matrix) · v0.7 (Snap) · v0.8 (illustrated banners) · v0.9 (photo banners dormant in sandbox — QA-19 verified block; auto-activate at Phase 2)
 
 ## Founder decision queue (empty = good)
 — none pending —

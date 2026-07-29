@@ -29,8 +29,8 @@ Candidates for App 0.4.0 (selection driven by Phase 1 field notes, per ROADMAP):
 ## App 0.9.0 — 2026-07-27 [ASSUMPTION-driven per ADR-0009]
 ### Added
 - **Real photo banners (experimental):** per-category Unsplash-licensed photographs on all cards, with automatic fallback to the v0.8 illustrations on load failure (sandbox CSP or link rot) — progressive enhancement, no broken images possible. Emoji identity badge overlays photos. Licensing: Unsplash License (free commercial use, no attribution required; noted with thanks).
-### Known unknowns
-- Whether the artifact sandbox permits images.unsplash.com is EMPIRICALLY UNTESTED — QA check 19 (founder) reports photo-vs-illustration per category; individual photo IDs are best-effort and may 404 (fallback covers). End state unchanged: Phase 4 = actual venue photos via Places.
+### Resolved 2026-07-27 (founder QA-19)
+- **VERIFIED: sandbox blocks external images** — all categories rendered illustrations; fallback flawless (no broken UI). Photo banners auto-activate at Phase 2 (PWA has no such wall; code already shipped and waiting). Whether the artifact sandbox permits images.unsplash.com was previously untested — QA check 19 (founder) reports photo-vs-illustration per category; individual photo IDs are best-effort and may 404 (fallback covers). End state unchanged: Phase 4 = actual venue photos via Places.
 
 ## App 0.8.0 — 2026-07-27 [ASSUMPTION-driven per ADR-0009]
 ### Added
