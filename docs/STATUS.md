@@ -7,7 +7,7 @@ Rule: read at every session open; update at every touch. A stream not on this bo
 | Track A: founder dogfooding | Evidence Owner | v0.5 ready | Daily use + field notes in 2026-W31 file | Founder |
 | Track B: survey | Research | Spec frozen, form not built | Build Google Form from spec; send link back | Founder (~15 min) |
 | v0.4 QA sign-off | Manual Test Lead | Script written, unexecuted | Run docs/qa/v0-4-test-script.md on device | Founder (~10 min) |
-| v0.5.x–0.6 QA sign-off | Manual Test Lead | Script covers 0.5.1→0.11 (24 checks) | Run docs/qa/v0-5-test-script.md on v0.6 | Founder |
+| v0.5.x–0.6 QA sign-off | Manual Test Lead | Script covers 0.5.1→0.12 (27 checks) | Run docs/qa/v0-5-test-script.md on v0.6 | Founder |
 | Interview funnel | Research | 0 volunteers | Post survey (r/SampleSize first), log postings | Survey link |
 
 ## Scheduled / blocked
@@ -20,7 +20,7 @@ Rule: read at every session open; update at every touch. A stream not on this bo
 | Video in journal | Logged Phase 2 backend item | Real cloud storage exists |
 
 ## Done this cycle
-Repo live (27→ files) · Phase 0 closed w/ debts · D4 competitive scan · ADR-0008 survey method · ADR-0009 parallel tracks · ADR-0010 team charter · v0.4 (variety + deck) · v0.5.1 · v0.6/0.6.1 (pin + env matrix) · v0.7 (Snap) · v0.8 (illustrated banners) · v0.9 (photos dormant per QA-19) · v0.10 (rich illustrations) · v0.11 (Memories hub: filters/search/grid/journal)
+Repo live (27→ files) · Phase 0 closed w/ debts · D4 competitive scan · ADR-0008 survey method · ADR-0009 parallel tracks · ADR-0010 team charter · v0.4 (variety + deck) · v0.5.1 · v0.6/0.6.1 (pin + env matrix) · v0.7 (Snap) · v0.8 (illustrated banners) · v0.9 (photos dormant per QA-19) · v0.10 (rich illustrations) · v0.11 (Memories hub) · v0.12 (edit/delete memories)
 
 ## Founder decision queue (empty = good)
 — none pending —

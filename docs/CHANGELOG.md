@@ -26,6 +26,10 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versioning: SemVer. Two 
 ## [Unreleased]
 Candidates for App 0.4.0 (selection driven by Phase 1 field notes, per ROADMAP): logistics/nap layer (design doc §8) · time-budget input · photo attach · expanded archetype library · journal export.
 
+## App 0.12.0 — 2026-07-27 [ASSUMPTION-driven per ADR-0009]
+### Added
+- **Edit any memory** (✏️ on every entry): notes/journal text; place name (visits); add photos (cap 6) and remove photos (✕ on thumbnail); rating correction on visits — flows into the engine as a corrected child-response record (legitimate, unlike swipes); two-tap delete with photo-storage cleanup on both delete and photo-empty saves. PRD: `docs/prds/2026-07-27-v0-12-edit-memories.md`.
+
 ## App 0.11.0 — 2026-07-27 [ASSUMPTION-driven per ADR-0009]
 ### Added
 - **Memories as the hook:** stats header (outings/places/photos/since) · Story/Photos view toggle · 3-column photo grid · full-screen lightbox with captions (grid + story thumbnails) · 😍 Loved and 📷 Photos filters · free-text search over places/names/notes · **✍️ Write a moment** freeform journal entries (text/photos, marigold-spine styling). PRD: `docs/prds/2026-07-27-v0-11-memories.md`.
