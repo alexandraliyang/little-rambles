@@ -26,6 +26,12 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versioning: SemVer. Two 
 ## [Unreleased]
 Candidates for App 0.4.0 (selection driven by Phase 1 field notes, per ROADMAP): logistics/nap layer (design doc §8) · time-budget input · photo attach · expanded archetype library · journal export.
 
+## App 0.9.0 — 2026-07-27 [ASSUMPTION-driven per ADR-0009]
+### Added
+- **Real photo banners (experimental):** per-category Unsplash-licensed photographs on all cards, with automatic fallback to the v0.8 illustrations on load failure (sandbox CSP or link rot) — progressive enhancement, no broken images possible. Emoji identity badge overlays photos. Licensing: Unsplash License (free commercial use, no attribution required; noted with thanks).
+### Known unknowns
+- Whether the artifact sandbox permits images.unsplash.com is EMPIRICALLY UNTESTED — QA check 19 (founder) reports photo-vs-illustration per category; individual photo IDs are best-effort and may 404 (fallback covers). End state unchanged: Phase 4 = actual venue photos via Places.
+
 ## App 0.8.0 — 2026-07-27 [ASSUMPTION-driven per ADR-0009]
 ### Added
 - **Illustrated card banners:** per-category SVG scenes (design-system palette; waves/sun, storybooks, notes, hills, forest, confetti, paint blobs, slide, starfield) on hero, Explore, compact, and deck cards, with each idea's emoji as focal character. Inline SVG → always renders in-sandbox, zero licensing exposure. PRD: `docs/prds/2026-07-27-v0-8-card-art.md`.
