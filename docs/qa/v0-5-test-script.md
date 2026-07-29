@@ -20,5 +20,9 @@ Executed by: Manual Test Lead · ~6 min · builds on v0.4 script (run that first
 18. (v0.8) Memories tab unchanged — no banners there (your photos remain the star)? __
 19. (v0.9) For each category card: REAL PHOTO or ILLUSTRATION? List which — this is a live probe of the sandbox image policy. Any broken/blank banner = defect (fallback failed). __
 20. (v0.10) Rich scenes render across hero/Explore/deck: waves+sun (water), book stack (stories), sound-rings (music), meadow+fence (animals), layered forest (nature), awning (sensory), splats (art), slide+swing (playground), planet+stars (science) — no visual glitches or overflow? __
+21. (v0.11) Memories: stats header shows correct counts; "since" matches earliest entry? __
+22. (v0.11) Filters: 😍 narrows to loved; 📷 to photo-entries; search "jump" finds your Jump Gym entry; nonsense search → friendly empty state? __
+23. (v0.11) Photos view: grid of all photos; tap → full-screen lightbox with place+date caption; tap closes? __
+24. (v0.11) ✍️ Write a moment: save text+photo → appears with marigold spine and Journal badge; survives full app restart; does NOT create a pending check-in card on Today? __
 ## Result
-Date: ____ · Pass __/18 (+2 deferred to Phase 2 env) · Defects:
+Date: ____ · Pass __/22 (+2 deferred to Phase 2 env) · Defects:

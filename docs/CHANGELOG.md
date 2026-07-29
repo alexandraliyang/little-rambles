@@ -26,6 +26,12 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versioning: SemVer. Two 
 ## [Unreleased]
 Candidates for App 0.4.0 (selection driven by Phase 1 field notes, per ROADMAP): logistics/nap layer (design doc §8) · time-budget input · photo attach · expanded archetype library · journal export.
 
+## App 0.11.0 — 2026-07-27 [ASSUMPTION-driven per ADR-0009]
+### Added
+- **Memories as the hook:** stats header (outings/places/photos/since) · Story/Photos view toggle · 3-column photo grid · full-screen lightbox with captions (grid + story thumbnails) · 😍 Loved and 📷 Photos filters · free-text search over places/names/notes · **✍️ Write a moment** freeform journal entries (text/photos, marigold-spine styling). PRD: `docs/prds/2026-07-27-v0-11-memories.md`.
+### Signal discipline
+- Journal entries are the parent's voice: excluded from the recommendation engine, insights, and pending-check-in logic entirely — same hierarchy as swipes (child's rated reactions remain the only heavy signal).
+
 ## App 0.10.0 — 2026-07-27 [ASSUMPTION-driven per ADR-0009]
 ### Changed
 - **Rich illustration pack:** all nine category scenes rebuilt with atmosphere and depth (sun-glow + layered waves + sparkles; lamplit book stack; sound-rings; meadow with fence and flowers; sunbeamed layered forest with birds; market awning + bokeh; splats with drips and brushstroke; full playground scene; nebula + ringed planet + shooting star). Photo-attempt + fallback retained, dormant in sandbox (QA-19), auto-activates Phase 2.
