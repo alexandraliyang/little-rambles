@@ -26,6 +26,13 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versioning: SemVer. Two 
 ## [Unreleased]
 Candidates for App 0.4.0 (selection driven by Phase 1 field notes, per ROADMAP): logistics/nap layer (design doc §8) · time-budget input · photo attach · expanded archetype library · journal export.
 
+## App 0.7.0 — 2026-07-27 [ASSUMPTION-driven per ADR-0009]
+### Added
+- **📸 Snap** on the pending-visit card: shooting through the app attaches the photo at the capture moment — no evening picking; snaps accumulate live on the card (cap raised to 6/visit). PRD: `docs/prds/2026-07-27-v0-7-snap.md`.
+- Check-in modal now preloads already-snapped photos and prior place/note drafts (no data loss on reopen).
+### Documented trade-offs
+- iOS: through-app photos may not save to the camera roll — pattern is "snap journal moments in-app, shoot keepers in the real camera"; retroactive library harvest (time + pin matching, zero behavior change) remains the Phase 5 native opt-in per ADR-0011; Android share-target arrives Phase 2.
+
 ## App 0.6.1 — 2026-07-27 (patch)
 ### Fixed
 - **Defect #2 (Manual Test Lead):** pin untestable — the chat-artifact sandbox blocks the geolocation API outright (no prompt possible). Error message corrected from implied user error to honest environment limit; feature remains built, verification deferred to Phase 2 PWA. Root cause: QA checked syntax, not sandbox permissions → new standing QA rule + `docs/qa/environment-capability-matrix.md` created (device-API features are matrix-checked before build).

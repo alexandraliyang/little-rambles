@@ -11,5 +11,9 @@ Executed by: Manual Test Lead · ~6 min · builds on v0.4 script (run that first
 8. Very long place name (50+ chars) → layout survives? __
 9. (v0.6.1) Pending card shows "📍 Pin where we are"; tapping it yields the honest environment-blocked toast (NOT a user-error message), no crash? __
 10–11. [ENV-BLOCKED, per capability matrix] True pin capture + map link verified at Phase 2 PWA, not here. Logged, not skipped silently.
+12. (v0.7) Pending card → 📸 Snap → camera opens (mobile) / file dialog (desktop) → photo appears ON the pending card instantly? __
+13. (v0.7) Snap 2–3 times → count accumulates in toast; thumbnails stack on card? __
+14. (v0.7) Open Check in afterwards → snapped photos already loaded in the modal (with any draft place/note)? __
+15. (v0.7) Try exceeding 6 photos → capped gracefully? __
 ## Result
-Date: ____ · Pass __/9 (+2 deferred to Phase 2 env) · Defects:
+Date: ____ · Pass __/13 (+2 deferred to Phase 2 env) · Defects:
