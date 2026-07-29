@@ -15,5 +15,8 @@ Executed by: Manual Test Lead · ~6 min · builds on v0.4 script (run that first
 13. (v0.7) Snap 2–3 times → count accumulates in toast; thumbnails stack on card? __
 14. (v0.7) Open Check in afterwards → snapped photos already loaded in the modal (with any draft place/note)? __
 15. (v0.7) Try exceeding 6 photos → capped gracefully? __
+16. (v0.8) Hero, Explore cards, compact cards, and deck cards all show illustrated banners; each category's scene differs? __
+17. (v0.8) Science centre banner (dark starfield) — text/badges above it still readable, layout intact? __
+18. (v0.8) Memories tab unchanged — no banners there (your photos remain the star)? __
 ## Result
-Date: ____ · Pass __/13 (+2 deferred to Phase 2 env) · Defects:
+Date: ____ · Pass __/16 (+2 deferred to Phase 2 env) · Defects:

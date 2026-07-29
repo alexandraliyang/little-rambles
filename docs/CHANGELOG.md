@@ -26,6 +26,12 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versioning: SemVer. Two 
 ## [Unreleased]
 Candidates for App 0.4.0 (selection driven by Phase 1 field notes, per ROADMAP): logistics/nap layer (design doc §8) · time-budget input · photo attach · expanded archetype library · journal export.
 
+## App 0.8.0 — 2026-07-27 [ASSUMPTION-driven per ADR-0009]
+### Added
+- **Illustrated card banners:** per-category SVG scenes (design-system palette; waves/sun, storybooks, notes, hills, forest, confetti, paint blobs, slide, starfield) on hero, Explore, compact, and deck cards, with each idea's emoji as focal character. Inline SVG → always renders in-sandbox, zero licensing exposure. PRD: `docs/prds/2026-07-27-v0-8-card-art.md`.
+### Documented
+- Image ladder: Phase 2 licensed photography per category; Phase 4 real venue photos via Places API (with attribution) — actual-place imagery as the end-state motivator. Memories deliberately excluded: the family's own photos stay the visual star there.
+
 ## App 0.7.0 — 2026-07-27 [ASSUMPTION-driven per ADR-0009]
 ### Added
 - **📸 Snap** on the pending-visit card: shooting through the app attaches the photo at the capture moment — no evening picking; snaps accumulate live on the card (cap raised to 6/visit). PRD: `docs/prds/2026-07-27-v0-7-snap.md`.
