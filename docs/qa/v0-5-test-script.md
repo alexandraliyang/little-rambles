@@ -19,5 +19,6 @@ Executed by: Manual Test Lead · ~6 min · builds on v0.4 script (run that first
 17. (v0.8) Science centre banner (dark starfield) — text/badges above it still readable, layout intact? __
 18. (v0.8) Memories tab unchanged — no banners there (your photos remain the star)? __
 19. (v0.9) For each category card: REAL PHOTO or ILLUSTRATION? List which — this is a live probe of the sandbox image policy. Any broken/blank banner = defect (fallback failed). __
+20. (v0.10) Rich scenes render across hero/Explore/deck: waves+sun (water), book stack (stories), sound-rings (music), meadow+fence (animals), layered forest (nature), awning (sensory), splats (art), slide+swing (playground), planet+stars (science) — no visual glitches or overflow? __
 ## Result
-Date: ____ · Pass __/17 (+2 deferred to Phase 2 env) · Defects:
+Date: ____ · Pass __/18 (+2 deferred to Phase 2 env) · Defects:

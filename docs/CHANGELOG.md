@@ -26,6 +26,12 @@ Format: [Keep a Changelog](https://keepachangelog.com). Versioning: SemVer. Two 
 ## [Unreleased]
 Candidates for App 0.4.0 (selection driven by Phase 1 field notes, per ROADMAP): logistics/nap layer (design doc §8) · time-budget input · photo attach · expanded archetype library · journal export.
 
+## App 0.10.0 — 2026-07-27 [ASSUMPTION-driven per ADR-0009]
+### Changed
+- **Rich illustration pack:** all nine category scenes rebuilt with atmosphere and depth (sun-glow + layered waves + sparkles; lamplit book stack; sound-rings; meadow with fence and flowers; sunbeamed layered forest with birds; market awning + bokeh; splats with drips and brushstroke; full playground scene; nebula + ringed planet + shooting star). Photo-attempt + fallback retained, dormant in sandbox (QA-19), auto-activates Phase 2.
+### Image ladder amended (founder request: "AI pictures that look real")
+- Photorealistic AI generation: not available in this environment, and flagged by Design as a brand risk (fake-real venues/children vs. our honesty moat). Adopted path: hand-crafted rich illustration now → optional AI-STYLIZED art with consistent direction at Phase 2 → real venue photography via Places at Phase 4. Photoreal is reserved for photos of real places only.
+
 ## App 0.9.0 — 2026-07-27 [ASSUMPTION-driven per ADR-0009]
 ### Added
 - **Real photo banners (experimental):** per-category Unsplash-licensed photographs on all cards, with automatic fallback to the v0.8 illustrations on load failure (sandbox CSP or link rot) — progressive enhancement, no broken images possible. Emoji identity badge overlays photos. Licensing: Unsplash License (free commercial use, no attribution required; noted with thanks).
