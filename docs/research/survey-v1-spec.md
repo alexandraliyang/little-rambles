@@ -1,5 +1,5 @@
 # Parent Survey v1 — Specification (pre-registered)
-Date: 2026-07-27 · Status: ready to build · Tool: Google Forms (see tool decision in CHANGELOG) · Target: ≥60 valid responses in 2–3 weeks · Public title: **"How parents really plan time with little kids — 5-min anonymous survey"**
+Date: 2026-07-27 · Status: **LIVE 2026-07-27** — https://docs.google.com/forms/d/e/1FAIpQLScwGfNEKUm4xONslhSRcn9ZTg5DLxz-zuMA_eHc1PsbffDUyQ/viewform · Tool: Google Forms (see tool decision in CHANGELOG) · Target: ≥60 valid responses in 2–3 weeks · Public title: **"How parents really plan time with little kids — 5-min anonymous survey"**
 
 ## Design rules (why it looks like this)
 - Q1 open-ended comes BEFORE any pain-themed question → spontaneous pain mentions in Q1 are our "unprompted" measure.

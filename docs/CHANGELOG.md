@@ -92,6 +92,12 @@ Candidates for App 0.4.0 (selection driven by Phase 1 field notes, per ROADMAP):
 ### Deferred (logged)
 - Video capture → Phase 2 (requires real cloud storage). Place autocomplete → Phase 4 Places pipeline, now re-framed in ROADMAP scope as a MEMORY feature (venue-level tap-to-go restores zero-friction specificity).
 
+## Research — 2026-07-27 (Track B live)
+### Added
+- **Survey is LIVE** — Google Form built by Founder from the pre-registered spec; link filed in `survey-v1-spec.md` and interpolated into all recruiting posts. Phase 1 Track B unblocked; interview funnel now depends only on responses.
+### Note
+- Age screener covers 6mo–5y (spec written pre-ADR-0012); product now spans 0–7y. Adding a "6 years" option is optional and non-blocking — posting takes priority over perfect coverage.
+
 ## Docs — 2026-07-27 (team charter)
 ### Added
 - **ADR-0010 + docs/TEAM.md:** role-based team structure — Founder as Owner/CEO, Manual Test Lead, and exclusive Evidence Owner; Claude in nine checklisted roles; Science Advisor designated external-human-only (D2); release Definition-of-Done with per-role sign-offs adopted.

@@ -5,10 +5,10 @@ Rule: read at every session open; update at every touch. A stream not on this bo
 | Stream | Role lead | State | Next action | Waiting on |
 |---|---|---|---|---|
 | Track A: founder dogfooding | Evidence Owner | v0.5 ready | Daily use + field notes in 2026-W31 file | Founder |
-| Track B: survey | Research | Spec frozen, form not built | Build Google Form from spec; send link back | Founder (~15 min) |
+| Track B: survey | Research | **LIVE** — form built & link filed | Post to r/SampleSize, then FB groups; log postings | Founder (posting) |
 | v0.4 QA sign-off | Manual Test Lead | Script written, unexecuted | Run docs/qa/v0-4-test-script.md on device | Founder (~10 min) |
 | v0.5.x–0.6 QA sign-off | Manual Test Lead | Script covers 0.5.1→0.13 (29 checks) | Run docs/qa/v0-5-test-script.md on v0.6 | Founder |
-| Interview funnel | Research | 0 volunteers | Post survey (r/SampleSize first), log postings | Survey link |
+| Interview funnel | Research | 0 volunteers | Volunteers arrive via survey F1; schedule at ≥8 | Survey responses |
 
 ## Scheduled / blocked
 | Stream | State | Unblocks when |
@@ -23,5 +23,5 @@ Rule: read at every session open; update at every touch. A stream not on this bo
 ## Done this cycle
 Repo live (27→ files) · Phase 0 closed w/ debts · D4 competitive scan · ADR-0008 survey method · ADR-0009 parallel tracks · ADR-0010 team charter · v0.4 (variety + deck) · v0.5.1 · v0.6/0.6.1 (pin + env matrix) · v0.7 (Snap) · v0.8 (illustrated banners) · v0.9 (photos dormant per QA-19) · v0.10 (rich illustrations) · v0.11 (Memories hub) · v0.12 (edit memories) · v0.13 + Map 1.1.0 (age 0–7, big-kid ideas)
 
-## Founder decision queue (empty = good)
-— none pending —
+## Founder decision queue
+- Optional: add "6 years" to survey age screener (ADR-0012 extended range to 0–7y) — non-blocking, post first.
