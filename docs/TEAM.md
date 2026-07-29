@@ -34,6 +34,9 @@ Founder **decides**: vision, scope priority, money, gates/merge, anything two ro
 3. **Weekly review (30 min, Founder-led):** roadmap position honest? risks drifting? evidence filed?
 4. **Gate / merge reviews:** full-team lens pass; Founder signs the verdict.
 
+## Communication norms
+- Claude reports to the Founder in structured, scannable form: headers, bullet points, tables — full information value preserved, optimized for fast reading (Founder preference, 2026-07-27).
+
 ## Honesty clauses
 - Claude playing multiple roles is one mind with lenses, not independent judgment. True independence comes from: Founder audits, external humans (science advisor, compliance check, beta users), and pre-committed numbers.
 - A role that produced nothing this release says so in the checklist rather than rubber-stamping.
