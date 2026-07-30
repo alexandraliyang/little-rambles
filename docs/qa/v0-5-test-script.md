@@ -29,5 +29,19 @@ Executed by: Manual Test Lead · ~6 min · builds on v0.4 script (run that first
 27. (v0.12) Delete: first tap shows "Tap again"; second tap removes entry AND its photos; stats header counts drop? __
 28. (v0.13) Edit profile → set birthdate ~5 years ago → header shows "5y Xm"; Today's band note reads "Big kid, wide world"; bowling/climbing/skate rank up; science centre badge is "Great" not "later"? __
 29. (v0.13) Set birthdate back to her real one → everything returns to toddler-appropriate; data intact? __
+--- PWA build (v1.0-beta) — run these ON THE INSTALLED APP ---
+30. Installs to iPhone home screen (Safari → Share → Add to Home Screen); opens full-screen with no browser bars; icon is the marigold squiggle? __
+31. 📍 Pin where we are → iOS permission prompt appears → card shows "📍 Pinned" → journal "· 📍 map" link opens Maps at the right spot? (First real test — was sandbox-blocked) __
+32. Card banners: REAL PHOTOS now (external images unblocked outside sandbox)? __
+33. 📸 Snap uses the actual camera; photo attaches; survives force-quit + reopen (IndexedDB)? __
+34. Airplane mode → app still opens and shows existing memories (service worker offline shell)? __
+35. New categories present in Explore: transit 🚇, community 🏫, food 🥐, winter ❄️ (out of season = "Season: Dec–Feb"), seasonal 🎃, culture 🏛️, sports ⚽? __
+--- Featured venues + photos (v1.1-beta) ---
+36. Hero and Explore cards lead with REAL venue names (e.g. Spanish Banks Beach, Maplewood Farm) with archetype + neighbourhood beneath? __
+37. **D5 VERIFICATION (founder local knowledge):** read all 45 featured picks in Explore — flag any that are closed, renamed, wrong neighbourhood, or a poor pick. List them: __
+38. "Let's go" on a featured card → Maps opens at THAT venue (not a generic search) → journal entry already carries the venue name with no typing? __
+39. "See every … nearby →" link opens the broad category search (breadth intact)? __
+40. Set an away-mode spot → featured venues disappear, cards revert to category mode? __
+41. Category banners now show REAL PHOTOS (all 16)? List any still showing illustrations: __
 ## Result
-Date: ____ · Pass __/27 (+2 deferred to Phase 2 env) · Defects:
+Date: ____ · Pass __/39 (+2 deferred to Phase 2 env) · Defects:
