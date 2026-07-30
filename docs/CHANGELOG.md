@@ -92,6 +92,39 @@ Candidates for App 0.4.0 (selection driven by Phase 1 field notes, per ROADMAP):
 ### Deferred (logged)
 - Video capture → Phase 2 (requires real cloud storage). Place autocomplete → Phase 4 Places pipeline, now re-framed in ROADMAP scope as a MEMORY feature (venue-level tap-to-go restores zero-friction specificity).
 
+## App 3.3.0-beta — 2026-07-30 — founder feedback FB2 (round 3)
+Triage with per-item root causes: `docs/qa/2026-07-30-founder-feedback-fb2.md`. FB2 was written against **v3.0**; 3.1 and 3.2 had already closed five of its items, so each was re-checked against source before any work — see "Already fixed" below.
+
+### Infrastructure — the build became reproducible (this was blocking)
+- **`web/` could not be rebuilt from its own source.** The esbuild entry file (React mount + error boundary + global error handlers) existed *only inside the minified `app.js`* — it had never been committed. Recovered from the bundle and committed as **`web/main.jsx`**, alongside **`web/package.json`** pinning React 18.3.1 + esbuild.
+- **Verified faithful, not assumed:** rebuilding from the reconstructed source reproduces the previously committed `app.js` **byte-for-byte** (modulo `core.autocrlf` line endings). That proof was taken *before* any feature edit, so the baseline is trustworthy.
+- Node.js 24.18.0 installed on the founder's machine (none was present; `app.js` is minified and was not hand-patchable). `npm run build` regenerates the bundle; `npm test` builds and runs the smoke suite.
+- **`web/smoke.mjs`** added: 18 headless jsdom checks covering the FB2 logic. All pass.
+
+### Fixed
+- **The age toggle never revealed anything (FB2-06) — root cause found.** Not a state bug: under-age activities score `-100` and sort to the bottom of `ranked`, and the list was then cut with `.slice(0, 60)`. With a big-kid-band child, over 60 age-appropriate activities already saturated the cap, so the toggle changed its own label and *nothing else*. Browse now builds the two age groups as **separate lists**, with "coming later" rendered as its own labelled section that no cap can swallow. Smoke-verified: 60 cards → 61 with the toggle on (was 60 → 60).
+- **Log-outing action below the fold (FB2-08):** the save button now sticks to the bottom of the sheet. Chosen over centring the sheet so the v0.5.1 ordering fix — fields before the submit control — stays intact.
+- Duplicate `place:` key in the custom-activity object literal (last-wins, harmless, but esbuild flagged it).
+- Switching tabs no longer drops you at the previous tab's scroll offset — all four tabs share one scroll container.
+
+### Added
+- **Five-tier ratings (FB2-11):** 😍 Loved it · 🙂 Liked it · 😐 It was okay · 😕 Not great · 😵 Not today. Ratings are the engine's only heavy signal, so the scale and its weights (+2/+1/0/−1/−2) are one decision. Categories are now scored by **summed weight** rather than per-key counts, with thresholds set to preserve the old behaviour at the anchors (two "loved" still makes a loved category; two "nope" still rests one).
+  - **Migration is lossless at the anchors:** `loved→loved`, `fine→okay` (both were the neutral middle), `nope→nope` — run once on load, then persisted. Nothing is guessed up or down. `rateKey()` means stored data is never used to index `RATE` directly, so an unknown value can no longer throw.
+- **Gender field (FB2-07):** Girl / Boy / Prefer not to say, driving she/he/they. **Unset — including every profile created before this build — gets they/them.** All gendered copy swept from both `app.jsx` and the 155 activity blurbs in `data.js` (8 occurrences, e.g. "a physics lab she can sit in" → "you can sit in"). Birthdate is now labelled as required, which 3.2 already enforced.
+- **Back to top (FB2-05, FB2-09):** floating button on every list past ~700px.
+- **Real place search when logging (FB2-10, FB2-12):** check-in and "an outing we did on our own" both use the same `PlaceInput` geocoder as the rest of the app, seeded with **places you've already logged** so a repeat venue is one tap and needs no network call.
+- **Favourites (FB2-14):** ⭐ on any memory, with a filter. Deliberately **excluded from the engine** — a favourite is the parent's keepsake mark, not the child's reaction. Same signal discipline as journal entries and swipes.
+- **Memories filters (FB2-15):** filter by any of the five rating tiers, plus ⭐ Favourites, 📷 Photos, and 📍 We did on our own as its own category. (User-added activities already fed Browse/Swipe via the `userAdded` +3 boost — only the Memories-side filter was missing.)
+- **One shared marked picture for your own places (FB2-16):** the single deliberate exception to "every activity has its own picture". Places you add skip the Wikimedia lookup entirely — a keyword search for a private place name returns something irrelevant, and a shared mark reads as intentional where a wrong photo reads as broken.
+
+### Already fixed in 3.1/3.2 — re-test, no work done
+FB2-01 unique kid-relevant pictures · FB2-02 edit-profile/sign-out crash · FB2-03 clipped nav badge · FB2-04a "add your own" at top · FB2-18 address bar doing nothing. Each was verified present in source. **FB2-01 and FB2-18 depend on live Wikimedia/Photon calls that no sandbox here can exercise — on-device testing is the only real check.**
+
+### Not built — stated plainly
+- **FB2-17 multi-parent accounts: not possible in this architecture.** The app is device-local (IndexedDB, no server, no auth); the existing "caregivers" list is a label on a memory, not access control. Real shared accounts need the Phase 2 Supabase stack and are gated by **D3 compliance** — child data on a server is exactly what that baseline covers. A fake accounts screen backed by local storage would be worse than nothing.
+- **Venue-level place accuracy** is still address-level: the geocoder finds addresses, not "the good playground". Unchanged Phase 4 Places dependency.
+- Smoke tests cannot exercise Photon, Wikimedia, camera, video, or real touch. Founder device testing remains the gate.
+
 ## App 3.2.0-beta — 2026-07-30 — founder feedback FB1 (round 2)
 ### Fixed — root cause of the long-standing crash found
 - **The "no birthday entered" state and the iOS Edit-profile/Sign-out crash were the same bug.** Tapping "Use my current location" during onboarding wrote a *partial* profile (home only, no name or birthdate). The app then treated that as an existing profile, offered "Welcome back → Continue", and signed in with no birthdate — producing `NaN` ages ("Great at NaNy") and, on the profile screen, `name.trim()` on an undefined value, which threw. Fixed three ways: (1) onboarding now captures home into local form state instead of writing a profile, (2) a profile only counts as valid with name + birthdate + a parseable age, otherwise onboarding is shown, (3) every profile form field is defaulted so undefined can never reach `.trim()`. Verified headlessly: a partial profile now recovers to onboarding, and Edit profile no longer errors.

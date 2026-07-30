@@ -23,6 +23,14 @@ Rule: read at every session open; update at every touch. A stream not on this bo
 | Phase 4 Places pipeline | Re-scoped: MEMORY feature as much as discovery (venue-level tap-to-go = specific auto-logging) | After merge checkpoint |
 | Video in journal | Logged Phase 2 backend item | Real cloud storage exists |
 
+## 2026-07-30 — FB2 round 3
+| Stream | Role lead | State | Next action | Waiting on |
+|---|---|---|---|---|
+| v3.3 FB2 build | Developer | **Built + 18 automated checks passing** | Deploy `web/` to Netlify, reinstall on phone, run `docs/qa/v3-3-test-script.md` | Founder (device test) |
+| FB2 items already fixed in 3.1/3.2 | QA | 5 items need re-test only (FB2 was written against v3.0) | Part A of the v3.3 script — A1 photos and A5 address search are network-dependent and testable **only** on device | Founder |
+| Build reproducibility | Tech Lead | **CLOSED** — `main.jsx` was missing so `web/` could not be rebuilt from source; recovered and proven byte-identical. Node 24.18.0 installed | — | — |
+| FB2-17 multi-parent accounts | Tech Lead | Deferred to Phase 2 — needs a server, auth, and D3 compliance; device-local app cannot do it | Fold into Phase 2 Supabase scope | Phase 2 |
+
 ## Done this cycle
 v1.0-beta PWA · v1.1 featured venues · v2.0 four-tab rebuild + 155 activities · v2.1 location/swipe/photos · v2.2 unique images · v3.0 renamed **Rambles** · v3.1 dual geocoder + Wikimedia images · v3.2 partial-profile crash root-caused and fixed, kid-oriented photo queries, custom activities surfaced
 

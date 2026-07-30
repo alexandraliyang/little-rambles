@@ -1,0 +1,22 @@
+{
+  "name": "rambles-web",
+  "version": "3.3.0-beta",
+  "private": true,
+  "description": "Rambles PWA — deployable static build. Edit main.jsx / app.jsx / data.js, then npm run build to regenerate app.js.",
+  "scripts": {
+    "build": "esbuild main.jsx --bundle --minify --target=es2017 --loader:.jsx=jsx --outfile=app.js --legal-comments=eof",
+    "check": "esbuild main.jsx --bundle --target=es2017 --loader:.jsx=jsx --outfile=/dev/null",
+    "test": "npm run build && node smoke.mjs"
+  },
+  "dependencies": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.1",
+    "jsdom": "^30.0.1"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true
+  }
+}

@@ -2,8 +2,16 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { AGE_BANDS, bandFor, AFF, CAT_META, ACTIVITIES, FEATURED, FEATURED_CITY, AREA_SUGGESTIONS, IMG, KIDQ } from "./data.js";
 
 /* ==================================================================
-   Rambles v3.2
+   Rambles v3.3 — founder feedback FB2 (round 3)
    Tabs: Discover (swipe) · Explore · Up Next · Story  + Settings
+
+   FB2 in this build: five-tier ratings with a lossless migration off the
+   old three · gender field so copy stops assuming "she" · the Browse
+   age toggle actually reveals activities (it was being cut by slice(60))
+   · back-to-top on every list · sticky save in the check-in sheet ·
+   real place search when logging · favourites · rating/own-outing
+   filters in Memories · one shared marked picture for your own places.
+   Triage: docs/qa/2026-07-30-founder-feedback-fb2.md
    ================================================================== */
 
 const KEY = "little-rambles-v2";
@@ -42,7 +50,30 @@ const store = {
 };
 
 /* ---------------------------- helpers -------------------------- */
-const RATE = { loved: { e: "😍", l: "Loved it", c: "r-loved" }, fine: { e: "🙂", l: "Fine", c: "r-fine" }, nope: { e: "😵", l: "Not today", c: "r-nope" } };
+/* Five-tier rating (FB2-11). `w` is the engine weight — ratings remain the only
+   heavy signal, so the scale and the weights are the same decision.
+   Old three-tier data migrates through RATE_OLD once, on load: loved→loved,
+   fine→okay (both were the neutral middle), nope→nope. Nothing is guessed
+   upward or downward, so no stored memory changes meaning. */
+const RATE = {
+  loved: { e: "😍", l: "Loved it", c: "r-loved", w: 2 },
+  liked: { e: "🙂", l: "Liked it", c: "r-liked", w: 1 },
+  okay: { e: "😐", l: "It was okay", c: "r-okay", w: 0 },
+  meh: { e: "😕", l: "Not great", c: "r-meh", w: -1 },
+  nope: { e: "😵", l: "Not today", c: "r-nope", w: -2 },
+};
+const RATE_OLD = { fine: "okay" };
+/* Never index RATE directly with stored data — a pre-migration or unknown value
+   would throw on .c/.e. rateKey returns null instead. */
+const rateKey = (r) => (r && (RATE[r] ? r : RATE_OLD[r] || null)) || null;
+const rateW = (r) => { const k = rateKey(r); return k ? RATE[k].w : 0; };
+const RATE_ORDER = Object.keys(RATE);
+
+/* FB2-07: copy used to assume "she". The profile now carries a gender purely so
+   the wording can be right; anything unset — including "prefer not to say", and
+   every profile created before this build — gets they/them. */
+const PRONOUNS = { girl: { subj: "she", obj: "her", poss: "her" }, boy: { subj: "he", obj: "him", poss: "his" } };
+const pronounsFor = (p) => (p && PRONOUNS[p.gender]) || { subj: "they", obj: "them", poss: "their" };
 const DAY = 86400000;
 const monthsOld = (bd) => { const b = new Date(bd + "T00:00:00"), n = new Date(); let m = (n.getFullYear() - b.getFullYear()) * 12 + (n.getMonth() - b.getMonth()); if (n.getDate() < b.getDate()) m -= 1; return Math.max(0, m); };
 const fmtAge = (m) => (m < 24 ? m + " mo" : Math.floor(m / 12) + "y" + (m % 12 ? " " + (m % 12) + "m" : ""));
@@ -179,6 +210,8 @@ export default function App() {
   const [fling, setFling] = useState(0);
   const dragT = useRef(0);
   const [hintShown, setHintShown] = useState(false);
+  const scrollRef = useRef(null);
+  const [showTop, setShowTop] = useState(false);
   const [round, setRound] = useState(0);
   const dragFrom = useRef(null);
   const say = (m) => { setToast(m); setTimeout(() => setToast(null), 3600); };
@@ -187,7 +220,11 @@ export default function App() {
   useEffect(() => { (async () => {
     try { const r = await store.get(KEY); const s = JSON.parse(r.value);
       if (s.profile) { setProfile(s.profile); setSignedIn(s.signedIn !== false); }
-      setVisits(s.visits || []); setPlans(s.plans || []); setSwipes(s.swipes || {});
+      /* FB2-11 migration: rewrite three-tier ratings to the five-tier keys once,
+         on load, so nothing downstream ever sees a dead key. Persisted by the
+         save effect below. */
+      setVisits((s.visits || []).map((v) => (v.rating && !RATE[v.rating] ? { ...v, rating: rateKey(v.rating) } : v)));
+      setPlans(s.plans || []); setSwipes(s.swipes || {});
       setCustomActs(s.customActs || []); setDropped(s.dropped || []); setSpot(s.spot || null);
     } catch (e) {}
     setLoaded(true);
@@ -200,10 +237,15 @@ export default function App() {
     }
   })(); }, [tab, visits]);
 
+  /* One scroll container serves all four tabs, so switching tabs would otherwise
+     drop you at the previous tab's scroll offset. */
+  useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = 0; setShowTop(false); }, [tab]);
+
   const profileComplete = !!(profile && profile.name && profile.birthdate && !isNaN(monthsOld(profile.birthdate)));
   const months = profileComplete ? monthsOld(profile.birthdate) : null;
   const band = months != null ? bandFor(months) : null;
   const pool = useMemo(() => [...ACTIVITIES, ...customActs], [customActs]);
+  const pro = pronounsFor(profile);
   const constraints = useMemo(() => {
     const auto = parseConstraints(profile && profile.notes);
     const off = (profile && profile.cOff) || [];
@@ -218,12 +260,16 @@ export default function App() {
 
   /* ---------------- signals ---------------- */
   const rated = visits.filter((v) => v.rating && v.ideaId);
-  const catStats = useMemo(() => { const m = {}; rated.forEach((v) => { m[v.cat] = m[v.cat] || { loved: 0, fine: 0, nope: 0, total: 0 }; m[v.cat][v.rating]++; m[v.cat].total++; }); return m; }, [rated]);
-  const lovedCats = Object.entries(catStats).filter(([, s]) => s.loved >= 2).map(([c]) => c);
-  const pausedCats = Object.entries(catStats).filter(([, s]) => s.total >= 2 && s.loved === 0 && s.nope >= 1).map(([c]) => c);
+  /* Five tiers are summed by weight rather than counted per-key, so adding a tier
+     never needs another counter. Thresholds are set to preserve the old
+     behaviour at the anchors: two "loved" still makes a loved category (sum 4),
+     two "nope" still rests one (sum -4). */
+  const catStats = useMemo(() => { const m = {}; rated.forEach((v) => { const k = rateKey(v.rating); if (!k) return; m[v.cat] = m[v.cat] || { total: 0, sum: 0, loved: 0 }; m[v.cat].total++; m[v.cat].sum += RATE[k].w; if (k === "loved") m[v.cat].loved++; }); return m; }, [rated]);
+  const lovedCats = Object.entries(catStats).filter(([, s]) => s.total >= 2 && s.sum >= 3).map(([c]) => c);
+  const pausedCats = Object.entries(catStats).filter(([, s]) => s.total >= 2 && s.loved === 0 && s.sum <= -2).map(([c]) => c);
   const recentIdeas = useMemo(() => { const m = {}; visits.forEach((v) => { if (v.ideaId && (!m[v.ideaId] || v.ts > m[v.ideaId])) m[v.ideaId] = v.ts; }); return m; }, [visits]);
   const recentCats = useMemo(() => { const m = {}; visits.forEach((v) => { if (v.cat && (!m[v.cat] || v.ts > m[v.cat])) m[v.cat] = v.ts; }); return m; }, [visits]);
-  const retryIds = useMemo(() => rated.filter((v) => v.rating === "nope" && Date.now() - v.ts > 60 * DAY).map((v) => v.ideaId), [rated]);
+  const retryIds = useMemo(() => rated.filter((v) => rateW(v.rating) <= -1 && Date.now() - v.ts > 60 * DAY).map((v) => v.ideaId), [rated]);
 
   function score(a, avail) {
     if (months == null || months < a.ageMin) return -100;
@@ -330,7 +376,7 @@ export default function App() {
     setPlans((ps) => [{ id: Date.now() + 1, ideaId: id, name: form.name, cat: form.cat, emoji: CAT_META[form.cat].emoji, place: form.place || null, area: null, status: "planned", ts: Date.now(), times: 1, mine: true }, ...ps]);
     setCustomActs((c) => [{ id, name: form.name, cat: form.cat, emoji: CAT_META[form.cat].emoji, ageMin: Number(form.ageMin) || 0, ageMax: 84,
       aff: (function () { const m = ACTIVITIES.find((a) => a.cat === form.cat); return m ? m.aff : ["peer_faces"]; })(), tags: ["indoor"],
-      why: form.why || "Added by you.", place: form.place || null, mapsQuery: form.place || form.name, hours: { days: [0, 1, 2, 3, 4, 5, 6], open: 8, close: 20, conf: "daily", months: null }, userAdded: true, place: form.place || null }, ...c]);
+      why: form.why || "Added by you.", place: form.place || null, mapsQuery: form.place || form.name, hours: { days: [0, 1, 2, 3, 4, 5, 6], open: 8, close: 20, conf: "daily", months: null }, userAdded: true }, ...c]);
     say(form.name + " added — it is in Our List, ready to visit or log.");
     setTab("upnext");
   };
@@ -347,13 +393,27 @@ export default function App() {
   const memAll = visits.filter((v) => v.rating || v.kind === "journal" || v.kind === "custom");
   const q = memSearch.trim().toLowerCase();
   const memList = memAll.filter((v) => {
-    if (memFilter === "loved" && v.rating !== "loved") return false;
+    if (memFilter === "fav" && !v.fav) return false;
     if (memFilter === "media" && !(v.mediaCount > 0)) return false;
+    if (memFilter === "own" && v.kind !== "custom") return false;                       // FB2-15: "we did on our own"
+    if (memFilter.slice(0, 2) === "r:" && rateKey(v.rating) !== memFilter.slice(2)) return false;
     if (q && !((v.place || "") + " " + (v.name || "") + " " + (v.note || "") + " " + (v.by || "")).toLowerCase().includes(q)) return false;
     return true;
   });
   const gridMedia = memList.flatMap((v) => (photosBy[v.id] || []).map((m) => ({ ...m, label: (v.place || v.name) + " · " + fmtDate(v.ts) })));
   const memCatCounts = useMemo(() => { const m = {}; memAll.forEach((v) => { if (v.cat) m[v.cat] = (m[v.cat] || 0) + 1; }); return Object.entries(m).sort((a, b) => b[1] - a[1]); }, [memAll]);
+
+  /* Distinct place names already used, most recent first (FB2-10 / FB2-12). */
+  const pastPlaces = useMemo(() => {
+    const seen = [];
+    visits.forEach((v) => { if (v.place && !seen.includes(v.place)) seen.push(v.place); });
+    return seen.slice(0, 12);
+  }, [visits]);
+
+  /* FB2-14. A favourite is the PARENT's keepsake mark, not the child's reaction,
+     so it is deliberately excluded from score() — same signal discipline as
+     journal entries and swipes. Ratings remain the only heavy signal. */
+  const toggleFav = (id) => setVisits((vs) => vs.map((v) => (v.id === id ? { ...v, fav: !v.fav } : v)));
 
   const exportData = () => {
     const blob = new Blob([JSON.stringify({ profile, visits, plans, exportedAt: new Date().toISOString() }, null, 2)], { type: "application/json" });
@@ -370,6 +430,21 @@ export default function App() {
         onCancel={editProfile ? () => setEditProfile(false) : null} constraints={constraints} />
     </div></div>;
 
+  /* Browse lists (FB2-06). The two age groups are built as SEPARATE lists rather
+     than one ranked list filtered by age. Under-age activities score -100, so
+     they sort below everything; the old single list then cut at .slice(0,60) and
+     never reached them — the toggle changed its own label and nothing else. */
+  const exMatch = (a, avail) => {
+    if (exCat !== "all" && a.cat !== exCat) return false;
+    if (exFilter === "open") return avail.st === "open" || avail.st === "closing";
+    if (exFilter === "free") return a.tags.includes("free");
+    if (exFilter === "rainy") return a.tags.includes("indoor") || a.tags.includes("rainy");
+    if (exFilter === "new") return !recentIdeas[a.id];
+    return true;
+  };
+  const exNow = ranked.filter(({ a, avail }) => months >= a.ageMin && exMatch(a, avail)).slice(0, 60);
+  const exLater = ranked.filter(({ a, avail }) => months < a.ageMin && exMatch(a, avail)).slice(0, 40);
+
   const TABS = [["discover", "Swipe", "🃏"], ["explore", "Browse", "🔎"], ["upnext", "Our List", "💛"], ["story", "Memories", "📖"]];
   const _unusedPlaceLabel = placeLabel;
   const outRows = plans.filter((p) => p.status === "out");
@@ -379,7 +454,7 @@ export default function App() {
     <div className="root"><style>{CSS}</style>
       <div className="phone">
         <header className="hdr">
-          <div className="brand"><span>〰️</span><b>Rambles</b><span className="ver">v3.2</span></div>
+          <div className="brand"><span>〰️</span><b>Rambles</b><span className="ver">v3.3</span></div>
           <div className="hdrright">
             <button className="kidchip" onClick={() => setTab("profile")}>{profile.name} · {fmtAge(months)}</button>
             <button className="chip tiny" onClick={() => setTab("settings")}>⚙️</button>
@@ -432,7 +507,16 @@ export default function App() {
           {TABS.map(([k, l, ic]) => <button key={k} className={"tb" + (tab === k ? " on" : "")} onClick={() => setTab(k)}><span className="ti">{ic}</span><span className="tl">{l}</span>{k === "upnext" && plans.length ? <i className="dot">{plans.length}</i> : null}</button>)}
         </nav>
 
-        <main className="scroll">
+        {/* FB2-05 / FB2-09: Browse renders up to 60 cards and Memories is unbounded,
+            so every list needs a way back without a long thumb-drag. `.scroll` is
+            the scrolling element here, not the window. */}
+        {showTop && <button className="totop" title="Back to top"
+          onClick={() => scrollRef.current && scrollRef.current.scrollTo({ top: 0, behavior: "smooth" })}>↑ Top</button>}
+
+        <main className="scroll" ref={scrollRef} onScroll={(e) => {
+          const on = e.currentTarget.scrollTop > 700;
+          if (on !== showTop) setShowTop(on);
+        }}>
           {/* ---------------- DISCOVER ---------------- */}
           {tab === "discover" && <div className="pad">
             <p className="bandline">{band.theme}</p>
@@ -478,6 +562,9 @@ export default function App() {
           {/* ---------------- EXPLORE ---------------- */}
           {tab === "explore" && <div className="pad">
             <button className="wide" onClick={() => setAddOpen(true)}>➕ Add your own activity or place</button>
+            <button className="wide alt" onClick={() => setShowLater((v) => !v)}>
+              {showLater ? "Hide what's coming later" : `Show what's coming later (${exLater.length} for older kids)`}
+            </button>
             <div className="chips">
               {[["all", "All"], ["open", "Open now"], ["free", "Free"], ["rainy", "Indoor"], ["new", "New to us"]].map(([k, l]) =>
                 <button key={k} className={"chip" + (exFilter === k ? " on" : "")} onClick={() => setExFilter(k)}>{l}</button>)}
@@ -487,18 +574,14 @@ export default function App() {
               {Object.entries(CAT_META).map(([c, m]) => <button key={c} className={"chip" + (exCat === c ? " on" : "")} onClick={() => setExCat(c)}>{m.emoji} {m.label}</button>)}
             </div>
             {!inFeaturedCity && <div className="nudge sm"><span>🌍</span><p>Named picks are curated for Metro Vancouver so far. Everywhere else, cards search your area by type — works worldwide.</p></div>}
-            {ranked.filter(({ a, avail }) => {
-              if (months < a.ageMin && !showLater) return false;
-              if (exCat !== "all" && a.cat !== exCat) return false;
-              if (exFilter === "open") return avail.st === "open" || avail.st === "closing";
-              if (exFilter === "free") return a.tags.includes("free");
-              if (exFilter === "rainy") return a.tags.includes("indoor") || a.tags.includes("rainy");
-              if (exFilter === "new") return !recentIdeas[a.id];
-              return true;
-            }).slice(0, 60).map(({ a, avail }) => <ActCard key={a.id} a={a} feat={featFor(a)} fit={fit(a)} avail={avail} affs={matched(a)} place={activePlace} onGo={goNow} onSave={saveLater} planned={plans.some((p) => p.ideaId === a.id)} />)}
-            <button className="wide alt" onClick={() => setShowLater((v) => !v)}>
-              {showLater ? "Hide activities she's not old enough for" : `Show what's coming later (${ranked.filter((r) => months < r.a.ageMin).length} for older kids)`}
-            </button>
+            {exNow.map(({ a, avail }) => <ActCard key={a.id} a={a} feat={featFor(a)} fit={fit(a)} avail={avail} affs={matched(a)} place={activePlace} onGo={goNow} onSave={saveLater} planned={plans.some((p) => p.ideaId === a.id)} />)}
+            {exNow.length === 0 && <div className="card dash"><p className="why">Nothing matches those filters right now. Try “All”, or widen the type.</p></div>}
+            {showLater && <>
+              <div className="lbl">Coming later — not old enough yet</div>
+              {exLater.length > 0
+                ? exLater.map(({ a, avail }) => <ActCard key={a.id} a={a} feat={featFor(a)} fit={fit(a)} avail={avail} affs={matched(a)} place={activePlace} onGo={goNow} onSave={saveLater} planned={plans.some((p) => p.ideaId === a.id)} />)
+                : <div className="card dash"><p className="why">Nothing further ahead in these filters — {profile.name} is already old enough for everything here.</p></div>}
+            </>}
           </div>}
 
           {/* ---------------- UP NEXT ---------------- */}
@@ -558,10 +641,17 @@ export default function App() {
             </div>
             <div className="chips">
               {[["story", "Story"], ["grid", "Photos"]].map(([k, l]) => <button key={k} className={"chip" + (memView === k ? " on" : "")} onClick={() => setMemView(k)}>{l}</button>)}
-              <button className={"chip" + (memFilter === "loved" ? " on" : "")} onClick={() => setMemFilter(memFilter === "loved" ? "all" : "loved")}>😍 Loved</button>
-              <button className={"chip" + (memFilter === "media" ? " on" : "")} onClick={() => setMemFilter(memFilter === "media" ? "all" : "media")}>📷 With photos</button>
             </div>
-            <input className="inp" placeholder="Search places, notes, who took her…" value={memSearch} onChange={(e) => setMemSearch(e.target.value)} />
+            {/* FB2-15: one tap toggles a filter on, the same tap again clears it */}
+            <div className="chips">
+              {[["fav", "⭐ Favourites"], ["media", "📷 Photos"], ["own", "📍 We did on our own"]].map(([k, l]) =>
+                <button key={k} className={"chip" + (memFilter === k ? " on" : "")} onClick={() => setMemFilter(memFilter === k ? "all" : k)}>{l}</button>)}
+            </div>
+            <div className="chips">
+              {RATE_ORDER.map((k) => <button key={k} title={RATE[k].l} className={"chip rchip" + (memFilter === "r:" + k ? " on" : "")}
+                onClick={() => setMemFilter(memFilter === "r:" + k ? "all" : "r:" + k)}>{RATE[k].e} {RATE[k].l}</button>)}
+            </div>
+            <input className="inp" placeholder={"Search places, notes, who took " + pro.obj + "…"} value={memSearch} onChange={(e) => setMemSearch(e.target.value)} />
             {memView === "story" ? <>
               {rated.length >= 2 && <div className="ins">
                 {lovedCats.map((c) => <div className="in up" key={c}><span>💛</span><p><b>Working well:</b> {CAT_META[c] ? CAT_META[c].label : c} — {catStats[c].loved} “loved it”.</p></div>)}
@@ -572,7 +662,8 @@ export default function App() {
               {memList.map((v) => <div className={"mem" + (v.kind === "journal" ? " jr" : "") + (v.kind === "custom" ? " cu" : "")} key={v.id}>
                 <div className="memhead"><span className="date">{fmtDate(v.ts)}</span><div className="hr">
                   {v.kind === "journal" ? <span className="pill jrp">✍️ Journal</span> : v.kind === "custom" ? <span className="pill cup">📍 Ours</span> : null}
-                  {v.rating && <span className={"pill " + RATE[v.rating].c}>{RATE[v.rating].e} {RATE[v.rating].l}</span>}
+                  {rateKey(v.rating) && <span className={"pill " + RATE[rateKey(v.rating)].c}>{RATE[rateKey(v.rating)].e} {RATE[rateKey(v.rating)].l}</span>}
+                  <button className={"mini fav" + (v.fav ? " on" : "")} title={v.fav ? "Remove from favourites" : "Mark as a favourite"} onClick={() => toggleFav(v.id)}>{v.fav ? "⭐" : "☆"}</button>
                   <button className="mini" onClick={() => setEditMem(v)}>✏️</button></div></div>
                 {v.kind !== "journal" && <div className="mtitle">{v.emoji} {v.place || v.name}{v.place && v.name !== v.place ? <span className="msub"> · {v.name}</span> : null}</div>}
                 {v.by && <div className="msub">with {v.by}</div>}
@@ -595,7 +686,7 @@ export default function App() {
               <p className="why">{band.theme}</p>
               <div className="pills"><button className="pillbtn dark" onClick={() => setEditProfile(true)}>Edit name, age & preferences</button></div>
             </div>
-            <div className="lbl">What we avoid & what she loves</div>
+            <div className="lbl">What we avoid & what {profile.name} loves</div>
             <div className="card">
               {(constraints.avoid.length || constraints.love.length)
                 ? <div className="chipline">{constraints.avoid.map((c) => <span className="badge b-paused" key={c}>avoiding {c}</span>)}{constraints.love.map((c) => <span className="badge b-loves" key={c}>likes {c}</span>)}</div>
@@ -635,7 +726,9 @@ export default function App() {
               {!customActs.length && <p className="why">Add a type of outing or a specific place we don't suggest — it joins your recommendations, marked “Yours”.</p>}
               {customActs.map((a) => <div className="uarow" key={a.id}><span>{a.emoji} {a.name}</span>
                 <button className="mini" onClick={() => { setCustomActs((c) => c.filter((x) => x.id !== a.id)); say("Removed."); }}>✕</button></div>)}
-              <button className="wide" onClick={() => setAddOpen(true)}>➕ Add activity or place</button>
+              {/* FB2-13: the "add" button lives on Browse and Our List, where you are
+                  when you think of one. This screen only lists and removes. */}
+              <p className="fine">Add one from the top of Browse or Our List. To log something you did off your own bat, use “Add an outing we did on our own” in Memories.</p>
             </div>
 
             <div className="lbl">Your data</div>
@@ -644,7 +737,7 @@ export default function App() {
               <p className="why">Tap any photo → <b>Save</b> to copy it to your device. Use <b>Export</b> for a full backup file of memories and notes. Cloud accounts with real backup arrive in the next build.</p>
               <div className="btns"><button className="primary sm" onClick={exportData}>Export my data</button></div>
             </div>
-            <p className="fine center">Little Rambles v2.0 · 155 activities · Dev-Map v1.2.0</p>
+            <p className="fine center">Rambles v3.3-beta · 155 activities · Dev-Map v1.2.0</p>
           </div>}
         </main>
 
@@ -654,18 +747,25 @@ export default function App() {
           <h3 className="ctitle">{checkIn.place || checkIn.name}</h3>
           <div className="lbl">How did it go?</div>
           <div className="rates">{Object.entries(RATE).map(([k, m]) => <button key={k} className={"rb " + m.c + (ciRating === k ? " on" : "")} onClick={() => setCiRating(k)}><span className="e">{m.e}</span><span>{m.l}</span></button>)}</div>
-          <input className="inp" placeholder="Which place exactly? (optional)" value={ciPlace} onChange={(e) => setCiPlace(e.target.value)} />
+          {/* FB2-10: real geocoder instead of a bare text box, seeded with places
+              already logged so a repeat venue is one tap rather than retyping */}
+          <PlaceInput value={ciPlace} onChange={setCiPlace} onPick={(h) => setCiPlace(h.label)}
+            placeholder="Which place exactly? (optional)" recent={pastPlaces} />
           <textarea className="inp ta" placeholder="Notes or a reminder for next time — e.g. “bring water shoes”, “arrive before 10 or no parking”" value={ciNote} onChange={(e) => setCiNote(e.target.value)} />
           {profile.caregivers && profile.caregivers.length > 1 && <select className="inp" value={ciBy} onChange={(e) => setCiBy(e.target.value)}>
-            <option value="">Who took her out?</option>{profile.caregivers.map((c) => <option key={c} value={c}>{c}</option>)}</select>}
+            <option value="">Who took {pro.obj} out?</option>{profile.caregivers.map((c) => <option key={c} value={c}>{c}</option>)}</select>}
           <div className="btns">
             <label className="pick main">🖼️ Add photos <small>pick several at once</small><input type="file" accept="image/*" multiple hidden onChange={(e) => addMedia(e, setCiMedia)} /></label>
             <label className="pick">📸 Camera<input type="file" accept="image/*" capture="environment" hidden onChange={(e) => addMedia(e, setCiMedia)} /></label>
             <label className="pick">🎥 Video<input type="file" accept="video/*" hidden onChange={(e) => addMedia(e, setCiMedia)} /></label>
           </div>
           {ciMedia.length > 0 && <div className="strip">{ciMedia.map((m, i) => <button className="tb del" key={i} onClick={() => setCiMedia((p) => p.filter((_, j) => j !== i))}>{m.t === "v" ? <span className="vid">🎥</span> : <img src={m.d} alt="" />}<i>✕</i></button>)}</div>}
-          <button className="primary full" onClick={saveCheck}>Save to {profile.name}'s story</button>
-          <button className="ghost full mt" onClick={() => setCheckIn(null)}>Not now</button>
+          {/* FB2-08: the sheet is taller than the viewport once photos are added,
+              so the action sticks to the bottom instead of hiding below the fold */}
+          <div className="sticky-act">
+            <button className="primary full" onClick={saveCheck}>Save to {profile.name}'s story</button>
+            <button className="ghost full mt" onClick={() => setCheckIn(null)}>Not now</button>
+          </div>
         </Sheet>}
 
         {journalOpen && <JournalSheet name={profile.name} onClose={() => setJournalOpen(false)} onSave={async (text, media) => {
@@ -677,7 +777,7 @@ export default function App() {
 
         {addOpen && <AddActivitySheet place={activePlace} onClose={() => setAddOpen(false)} onSave={(f) => { addCustomActivity(f); setAddOpen(false); }} />}
 
-        {editMem && <EditMemSheet mem={editMem} media={photosBy[editMem.id] || []} caregivers={profile.caregivers || []} addMedia={addMedia}
+        {editMem && <EditMemSheet mem={editMem} media={photosBy[editMem.id] || []} caregivers={profile.caregivers || []} addMedia={addMedia} pastPlaces={pastPlaces}
           onClose={() => setEditMem(null)}
           onSaveNew={async (f, media) => { await addCustomMemory(f, media); setEditMem(null); }}
           onSave={async (patch, media) => {
@@ -703,7 +803,7 @@ export default function App() {
 }
 
 /* ============================ pieces ============================ */
-function PlaceInput({ value, onChange, onPick, placeholder, allowGps, onGps }) {
+function PlaceInput({ value, onChange, onPick, placeholder, allowGps, onGps, recent }) {
   const [hits, setHits] = useState([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(false);
@@ -725,9 +825,15 @@ function PlaceInput({ value, onChange, onPick, placeholder, allowGps, onGps }) {
       onGps && onGps(h); setHits([]);
     }, () => {}, { enableHighAccuracy: true, timeout: 9000 });
   };
+  /* Places already logged, offered before the user types — the common case is a
+     repeat visit, and the geocoder never needs to be reached for those. */
+  const q = String(value || "").trim().toLowerCase();
+  const near = (recent || []).filter((p) => !q || p.toLowerCase().includes(q)).filter((p) => p.toLowerCase() !== q).slice(0, 4);
   return <div className="placewrap">
     <input className="inp" value={value} onChange={(e) => type(e.target.value)} placeholder={placeholder} />
     {allowGps && <button className="sug gps" onClick={gps}>📍 Use my current location</button>}
+    {near.length > 0 && hits.length === 0 && <div className="locsug">{near.map((p) => (
+      <button className="sug" key={p} onClick={() => { onChange(p); onPick({ label: p }); setHits([]); }}><b>{p}</b><small>somewhere you've been</small></button>))}</div>}
     {busy && <p className="searching">Searching addresses…</p>}
     {err && <p className="fine">Address search unreachable — what you typed will still be used.</p>}
     {hits.length > 0 && <div className="locsug">{hits.map((h, i) =>
@@ -783,18 +889,34 @@ async function findPhoto(a) {
   if (pick) { claimed[pick] = a.id; photoCache[a.id] = pick; store.set("img:" + a.id, pick).catch(() => {}); }
   return pick || null;
 }
+/* FB2-16: the ONE deliberate exception to "every activity has its own picture".
+   Places you added yourself share a single marked scene — a keyword lookup for a
+   private place name would return something irrelevant, and a shared mark reads
+   as intentional where a wrong photo reads as broken. */
+function MineArt() {
+  return <svg className="genart" viewBox="0 0 320 120" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <defs><linearGradient id="gmine" x1="0" y1="0" x2="0.4" y2="1"><stop offset="0" stopColor="#8B6FB0" /><stop offset="1" stopColor="#5E4A7D" /></linearGradient></defs>
+    <rect width="320" height="120" fill="url(#gmine)" />
+    <path d="M0,86 Q40,72 80,86 T160,86 T240,86 T320,86 V120 H0 Z" fill="#fff" opacity=".22" />
+    {[46, 116, 196, 266].map((x, i) => <circle key={i} cx={x} cy={34 + (i % 2) * 12} r={5 + (i % 3) * 2} fill="#fff" opacity=".5" />)}
+  </svg>;
+}
 function Art({ a, tall }) {
   const m = CAT_META[a.cat] || CAT_META.nature;
   const [src, setSrc] = useState(null);
   const [failed, setFailed] = useState(false);
   const h = hash(a.id);
   useEffect(() => {
+    if (a.userAdded) return;                 // FB2-16: never look one up for your own places
     let live = true;
     findPhoto(a)
       .then((u) => { if (!live) return; if (u) setSrc(u); else if (IMG[a.id]) setSrc("https://images.unsplash.com/photo-" + IMG[a.id] + "?w=800&q=72&auto=format&fit=crop"); else setFailed(true); })
       .catch(() => { if (!live) return; if (IMG[a.id]) setSrc("https://images.unsplash.com/photo-" + IMG[a.id] + "?w=800&q=72&auto=format&fit=crop"); else setFailed(true); });
     return () => { live = false; };
   }, [a.id]);
+  if (a.userAdded) return <div className={"art mineart" + (tall ? " tall" : "")}>
+    <MineArt /><span className="ae">{a.emoji}</span><span className="minetag">💜 Yours</span>
+  </div>;
   return <div className={"art" + (tall ? " tall" : "")}>
     {src && !failed ? <img src={src} alt="" loading="lazy" onError={() => { if (IMG[a.id] && src.indexOf("unsplash") < 0) setSrc("https://images.unsplash.com/photo-" + IMG[a.id] + "?w=800&q=72&auto=format&fit=crop"); else setFailed(true); }} /> : <GenArt a={a} m={m} h={h} />}
     <span className="ae">{a.emoji}</span>
@@ -811,7 +933,7 @@ function ActCard({ a, feat, fit, avail, affs, place, onGo, onSave, planned }) {
     </div>
     <div className="chipline"><span className={"av a-" + avail.st}>{avail.label}</span>{affs.map((f) => <span className="aff" key={f}>{AFF[f]}</span>)}</div>
     <p className="why">{feat ? feat.note : a.why}</p>
-    {later ? <p className="fine">On the timeline — it'll resurface when she's ready.</p> : <>
+    {later ? <p className="fine">On the timeline — it'll resurface at the right age.</p> : <>
       <div className="btns">
         <a className="primary sm" href={feat ? venueQuery(feat.name, feat.area, place) : nearQuery(a.mapsQuery, place)} target="_blank" rel="noreferrer" onClick={() => onGo(a)}>Let's go</a>
         <button className="ghost sm" onClick={() => onSave(a)}>{planned ? "On our list ✓" : "💛 Save"}</button>
@@ -827,6 +949,7 @@ function Profile({ profile, signedIn, editing, onDone, onCancel, constraints }) 
   const [home, setHome] = useState((profile && profile.home && profile.home.label) || "");
   const [homeObj, setHomeObj] = useState(profile && profile.home ? profile.home : null);
   const [cg, setCg] = useState((profile && profile.caregivers ? profile.caregivers.join(", ") : ""));
+  const [gender, setGender] = useState((profile && profile.gender) || "");
   const complete = !!(profile && profile.name && profile.birthdate);
   const returning = complete && !editing && !signedIn;
   const ok = String(name || "").trim() && bd && new Date(bd) < new Date();
@@ -840,11 +963,16 @@ function Profile({ profile, signedIn, editing, onDone, onCancel, constraints }) 
     <p className="obs">{editing ? "Update anything — recommendations adjust immediately." : "Three quick things. No quiz — the app learns by rambling with you."}</p>
     <label className="flab">Child's name</label>
     <input className="inp" value={name} onChange={(e) => setName(e.target.value)} placeholder="Mia" />
-    <label className="flab">Birthdate</label>
+    <label className="flab">Birthdate <span className="opt">— required; every recommendation is ranked by age</span></label>
     <input className="inp" type="date" value={bd} onChange={(e) => setBd(e.target.value)} />
+    <label className="flab">Gender <span className="opt">— optional, only changes how the app words things</span></label>
+    <div className="segs">
+      {[["girl", "Girl"], ["boy", "Boy"], ["", "Prefer not to say"]].map(([k, l]) =>
+        <button key={k || "na"} type="button" className={"seg" + (gender === k ? " on" : "")} onClick={() => setGender(k)}>{l}</button>)}
+    </div>
     <label className="flab">Home address <span className="opt">— sets where ideas are searched</span></label>
     <PlaceInput value={home} onChange={setHome} onPick={(h) => { setHome(h.label); setHomeObj(h); }} placeholder="Start typing your address or neighbourhood" allowGps onGps={(h) => { setHome(h.label); setHomeObj(h); }} />
-    <label className="flab">Who takes her out? <span className="opt">— comma separated</span></label>
+    <label className="flab">Who takes {String(name || "").trim() || "them"} out? <span className="opt">— comma separated</span></label>
     <input className="inp" value={cg} onChange={(e) => setCg(e.target.value)} placeholder="Mum, Dad, Grandma" />
     <label className="flab">Anything I should know? <span className="opt">— optional, free text</span></label>
     <textarea className="inp ta" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Hates water. Loves trains. Naps at 12:30." />
@@ -853,7 +981,7 @@ function Profile({ profile, signedIn, editing, onDone, onCancel, constraints }) 
       {constraints.love.map((c) => <span className="badge b-loves" key={c}>likes {c}</span>)}
     </div> : null}
     <p className="fine">I read that line and adjust rankings — you'll see the tags above update as you type.</p>
-    <button className="primary full" disabled={!ok} onClick={() => onDone({ ...(profile || {}), name: String(name || "").trim(), birthdate: bd, notes,
+    <button className="primary full" disabled={!ok} onClick={() => onDone({ ...(profile || {}), name: String(name || "").trim(), birthdate: bd, notes, gender,
       home: homeObj && homeObj.label === String(home || "").trim() ? homeObj : (String(home || "").trim() ? { label: String(home || "").trim() } : (profile && profile.home) || null),
       caregivers: String(cg || "").split(",").map((s) => s.trim()).filter(Boolean), cOff: (profile && profile.cOff) || [] })}>
       {editing ? "Save" : "Start rambling"}</button>
@@ -895,7 +1023,7 @@ function AddActivitySheet({ onClose, onSave, place }) {
     <button className="ghost full mt" onClick={onClose}>Cancel</button>
   </Sheet>;
 }
-function EditMemSheet({ mem, media, caregivers, onClose, onSave, onSaveNew, onDelete, addMedia }) {
+function EditMemSheet({ mem, media, caregivers, onClose, onSave, onSaveNew, onDelete, addMedia, pastPlaces }) {
   const isNew = mem.isNew;
   const [place, setPlace] = useState(mem.place || "");
   const [nm, setNm] = useState(isNew ? "" : mem.name || "");
@@ -913,7 +1041,9 @@ function EditMemSheet({ mem, media, caregivers, onClose, onSave, onSaveNew, onDe
       <label className="flab">When</label><input className="inp" type="date" value={date} onChange={(e) => setDate(e.target.value)} /></>}
     <div className="lbl">How did it go?</div>
     <div className="rates">{Object.entries(RATE).map(([k, x]) => <button key={k} className={"rb " + x.c + (rating === k ? " on" : "")} onClick={() => setRating(k)}><span className="e">{x.e}</span><span>{x.l}</span></button>)}</div>
-    {mem.kind !== "journal" && <><input className="inp" value={place} onChange={(e) => setPlace(e.target.value)} placeholder="Which place exactly? (name or address)" />
+    {/* FB2-12: same geocoder as everywhere else, plus places already logged */}
+    {mem.kind !== "journal" && <><PlaceInput value={place} onChange={setPlace} onPick={(h) => setPlace(h.label)}
+      placeholder="Which place exactly? (name or address)" recent={pastPlaces} allowGps onGps={(h) => setPlace(h.label)} />
       {place.trim() && <a className="more" href={"https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(place)} target="_blank" rel="noreferrer">Check this place on Maps ↗</a>}</>}
     <textarea className="inp ta" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Notes or a reminder for next time" />
     {caregivers.length > 1 && <select className="inp" value={by} onChange={(e) => setBy(e.target.value)}><option value="">Who was there?</option>{caregivers.map((c) => <option key={c} value={c}>{c}</option>)}</select>}
@@ -1037,7 +1167,7 @@ const CSS = `
 .hr{display:flex;align-items:center;gap:5px}
 .date{font-size:11px;font-weight:700;color:#8A8875;text-transform:uppercase;letter-spacing:.9px}
 .pill{font-size:11.5px;font-weight:700;border-radius:99px;padding:3px 8px}
-.r-loved{background:#F6DDD5;color:#A14E33}.r-fine{background:#ECEAE0;color:#6B695A}.r-nope{background:#DEEAEF;color:#33606F}
+.r-loved{background:#F6DDD5;color:#A14E33}.r-liked{background:#F3E6D2;color:#8A6A33}.r-okay{background:#ECEAE0;color:#6B695A}.r-meh{background:#E4E6E2;color:#5A6B60}.r-nope{background:#DEEAEF;color:#33606F}
 .jrp{background:#FBEAC9;color:#9A6410}.cup{background:#DEEAEF;color:#33606F}
 .mini{border:none;background:#F0EFE4;border-radius:8px;padding:4px 7px;cursor:pointer;font-size:12px}
 .mtitle{font-family:'Fraunces',Georgia,serif;font-size:15.5px;font-weight:600;margin-bottom:3px}
@@ -1056,10 +1186,24 @@ const CSS = `
 .uarow{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dashed #E3E1D6;font-size:13.5px;font-weight:700}
 .sheetbg{position:absolute;inset:0;background:rgba(41,56,47,.45);display:flex;align-items:flex-end;z-index:30;overflow:auto}
 .sheet{background:#F6F5EF;width:100%;border-radius:20px 20px 0 0;padding:18px 16px 24px;max-height:92vh;overflow-y:auto}
-.rates{display:flex;gap:8px;margin-bottom:10px}
-.rb{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;border:1.5px solid #DDDACB;border-radius:14px;padding:11px 4px;background:#FFF;font-family:'Karla';font-size:12px;font-weight:700;cursor:pointer;color:#29382F}
+/* five tiers (FB2-11): grid, not flex — equal columns that survive the narrower
+   share each button gets, with labels allowed to wrap to two lines */
+.minetag{position:absolute;left:10px;bottom:10px;background:rgba(255,255,255,.92);color:#5E4A7D;border-radius:99px;padding:3px 9px;font-size:10.5px;font-weight:700}
+.totop{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:25;border:none;background:#29382F;color:#F6F5EF;border-radius:99px;padding:11px 20px;font-family:'Karla';font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 6px 20px rgba(41,56,47,.32)}
+/* keeps the primary action on screen when a sheet outgrows the viewport (FB2-08);
+   the negative margins let the backdrop bleed to the sheet's own padding edge */
+.sticky-act{position:sticky;bottom:-24px;margin:12px -16px -24px;padding:12px 16px 24px;background:linear-gradient(to bottom,rgba(246,245,239,0) 0,#F6F5EF 14px,#F6F5EF 100%)}
+.sticky-act .primary.full{margin-bottom:0}
+.mini.fav{filter:grayscale(1);opacity:.55}
+.mini.fav.on{filter:none;opacity:1}
+.chip.rchip{font-size:11.5px}
+.segs{display:flex;gap:6px;margin-bottom:4px}
+.seg{flex:1;border:1.5px solid #DDDACB;background:#FFF;border-radius:11px;padding:10px 4px;font-family:'Karla';font-size:12.5px;font-weight:700;color:#29382F;cursor:pointer;line-height:1.2}
+.seg.on{border-color:#29382F;border-width:2.5px;background:#F0EFE4}
+.rates{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:10px}
+.rb{display:flex;flex-direction:column;align-items:center;gap:4px;border:1.5px solid #DDDACB;border-radius:13px;padding:9px 2px;background:#FFF;font-family:'Karla';font-size:10.5px;line-height:1.25;text-align:center;font-weight:700;cursor:pointer;color:#29382F}
 .rb.on{border-color:#29382F;border-width:2.5px;background:#F0EFE4}
-.rb .e{font-size:24px}
+.rb .e{font-size:21px}
 .pills{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 .pillbtn{border:1.5px solid #DDDACB;background:#FFF;border-radius:99px;padding:10px 16px;font-family:'Karla';font-size:13.5px;font-weight:700;color:#29382F;cursor:pointer;text-decoration:none;display:inline-block}
 .pillbtn.dark{background:#29382F;color:#F6F5EF;border-color:#29382F}

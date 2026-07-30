@@ -29,9 +29,12 @@ Updated: 2026-07-27 · **This file is the map of everything.** If an artifact is
 | `docs/learning/software-development-primer.md` | Founder education: how software gets built + how to audit the work | [AI-GEN] | Canonical, living |
 | `app/developmental-map-v1.json` | Science layer v1.2.0 (0–84mo, 22 affordances) — **now carries verificationStatus flag (D2)** | [AI-GEN from cited frameworks; weights provisional] | Canonical; expert review pending (Phase 2) |
 | `app/little-rambles-v0-13.jsx` | Current working prototype (age 0–7 + big-kid ideas + editable Memories hub) | [AI-GEN, ASSUMPTION-driven] | Canonical build |
-| `web/app.jsx` | **Current app source** (v3.2-beta) — 4-tab UI, scoring engine, location system, memories | [AI-GEN, ASSUMPTION-driven] | Canonical |
+| `web/main.jsx` | **Build entry point** — React mount, error boundary, global error handlers. Recovered from the bundle 2026-07-30 (it had never been committed, so `web/` could not be rebuilt from source); verified byte-identical against the previous `app.js` | [AI-GEN] | Canonical |
+| `web/app.jsx` | **Current app source** (v3.3-beta) — 4-tab UI, scoring engine, location system, memories | [AI-GEN, ASSUMPTION-driven] | Canonical |
 | `web/data.js` | 155 activities · 16 categories · age bands · featured venues · kid-oriented photo queries | [AI-GEN] | Canonical |
-| `web/app.js` | Bundled build (esbuild, React 18, es2017) — what Netlify serves | [BUILD ARTIFACT] | Regenerate, don't edit |
+| `web/package.json` | Pinned toolchain (React 18.3.1, esbuild) + `npm run build` / `npm test` | [AI-GEN] | Canonical |
+| `web/smoke.mjs` | 18 headless jsdom checks over the FB2 logic — run by `npm test` | [AI-GEN] | Canonical |
+| `web/app.js` | Bundled build (esbuild, React 18, es2017) — what Netlify serves | [BUILD ARTIFACT] | **Regenerate with `npm run build`, never edit** |
 | `web/index.html`, `manifest.webmanifest`, `sw.js`, `icon-*.png` | PWA shell: installable, offline-capable | [AI-GEN] | Canonical |
 | `docs/STATUS.md` | PM board — parallel-stream state, session-open reading | [AI-GEN] | Canonical, living |
 | `docs/prds/` | One-page PRDs written before each feature build (Rule 4) | [DECISION + AI-GEN] | Canonical |
@@ -41,6 +44,14 @@ Updated: 2026-07-27 · **This file is the map of everything.** If an artifact is
 
 ## Deployment
 Live beta: Netlify (drag-and-drop from `web/`). Founder installs via iPhone Safari → Share → Add to Home Screen. Auto-deploy from this repo is the next infrastructure step.
+
+**Build (from `web/`, requires Node — 24.18.0 installed 2026-07-30):**
+```
+npm install     # once
+npm test        # build + 18 headless checks
+npm run build   # regenerate app.js only
+```
+`app.js` is a build artifact. Editing it directly is how source and deployment drift apart — the whole reason `main.jsx` went missing. After a release, bump `CACHE` in `sw.js` or installed phones keep serving the old shell.
 
 ## Open debts (mirror of ROADMAP debt ledger)
 D1 platform (auto-resolves Phase 2) · D2 map verification (Phase 2, flag embedded in map file) · D3 compliance = Phase 2 entry gate · D4 **closed** 2026-07-27 · **D5** featured-venue verification (45 Vancouver picks, unverified) — QA-37.
