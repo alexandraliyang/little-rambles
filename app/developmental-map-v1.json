@@ -1,9 +1,9 @@
 {
   "meta": {
     "name": "Little Rambles Developmental Map",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "lastReviewed": "2026-07",
-    "verificationStatus": "FRAMEWORK-DERIVED, NOT EXPERT-VERIFIED (debt D2, Phase 0 gate review 2026-07-27). Band structure and skills derived from the cited frameworks; affordance weights are provisional product inventions. Professional review by an early-childhood educator or pediatric OT is required before this map is exposed to families beyond the founder (scheduled: Phase 2, before Phase 3 beta). Until then, treat all weights as hypotheses. EXTENSION 1.1.0 (2026-07-27, ADR-0012): bands 42-60 and 60-84 added; 60-84 exceeds CDC checklist coverage (AAP/dev-psych derived) — treat as lower-confidence pending D2 review.",
+    "verificationStatus": "FRAMEWORK-DERIVED, NOT EXPERT-VERIFIED (debt D2, Phase 0 gate review 2026-07-27). Band structure and skills derived from the cited frameworks; affordance weights are provisional product inventions. Professional review by an early-childhood educator or pediatric OT is required before this map is exposed to families beyond the founder (scheduled: Phase 2, before Phase 3 beta). Until then, treat all weights as hypotheses. EXTENSION 1.1.0 (2026-07-27, ADR-0012): bands 42-60 and 60-84 added; 60-84 exceeds CDC checklist coverage (AAP/dev-psych derived) — treat as lower-confidence pending D2 review. EXTENSION 1.2.0 (session 2): affordances vehicle_watch, snow_play, food_ritual, group_program added with per-band weights to close transit/winter/food/community-program coverage gaps.",
     "reviewCadenceMonths": 12,
     "editorialRules": [
       "NOT DIAGNOSTIC: This map describes emerging skills (opportunities), never expected achievements (judgments). No content may imply a child is behind.",
@@ -53,7 +53,12 @@
     "art_materials": "Open-ended messy materials (paint, dough, chalk)",
     "attention_span_long": "DEMANDS sustained attention / following a narrative (a cost until ~2.5y, then an affordance)",
     "rule_games": "Games with rules, turn-taking, scores — fair-play and losing-gracefully practice",
-    "big_kid_challenge": "Graded physical/skill challenges (bikes, climbing walls, laps, strikes) — measurable mastery"
+    "big_kid_challenge": "Graded physical/skill challenges (bikes, climbing walls, laps, strikes) — measurable mastery",
+    "vehicle_watch": "Trains, buses, boats, planes, diggers — moving machines to watch, name, and ride",
+    "snow_play": "Snow and ice: sledding, tracks, cold-hands wonder (winter coverage)",
+    "food_ritual": "Shared food outings — choosing, tasting, sitting together; ritual and routine",
+    "group_program": "Structured drop-in programs with other families (community centre, playgroup, class)",
+    "seasonal_wonder": "Seasonal, once-a-year spectacles — blossoms, pumpkins, festivals"
   },
   "bands": [
     {
@@ -103,7 +108,9 @@
         "peer_faces": 2,
         "music_rhythm": 2,
         "story_language": 2,
-        "water_play": 1
+        "water_play": 1,
+        "group_program": 2,
+        "food_ritual": 1
       },
       "caution": "Everything goes in the mouth; choose venues accordingly.",
       "sources": [
@@ -133,7 +140,9 @@
         "water_play": 2,
         "sensory_textures": 2,
         "peer_faces": 2,
-        "animal_watch": 1
+        "animal_watch": 1,
+        "vehicle_watch": 1,
+        "group_program": 2
       },
       "caution": "Newly mobile + zero judgment: floor-level hazard scan is the venue test.",
       "sources": [
@@ -164,7 +173,11 @@
         "story_language": 2,
         "sensory_textures": 2,
         "climb_run": 1,
-        "animal_watch": 1
+        "animal_watch": 1,
+        "vehicle_watch": 2,
+        "group_program": 2,
+        "food_ritual": 1,
+        "seasonal_wonder": 1
       },
       "caution": "Attention runs in short loops; repetition IS the learning, not a rut.",
       "sources": [
@@ -195,7 +208,12 @@
         "cause_effect": 2,
         "music_rhythm": 2,
         "animal_touch": 1,
-        "pretend_play": 1
+        "pretend_play": 1,
+        "vehicle_watch": 3,
+        "group_program": 2,
+        "food_ritual": 1,
+        "snow_play": 1,
+        "seasonal_wonder": 1
       },
       "caution": "Prime window to RETRY previously failed outings — the same aquarium is a new place now.",
       "sources": [
@@ -225,7 +243,12 @@
         "music_rhythm": 2,
         "story_language": 2,
         "art_materials": 1,
-        "peer_faces": 2
+        "peer_faces": 2,
+        "vehicle_watch": 3,
+        "group_program": 2,
+        "snow_play": 2,
+        "food_ritual": 2,
+        "seasonal_wonder": 2
       },
       "caution": "Big feelings era: exits, snacks, and nap windows shape success more than the venue does.",
       "sources": [
@@ -255,7 +278,12 @@
         "climb_run": 2,
         "animal_touch": 2,
         "naming_targets": 1,
-        "cause_effect": 1
+        "cause_effect": 1,
+        "vehicle_watch": 2,
+        "group_program": 3,
+        "snow_play": 2,
+        "food_ritual": 2,
+        "seasonal_wonder": 2
       },
       "caution": "Wild variance in language pace here is normal; never surface comparisons.",
       "sources": [
@@ -284,7 +312,12 @@
         "climb_run": 2,
         "cause_effect": 2,
         "naming_targets": 1,
-        "peer_faces": 2
+        "peer_faces": 2,
+        "vehicle_watch": 2,
+        "group_program": 3,
+        "snow_play": 2,
+        "food_ritual": 2,
+        "seasonal_wonder": 2
       },
       "caution": "This is where science centres, theatre, and exhibit museums flip from 'not yet' to 'finally'.",
       "sources": [
@@ -316,7 +349,12 @@
         "story_language": 2,
         "cause_effect": 2,
         "big_kid_challenge": 2,
-        "naming_targets": 1
+        "naming_targets": 1,
+        "vehicle_watch": 1,
+        "group_program": 3,
+        "snow_play": 3,
+        "food_ritual": 2,
+        "seasonal_wonder": 2
       },
       "caution": "Preschool-skill variance is enormous; never compare children.",
       "sources": [
@@ -348,7 +386,12 @@
         "story_language": 2,
         "art_materials": 2,
         "cause_effect": 2,
-        "pretend_play": 2
+        "pretend_play": 2,
+        "vehicle_watch": 1,
+        "group_program": 3,
+        "snow_play": 3,
+        "food_ritual": 2,
+        "seasonal_wonder": 2
       },
       "caution": "School shifts usage to weekends/holidays; interests individualize — follow the child's leads, not a checklist. LOWER EVIDENCE CONFIDENCE: beyond CDC checklist coverage.",
       "sources": [
