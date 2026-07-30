@@ -5,7 +5,7 @@
   "description": "Rambles PWA — deployable static build. Edit main.jsx / app.jsx / data.js, then npm run build to regenerate app.js.",
   "scripts": {
     "build": "esbuild main.jsx --bundle --minify --target=es2017 --loader:.jsx=jsx --outfile=app.js --legal-comments=eof",
-    "check": "esbuild main.jsx --bundle --target=es2017 --loader:.jsx=jsx --outfile=/dev/null",
+    "check": "esbuild main.jsx --bundle --target=es2017 --loader:.jsx=jsx --outfile=node_modules/.cache/check.js",
     "test": "npm run build && node smoke.mjs"
   },
   "dependencies": {

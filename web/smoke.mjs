@@ -96,8 +96,40 @@ ok("FB2-07 no 'she'/'her' in rendered copy for a profile with no gender set",
 const main = root.querySelector("main.scroll");
 ok("FB2-05 scroll container is wired to a ref-driven handler", !!main);
 
+/* --- FB3-02: "By type" counters are filter buttons, and they actually filter --- */
+const memTab2 = findByText("button", "Memories");
+if (memTab2) { click(memTab2); await settle(); }
+const catBtns = [...root.querySelectorAll("button.catstat")];
+ok("FB3-02 by-type counters render as buttons", catBtns.length >= 2, "found " + catBtns.length);
+const memCount = () => root.querySelectorAll(".mem").length;
+const allMems = memCount();
+if (catBtns[0]) { click(catBtns[0]); await settle(); }
+ok("FB3-02 tapping a type narrows the memory list", memCount() < allMems && memCount() > 0,
+   allMems + " → " + memCount());
+ok("FB3-02 the tapped type shows as selected", root.querySelectorAll("button.catstat.on").length === 1);
+if (catBtns[0]) { click(root.querySelectorAll("button.catstat")[0]); await settle(); }
+ok("FB3-02 tapping the same type again clears the filter", memCount() === allMems,
+   "back to " + memCount() + " of " + allMems);
+
+/* --- FB3-03: the nav badge is no longer clipped by a colliding .tb rule --- */
+ok("FB3-03 nav tabs use vector icons, not emoji", root.querySelectorAll("nav.topnav svg.ti").length === 5,
+   "svg icons " + root.querySelectorAll("nav.topnav svg.ti").length);
+ok("FB3-03 only the photo strip uses the .thumb class now",
+   root.querySelectorAll("nav.topnav .thumb").length === 0);
+
+/* --- FB3-04/05: Yours is a tab; Settings no longer duplicates the list --- */
+const mineTab = findByText("button", "Yours");
+ok("FB3-05 a top-level Yours tab exists", !!mineTab);
+if (mineTab) { click(mineTab); await settle(); }
+ok("FB3-05 Yours offers the add action", !!findByText("button", "Add your own activity"));
+ok("FB3-05 Yours explains itself when empty", text().includes("Nothing of your own yet"));
+const gear = findByText("button", "⚙️");
+if (gear) { click(gear); await settle(); }
+ok("FB3-04 Settings no longer carries a Your-activities list", !text().includes("Your activities ("));
+ok("FB3-04 Settings still carries the data section", text().includes("Export my data"));
+
 /* --- every tab renders without throwing --- */
-for (const t of ["Swipe", "Browse", "Our List", "Memories"]) {
+for (const t of ["Swipe", "Browse", "Our List", "Yours", "Memories"]) {
   const b = findByText("button", t);
   if (b) { click(b); await settle(); }
   ok("tab renders: " + t, !text().includes("Rambles hit an error"));

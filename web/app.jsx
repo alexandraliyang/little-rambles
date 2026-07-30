@@ -79,11 +79,25 @@ const monthsOld = (bd) => { const b = new Date(bd + "T00:00:00"), n = new Date()
 const fmtAge = (m) => (m < 24 ? m + " mo" : Math.floor(m / 12) + "y" + (m % 12 ? " " + (m % 12) + "m" : ""));
 const fmtDate = (ts) => new Date(ts).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 const fmtHour = (h) => { const hh = Math.floor(h), mm = Math.round((h - hh) * 60), ap = hh >= 12 ? "pm" : "am", h12 = ((hh + 11) % 12) + 1; return mm ? `${h12}:${String(mm).padStart(2, "0")}${ap}` : `${h12}${ap}`; };
+/* FB3-01. Great-circle distance, used to rank address results the way a maps app
+   does: what is near you first, not whatever the geocoder happened to return. */
+const haversine = (a, b) => {
+  if (!a || !b || a.lat == null || b.lat == null) return null;
+  const rad = Math.PI / 180, dLat = (b.lat - a.lat) * rad, dLng = (b.lng - a.lng) * rad;
+  const s = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.asin(Math.min(1, Math.sqrt(s)));
+};
+const fmtKm = (km) => (km == null ? ""
+  : km < 1 ? Math.round(km * 1000) + " m away"
+  : km < 10 ? km.toFixed(1) + " km away"
+  : Math.round(km).toLocaleString() + " km away");
 /* Keyless worldwide address autocomplete (Photon, OpenStreetMap data).
    Returns {label, lat, lng} so Maps searches can be centred on real coordinates. */
 async function photon(q, near) {
-  const bias = near && near.lat != null ? "&lat=" + near.lat + "&lon=" + near.lng : "";
-  const r = await fetch("https://photon.komoot.io/api/?q=" + encodeURIComponent(q) + "&limit=7" + bias);
+  /* location_bias_scale pulls results towards `near` inside Photon's own ranking;
+     without it a two-letter query returns the same global places for everyone. */
+  const bias = near && near.lat != null ? "&lat=" + near.lat + "&lon=" + near.lng + "&location_bias_scale=0.8&zoom=12" : "";
+  const r = await fetch("https://photon.komoot.io/api/?q=" + encodeURIComponent(q) + "&limit=12" + bias);
   if (!r.ok) throw new Error("photon " + r.status);
   const j = await r.json();
   return (j.features || []).map((f) => {
@@ -93,8 +107,13 @@ async function photon(q, near) {
     return { label: l1 || l2, sub: l1 && l2 !== l1 ? l2 : "", lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0] };
   }).filter((x) => x.label);
 }
-async function nominatim(q) {
-  const r = await fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=7&addressdetails=1&q=" + encodeURIComponent(q));
+async function nominatim(q, near) {
+  /* An unbounded viewbox: local matches float up, but somewhere genuinely far
+     away is still findable when you are planning a trip. */
+  const box = near && near.lat != null
+    ? "&viewbox=" + [near.lng - 1.2, near.lat + 0.9, near.lng + 1.2, near.lat - 0.9].map((n) => n.toFixed(4)).join(",")
+    : "";
+  const r = await fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=12&addressdetails=1" + box + "&q=" + encodeURIComponent(q));
   if (!r.ok) throw new Error("nominatim " + r.status);
   const j = await r.json();
   return (j || []).map((x) => {
@@ -102,12 +121,28 @@ async function nominatim(q) {
     return { label: parts.slice(0, 2).join(", "), sub: parts.slice(2, 5).filter(Boolean).join(", "), lat: +x.lat, lng: +x.lon };
   });
 }
+/* Blend the provider's own text relevance with distance, rather than sorting on
+   either alone. Distance dominates (a nearby match wins) but relevance breaks
+   ties inside a band, so an exact name match never drops below a vague one. */
+function rankByProximity(hits, near) {
+  if (!near || near.lat == null) return hits.slice(0, 7);
+  /* Bands, not raw kilometres: inside a band the geocoder's own text relevance
+     decides, so an exact name match never loses to a vaguer one 200m closer.
+     They stay open-ended at the top so a genuinely distant match still sorts
+     behind a merely far one. */
+  const band = (km) => (km == null ? 6 : km < 2 ? 0 : km < 10 ? 1 : km < 30 ? 2 : km < 100 ? 3 : km < 500 ? 5 : km < 2000 ? 7 : 9);
+  return hits
+    .map((h, i) => { const km = haversine(near, h); return { h: { ...h, km }, s: band(km) * 2 + i * 0.5 }; })
+    .sort((a, b) => a.s - b.s)
+    .slice(0, 7)
+    .map((x) => x.h);
+}
 /* Two independent providers so one being blocked or slow never leaves the user stuck. */
 async function geoSearch(q, near) {
   if (!q || q.trim().length < 2) return [];
   const dedupe = (arr) => { const seen = {}; return arr.filter((x) => (seen[x.label + x.sub] ? false : (seen[x.label + x.sub] = true))); };
-  try { const a = await photon(q, near); if (a.length) return dedupe(a); } catch (e) {}
-  return dedupe(await nominatim(q));
+  try { const a = await photon(q, near); if (a.length) return rankByProximity(dedupe(a), near); } catch (e) {}
+  return rankByProximity(dedupe(await nominatim(q, near)), near);
 }
 const MON = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 /* When we hold real coordinates we centre the Maps search on them (@lat,lng),
@@ -169,6 +204,24 @@ function parseConstraints(notes) {
 }
 const cmapFor = (label) => CMAP.find((m) => m.label === label) || { cats: [], affs: [] };
 
+/* FB3-03. Emoji were rendering at five different optical sizes and weights
+   across iOS/Android/desktop, which is what made the tab bar look uneven. These
+   are one grid, one stroke width, and they take the tab's colour, so the active
+   tab inverts cleanly instead of leaving a full-colour glyph on dark green. */
+const ICONS = {
+  swipe: "M7.5 6.2 4.6 15a2 2 0 0 0 1.3 2.5l7.6 2.5a2 2 0 0 0 2.5-1.3M10.5 3.5h6.8a2 2 0 0 1 2 2v9.4a2 2 0 0 1-2 2h-6.8a2 2 0 0 1-2-2V5.5a2 2 0 0 1 2-2Z",
+  browse: "M10.8 17.3a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13ZM19.5 19.5l-4.1-4.1",
+  heart: "M12 19.6s-6.9-4.2-8.4-8.2c-1.1-3 .5-5.9 3.2-6.4 1.9-.4 3.9.6 5.2 2.4 1.3-1.8 3.3-2.8 5.2-2.4 2.7.5 4.3 3.4 3.2 6.4-1.5 4-8.4 8.2-8.4 8.2Z",
+  star: "M12 3.6l2.5 5.2 5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4 5.7-.8L12 3.6Z",
+  book: "M12 6.7C10.4 5.2 8.2 4.6 4.8 4.6a.8.8 0 0 0-.8.8v11.2c0 .4.4.8.8.8 3.4 0 5.6.6 7.2 2.1 1.6-1.5 3.8-2.1 7.2-2.1a.8.8 0 0 0 .8-.8V5.4a.8.8 0 0 0-.8-.8c-3.4 0-5.6.6-7.2 2.1Zm0 0v13.8",
+};
+const Icon = ({ n }) => (
+  <svg className="ti" viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor"
+    strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+    <path d={ICONS[n]} />
+  </svg>
+);
+
 /* ============================== APP ============================= */
 export default function App() {
   const [loaded, setLoaded] = useState(false);
@@ -189,7 +242,9 @@ export default function App() {
   const [locHits, setLocHits] = useState([]);
   const [locBusy, setLocBusy] = useState(false);
   const [locErr, setLocErr] = useState(false);
+  const [deviceLoc, setDeviceLoc] = useState(null);   // FB3-01: silent GPS fix, only for ranking
   const locTimer = useRef(null);
+  const askedGps = useRef(false);
   const [checkIn, setCheckIn] = useState(null);
   const [ciRating, setCiRating] = useState(null);
   const [ciPlace, setCiPlace] = useState("");
@@ -255,6 +310,10 @@ export default function App() {
   /* place used for all Maps queries + whether Vancouver featured data applies */
   const activePlace = spot || (profile && profile.home) || null;
   const placeLabel = activePlace ? activePlace.label : null;
+  /* FB3-01. The point address results are ranked around. Prefer somewhere the
+     user has actually chosen; fall back to the device fix so a first-run user
+     with no home set still gets their own city first instead of the world's. */
+  const geoNear = (activePlace && activePlace.lat != null ? activePlace : null) || deviceLoc;
   const inFeaturedCity = !spot && placeLabel && /vancouver|burnaby|richmond|surrey|coquitlam|langley|north van|west van|new westminster/i.test(placeLabel);
   const featFor = (a) => (inFeaturedCity && !a.userAdded ? FEATURED[a.id] || null : null);
 
@@ -359,6 +418,19 @@ export default function App() {
   };
 
   /* ---------------- location ---------------- */
+  /* FB3-01. Asked for once, when the address box is opened and we have no better
+     anchor — the same moment a maps app asks. Failure is silent: ranking simply
+     falls back to unbiased results, and nothing in the UI depends on this. */
+  useEffect(() => {
+    if (!locOpen || askedGps.current || deviceLoc) return;
+    if (activePlace && activePlace.lat != null) return;
+    if (!navigator.geolocation) return;
+    askedGps.current = true;
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setDeviceLoc({ lat: +pos.coords.latitude.toFixed(5), lng: +pos.coords.longitude.toFixed(5) }),
+      () => {}, { timeout: 8000, maximumAge: 600000 });
+  }, [locOpen, deviceLoc, activePlace]);
+
   const useCurrent = (asHome) => {
     if (!navigator.geolocation) { say("Location isn't available on this device."); return; }
     say("Finding you…");
@@ -377,8 +449,11 @@ export default function App() {
     setCustomActs((c) => [{ id, name: form.name, cat: form.cat, emoji: CAT_META[form.cat].emoji, ageMin: Number(form.ageMin) || 0, ageMax: 84,
       aff: (function () { const m = ACTIVITIES.find((a) => a.cat === form.cat); return m ? m.aff : ["peer_faces"]; })(), tags: ["indoor"],
       why: form.why || "Added by you.", place: form.place || null, mapsQuery: form.place || form.name, hours: { days: [0, 1, 2, 3, 4, 5, 6], open: 8, close: 20, conf: "daily", months: null }, userAdded: true }, ...c]);
-    say(form.name + " added — it is in Our List, ready to visit or log.");
-    setTab("upnext");
+    /* FB3-05: it now lands in Yours (where it lives) and, because we also queue a
+       plan row, on Our List (where you act on it). Show the former — that is the
+       one the user just created and will want to confirm. */
+    say(form.name + " added — it's in Yours, and shortlisted on Our List.");
+    setTab("mine");
   };
   const addCustomMemory = async (form, media) => {
     const id = Date.now();
@@ -397,6 +472,8 @@ export default function App() {
     if (memFilter === "media" && !(v.mediaCount > 0)) return false;
     if (memFilter === "own" && v.kind !== "custom") return false;                       // FB2-15: "we did on our own"
     if (memFilter.slice(0, 2) === "r:" && rateKey(v.rating) !== memFilter.slice(2)) return false;
+    if (memFilter.slice(0, 2) === "c:" && v.cat !== memFilter.slice(2)) return false;   // FB3-02: "by type" is a filter
+
     if (q && !((v.place || "") + " " + (v.name || "") + " " + (v.note || "") + " " + (v.by || "")).toLowerCase().includes(q)) return false;
     return true;
   });
@@ -445,7 +522,14 @@ export default function App() {
   const exNow = ranked.filter(({ a, avail }) => months >= a.ageMin && exMatch(a, avail)).slice(0, 60);
   const exLater = ranked.filter(({ a, avail }) => months < a.ageMin && exMatch(a, avail)).slice(0, 40);
 
-  const TABS = [["discover", "Swipe", "🃏"], ["explore", "Browse", "🔎"], ["upnext", "Our List", "💛"], ["story", "Memories", "📖"]];
+  /* FB3-05: "Yours" is a destination of its own now, not a strip inside Our List. */
+  const TABS = [
+    ["discover", "Swipe", "swipe", 0],
+    ["explore", "Browse", "browse", 0],
+    ["upnext", "Our List", "heart", plans.length],
+    ["mine", "Yours", "star", customActs.length],
+    ["story", "Memories", "book", 0],
+  ];
   const _unusedPlaceLabel = placeLabel;
   const outRows = plans.filter((p) => p.status === "out");
   const planRows = plans.filter((p) => p.status === "planned");
@@ -462,7 +546,10 @@ export default function App() {
         </header>
 
         {!locOpen ? (
-          <button className="locbar" onClick={() => { setLocText(""); setLocOpen(true); }}>
+          /* FB3-06: a temporary "today" spot and a permanent home looked identical,
+             so it was easy not to notice you were still ranking against last
+             weekend's trip. Amber = temporary, plain = home. */
+          <button className={"locbar" + (spot ? " temp" : placeLabel ? "" : " unset")} onClick={() => { setLocText(""); setLocOpen(true); }}>
             <span className="locpin">📍</span>
             <span className="loctext">{placeLabel ? (spot ? "Today: " : "Home: ") + placeLabel : "Set your location"}</span>
             <span className="locedit">change</span>
@@ -477,7 +564,7 @@ export default function App() {
                   if (v.trim().length < 2) { setLocHits([]); setLocBusy(false); setLocErr(false); return; }
                   setLocBusy(true); setLocErr(false);
                   locTimer.current = setTimeout(async () => {
-                    try { const hits = await geoSearch(v, activePlace); setLocHits(hits); setLocErr(false); }
+                    try { const hits = await geoSearch(v, geoNear); setLocHits(hits); setLocErr(false); }
                     catch (err) { setLocHits([]); setLocErr(true); }
                     setLocBusy(false);
                   }, 300);
@@ -487,16 +574,25 @@ export default function App() {
             <div className="locsug">
               <button className="sug gps" onClick={() => useCurrent(false)}>📍 Use my current location</button>
               {locBusy && <p className="searching">Searching addresses…</p>}
+              {/* FB3-01: nearest first, with the distance shown so the order is legible */}
               {locHits.map((h, i) => <div className="sugrow" key={i}>
                 <button className="sug" onClick={() => { setSpot(h); setLocOpen(false); say(`Today's ideas are near ${h.label}.`); }}>
-                  <b>{h.label}</b>{h.sub ? <small>{h.sub}</small> : null}</button>
+                  <b>{h.label}</b>
+                  {(h.sub || h.km != null) && <small>{[h.sub, fmtKm(h.km)].filter(Boolean).join(" · ")}</small>}</button>
                 <button className="sughome" title="Save as home" onClick={() => { setProfile((p) => ({ ...p, home: h })); setSpot(null); setLocOpen(false); say(`Home saved: ${h.label}`); }}>🏠</button>
               </div>)}
+              {!locBusy && locHits.length > 0 && geoNear && <p className="fine nb">Sorted by distance from {activePlace && activePlace.lat != null ? activePlace.label : "where you are now"}.</p>}
               {!locBusy && locErr && <div className="warnbox">Address search couldn't be reached just now. You can still use exactly what you typed:
                 <button className="sug" onClick={() => { setSpot({ label: locText.trim() }); setLocOpen(false); say("Using " + locText.trim() + "."); }}>Use "{locText.trim()}" anyway</button></div>}
               {!locBusy && !locErr && !locHits.length && locText.trim().length >= 2 && <div className="warnbox">No matches yet — keep typing, or
                 <button className="sug" onClick={() => { setSpot({ label: locText.trim() }); setLocOpen(false); say("Using " + locText.trim() + "."); }}>use "{locText.trim()}" as typed</button></div>}
-              {!locText.trim() && AREA_SUGGESTIONS.slice(0, 5).map((a) => <button className="sug" key={a} onClick={() => setLocText(a)}>{a}</button>)}
+              {/* FB3-01: before you type, offer what is actually likely — home, then
+                  places you have already been — rather than a generic city list. */}
+              {!locText.trim() && profile.home && <button className="sug home" onClick={() => { setSpot(null); setLocOpen(false); say("Back to your home area."); }}>
+                <b>🏠 {profile.home.label}</b><small>Your home area</small></button>}
+              {!locText.trim() && pastPlaces.slice(0, 4).map((p) => <button className="sug" key={p} onClick={() => setLocText(p)}>
+                <b>🕘 {p}</b><small>Somewhere you've been</small></button>)}
+              {!locText.trim() && AREA_SUGGESTIONS.slice(0, 4).map((a) => <button className="sug" key={a} onClick={() => setLocText(a)}>{a}</button>)}
             </div>
             {spot && <button className="ghost full" onClick={() => { setSpot(null); setLocOpen(false); say("Back to home area."); }}>Back to home</button>}
             <p className="fine">🏠 Home: {profile.home ? profile.home.label : "not set yet"}{spot ? " · 📍 Today: " + spot.label : ""} · tap 🏠 beside a result to make it home.</p>
@@ -504,7 +600,12 @@ export default function App() {
         )}
 
         <nav className="topnav">
-          {TABS.map(([k, l, ic]) => <button key={k} className={"tb" + (tab === k ? " on" : "")} onClick={() => setTab(k)}><span className="ti">{ic}</span><span className="tl">{l}</span>{k === "upnext" && plans.length ? <i className="dot">{plans.length}</i> : null}</button>)}
+          {TABS.map(([k, l, ic, n]) => <button key={k} className={"tb" + (tab === k ? " on" : "")} onClick={() => setTab(k)} aria-current={tab === k ? "page" : undefined}>
+            <Icon n={ic} /><span className="tl">{l}</span>
+            {/* FB3-03: the count sits inside the button box, so nothing can clip it,
+                and three digits collapse to 99+ rather than overflowing. */}
+            {n ? <i className="dot" aria-label={n + " saved"}>{n > 99 ? "99+" : n}</i> : null}
+          </button>)}
         </nav>
 
         {/* FB2-05 / FB2-09: Browse renders up to 60 cards and Memories is unbounded,
@@ -586,19 +687,6 @@ export default function App() {
 
           {/* ---------------- UP NEXT ---------------- */}
           {tab === "upnext" && <div className="pad">
-            <button className="wide" onClick={() => setAddOpen(true)}>➕ Add your own activity or place</button>
-            {customActs.length > 0 && <>
-              <div className="lbl">💜 Your own activities</div>
-              {customActs.map((a) => <div className="card mine" key={a.id}>
-                <div className="rowtop"><div><h3 className="ctitle">{a.emoji} {a.name}</h3>{a.place && <p className="dsub">{a.place}</p>}</div><span className="badge b-yours">Yours</span></div>
-                <p className="why">{a.why}</p>
-                <div className="pills">
-                  <a className="pillbtn dark" href={nearQuery(a.place || a.mapsQuery, activePlace)} target="_blank" rel="noreferrer" onClick={() => goNow(a)}>🚗 Let's go</a>
-                  <button className="pillbtn" onClick={() => openCheck({ id: Date.now(), ideaId: a.id, name: a.name, cat: a.cat, emoji: a.emoji, place: a.place || null })}>Log a memory here</button>
-                  <button className="pillbtn" onClick={() => { setCustomActs((c) => c.filter((x) => x.id !== a.id)); say("Removed."); }}>Remove</button>
-                </div>
-              </div>)}
-            </>}
             <div className="nudge sm"><span>💡</span><p><b>Our List is your shortlist.</b> Swipe right (or tap Save) to keep an idea here. Tap <b>Let's go</b> and it moves to "Out now" — then one tap logs it into the Story.</p></div>
             {!plans.length && <div className="card dash"><p className="why">Nothing saved yet. Swipe right in <b>Swipe</b>, or tap <b>Save</b> on anything in <b>Browse</b>.</p></div>}
             {outRows.length > 0 && <><div className="lbl">📍 Out now — tap to log afterwards</div>
@@ -624,6 +712,36 @@ export default function App() {
               </div>; })}</>}
           </div>}
 
+          {/* ---------------- YOURS (FB3-05) ----------------
+              Was a strip buried at the top of Our List and a dead list in Settings.
+              It is the only place in the app the family's own content lives, so it
+              gets a tab of its own and one obvious way in. */}
+          {tab === "mine" && <div className="pad">
+            <button className="wide" onClick={() => setAddOpen(true)}>➕ Add your own activity or place</button>
+            {!customActs.length
+              ? <div className="card dash">
+                  <p className="why"><b>Nothing of your own yet.</b> Add a kind of outing we never suggest, or one specific place you love — a friend's back garden, the noodle shop that tolerates a toddler, the long way round to nursery.</p>
+                  <p className="fine">Anything you add joins your recommendations everywhere, marked “Yours”.</p>
+                </div>
+              : <>
+                <div className="lbl">Your own activities ({customActs.length})</div>
+                {customActs.map((a) => <div className="card mine" key={a.id}>
+                  <div className="rowtop"><div><h3 className="ctitle">{a.emoji} {a.name}</h3>{a.place && <p className="dsub">{a.place}</p>}</div><span className="badge b-yours">Yours</span></div>
+                  <p className="why">{a.why}</p>
+                  <div className="pills">
+                    <a className="pillbtn dark" href={nearQuery(a.place || a.mapsQuery, activePlace)} target="_blank" rel="noreferrer" onClick={() => goNow(a)}>🚗 Let's go</a>
+                    <button className="pillbtn" onClick={() => openCheck({ id: Date.now(), ideaId: a.id, name: a.name, cat: a.cat, emoji: a.emoji, place: a.place || null })}>Log a memory here</button>
+                    <button className="pillbtn" onClick={() => { setCustomActs((c) => c.filter((x) => x.id !== a.id)); say("Removed."); }}>Remove</button>
+                  </div>
+                </div>)}
+              </>}
+            <div className="lbl">Somewhere you went without us</div>
+            <div className="card">
+              <p className="why">Already been somewhere and just want it in the story? That is a memory, not an activity.</p>
+              <div className="pills"><button className="pillbtn" onClick={() => { setTab("story"); setEditMem({ isNew: true }); }}>📍 Log an outing we did on our own</button></div>
+            </div>
+          </div>}
+
           {/* ---------------- STORY ---------------- */}
           {tab === "story" && <div className="pad">
             <div className="stats">
@@ -632,9 +750,19 @@ export default function App() {
               <div className="st"><b>{visits.reduce((n, v) => n + (v.mediaCount || 0), 0)}</b><span>photos</span></div>
               <div className="st"><b>{memAll.length ? fmtDate(memAll[memAll.length - 1].ts) : "—"}</b><span>since</span></div>
             </div>
-            {memCatCounts.length > 0 && <><div className="lbl">By type</div><div className="catstats">
-              {memCatCounts.map(([c, n]) => <span className="catstat" key={c}>{CAT_META[c] ? CAT_META[c].emoji + " " + CAT_META[c].label : c}<b>{n}</b></span>)}
-            </div></>}
+            {/* FB3-02: these were read-only counters. Tapping one now filters the
+                list below it, and tapping it again clears — same toggle rule as
+                every other chip row on this screen. */}
+            {memCatCounts.length > 0 && <>
+              <div className="lbl">By type {memFilter.slice(0, 2) === "c:" ? "· filtering" : "· tap to filter"}</div>
+              <div className="catstats">
+                {memCatCounts.map(([c, n]) => <button key={c} type="button"
+                  className={"catstat" + (memFilter === "c:" + c ? " on" : "")}
+                  aria-pressed={memFilter === "c:" + c}
+                  onClick={() => setMemFilter(memFilter === "c:" + c ? "all" : "c:" + c)}>
+                  {CAT_META[c] ? CAT_META[c].emoji + " " + CAT_META[c].label : c}<b>{n}</b></button>)}
+              </div>
+            </>}
             <div className="btns2">
               <button className="wide" onClick={() => setJournalOpen(true)}>✍️ Write a moment</button>
               <button className="wide" onClick={() => setEditMem({ isNew: true })}>📍 Add an outing we did on our own</button>
@@ -668,7 +796,7 @@ export default function App() {
                 {v.kind !== "journal" && <div className="mtitle">{v.emoji} {v.place || v.name}{v.place && v.name !== v.place ? <span className="msub"> · {v.name}</span> : null}</div>}
                 {v.by && <div className="msub">with {v.by}</div>}
                 {v.note && <div className={v.kind === "journal" ? "jtext" : "mnote"}>{v.kind === "journal" ? v.note : "“" + v.note + "”"}</div>}
-                {photosBy[v.id] && <div className="strip">{photosBy[v.id].map((m, i) => <button className="tb" key={i} onClick={() => setLightbox({ ...m, label: (v.place || v.name) + " · " + fmtDate(v.ts) })}>{m.t === "v" ? <span className="vid">🎥</span> : <img src={m.d} alt="" />}</button>)}</div>}
+                {photosBy[v.id] && <div className="strip">{photosBy[v.id].map((m, i) => <button className="thumb" key={i} onClick={() => setLightbox({ ...m, label: (v.place || v.name) + " · " + fmtDate(v.ts) })}>{m.t === "v" ? <span className="vid">🎥</span> : <img src={m.d} alt="" />}</button>)}</div>}
               </div>)}
             </> : <>
               <div className="lbl">Every photo, one place</div>
@@ -704,7 +832,7 @@ export default function App() {
             <div className="card">
               <p className="why">Free while in beta. Plans and family sharing will live here later.</p>
               <div className="pills"><button className="pillbtn" onClick={() => { setSignedIn(false); say("Signed out."); }}>Sign out</button>
-                <button className="pillbtn" onClick={() => setTab("settings")}>Data, feedback & your activities →</button></div>
+                <button className="pillbtn" onClick={() => setTab("settings")}>Data, backup & feedback →</button></div>
             </div>
           </div>}
 
@@ -721,15 +849,8 @@ export default function App() {
               <p className="fine">Goes straight to {FEEDBACK_EMAIL}.</p>
             </div>
 
-            <div className="lbl">Your activities ({customActs.length})</div>
-            <div className="card">
-              {!customActs.length && <p className="why">Add a type of outing or a specific place we don't suggest — it joins your recommendations, marked “Yours”.</p>}
-              {customActs.map((a) => <div className="uarow" key={a.id}><span>{a.emoji} {a.name}</span>
-                <button className="mini" onClick={() => { setCustomActs((c) => c.filter((x) => x.id !== a.id)); say("Removed."); }}>✕</button></div>)}
-              {/* FB2-13: the "add" button lives on Browse and Our List, where you are
-                  when you think of one. This screen only lists and removes. */}
-              <p className="fine">Add one from the top of Browse or Our List. To log something you did off your own bat, use “Add an outing we did on our own” in Memories.</p>
-            </div>
+            {/* FB3-04: the duplicate "Your activities" list lived here. It is now the
+                Yours tab — one home for it, not a settings row that only deleted. */}
 
             <div className="lbl">Your data</div>
             <div className="card">
@@ -759,7 +880,7 @@ export default function App() {
             <label className="pick">📸 Camera<input type="file" accept="image/*" capture="environment" hidden onChange={(e) => addMedia(e, setCiMedia)} /></label>
             <label className="pick">🎥 Video<input type="file" accept="video/*" hidden onChange={(e) => addMedia(e, setCiMedia)} /></label>
           </div>
-          {ciMedia.length > 0 && <div className="strip">{ciMedia.map((m, i) => <button className="tb del" key={i} onClick={() => setCiMedia((p) => p.filter((_, j) => j !== i))}>{m.t === "v" ? <span className="vid">🎥</span> : <img src={m.d} alt="" />}<i>✕</i></button>)}</div>}
+          {ciMedia.length > 0 && <div className="strip">{ciMedia.map((m, i) => <button className="thumb del" key={i} onClick={() => setCiMedia((p) => p.filter((_, j) => j !== i))}>{m.t === "v" ? <span className="vid">🎥</span> : <img src={m.d} alt="" />}<i>✕</i></button>)}</div>}
           {/* FB2-08: the sheet is taller than the viewport once photos are added,
               so the action sticks to the bottom instead of hiding below the fold */}
           <div className="sticky-act">
@@ -997,7 +1118,7 @@ function JournalSheet({ name, onClose, onSave, addMedia }) {
       <label className="pick main">🖼️ Add photos <small>pick several</small><input type="file" accept="image/*" multiple hidden onChange={(e) => addMedia(e, setM)} /></label>
       <label className="pick">📸 Camera<input type="file" accept="image/*" capture="environment" hidden onChange={(e) => addMedia(e, setM)} /></label>
     </div>
-    {m.length > 0 && <div className="strip">{m.map((x, i) => <button className="tb del" key={i} onClick={() => setM((p) => p.filter((_, j) => j !== i))}>{x.t === "v" ? <span className="vid">🎥</span> : <img src={x.d} alt="" />}<i>✕</i></button>)}</div>}
+    {m.length > 0 && <div className="strip">{m.map((x, i) => <button className="thumb del" key={i} onClick={() => setM((p) => p.filter((_, j) => j !== i))}>{x.t === "v" ? <span className="vid">🎥</span> : <img src={x.d} alt="" />}<i>✕</i></button>)}</div>}
     <button className="primary full" disabled={!t.trim() && !m.length} onClick={() => onSave(t.trim(), m)}>Save to {name}'s story</button>
     <button className="ghost full mt" onClick={onClose}>Not now</button>
   </Sheet>;
@@ -1052,7 +1173,7 @@ function EditMemSheet({ mem, media, caregivers, onClose, onSave, onSaveNew, onDe
       <label className="pick">📸 Camera<input type="file" accept="image/*" capture="environment" hidden onChange={(e) => addMedia(e, setM)} /></label>
       <label className="pick">🎥 Video<input type="file" accept="video/*" hidden onChange={(e) => addMedia(e, setM)} /></label>
     </div>
-    {m.length > 0 && <div className="strip">{m.map((x, i) => <button className="tb del" key={i} onClick={() => setM((p) => p.filter((_, j) => j !== i))}>{x.t === "v" ? <span className="vid">🎥</span> : <img src={x.d} alt="" />}<i>✕</i></button>)}</div>}
+    {m.length > 0 && <div className="strip">{m.map((x, i) => <button className="thumb del" key={i} onClick={() => setM((p) => p.filter((_, j) => j !== i))}>{x.t === "v" ? <span className="vid">🎥</span> : <img src={x.d} alt="" />}<i>✕</i></button>)}</div>}
     <button className="primary full" onClick={() => isNew ? onSaveNew({ name: nm || "Our own outing", cat, date, rating, note: note.trim(), place: place.trim(), by }, m) : onSave({ place: place.trim() || null, note: note.trim(), rating, by }, m)}>
       {isNew ? "Add to the story" : "Save changes"}</button>
     {!isNew && <button className="danger" onClick={() => (del ? onDelete() : setDel(true))}>{del ? "⚠️ Tap again to delete forever" : "Delete this memory"}</button>}
@@ -1077,6 +1198,8 @@ const CSS = `
 .locsug{display:flex;flex-direction:column;gap:4px;margin:8px 0}
 .sug{text-align:left;background:#F6F5EF;border:1px solid #E3E1D6;border-radius:10px;padding:9px 11px;font-family:'Karla';font-size:13px;font-weight:700;color:#29382F;cursor:pointer}
 .sug.gps{background:#DEEAEF;border-color:#8FB3C0;color:#33606F}
+.sug.home{background:#FBEAC9;border-color:#E9A23B}
+.fine.nb{margin:6px 2px 0;color:#8A8875}
 .hdrright{display:flex;gap:6px;align-items:center}
 .kidchip{background:#29382F;color:#F6F5EF;border:none;border-radius:99px;padding:7px 12px;font-family:'Karla';font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap}
 .searching{font-size:12.5px;font-weight:700;color:#33606F;margin:6px 2px}
@@ -1085,12 +1208,19 @@ const CSS = `
 .locbar{display:flex;align-items:center;gap:8px;margin:0 16px 10px;padding:10px 13px;background:#FFF;border:1.5px solid #DDDACB;border-radius:14px;font-family:'Karla';font-size:13.5px;font-weight:700;color:#29382F;cursor:pointer;text-align:left}
 .loctext{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .locedit{font-size:11.5px;color:#33606F;border-bottom:1.5px dotted #8FB3C0}
-.topnav{display:flex;gap:8px;padding:6px 14px 14px;overflow:visible}
-.tb{position:relative;flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:62px;background:#FFF;border:1.5px solid #E3E1D6;border-radius:16px;padding:10px 2px;font-family:'Karla';font-weight:700;color:#8A8875;cursor:pointer;line-height:1.1}
-.ti{font-size:19px;line-height:1}
-.tl{font-size:11.5px;letter-spacing:.1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.locbar.temp{background:#FBEAC9;border-color:#E9A23B}
+.locbar.unset{border-style:dashed;border-color:#E9A23B;color:#9A6410}
+/* FB3-03/05: five tabs on a 360px phone. Every horizontal value here is sized so
+   the narrowest tab still fits its label without ellipsis. */
+.topnav{display:flex;gap:5px;padding:6px 12px 14px;overflow:visible}
+.tb{position:relative;flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:64px;background:#FFF;border:1.5px solid #E3E1D6;border-radius:15px;padding:10px 3px;font-family:'Karla';font-weight:700;color:#8A8875;cursor:pointer;line-height:1.1;transition:background .16s ease,color .16s ease,border-color .16s ease}
+.ti{display:block;flex:none;color:inherit}
+.tl{font-size:10.5px;letter-spacing:.1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .tb.on{background:#29382F;color:#F6F5EF;border-color:#29382F}
-.dot{position:absolute;top:-7px;right:-3px;min-width:20px;height:20px;display:flex;align-items:center;justify-content:center;background:#E9A23B;color:#29382F;border-radius:99px;font-size:11px;font-style:normal;font-weight:700;padding:0 5px;box-shadow:0 1px 3px rgba(41,56,47,.25)}
+.tb.on .ti{stroke-width:2}
+.tb .dot{position:absolute;top:4px;right:4px;min-width:17px;height:17px;display:flex;align-items:center;justify-content:center;background:#E9A23B;color:#29382F;border:1.5px solid #FFF;border-radius:99px;font-size:9.5px;font-style:normal;font-weight:700;padding:0 4px;letter-spacing:0;box-sizing:content-box}
+.tb.on .dot{border-color:#29382F}
+@media (max-width:340px){.tl{font-size:9.5px}.tb{padding:9px 1px}}
 .scroll{flex:1;overflow-y:auto;padding-bottom:26px}
 .pad{padding:2px 16px 20px}
 .bandline{font-family:'Fraunces',Georgia,serif;font-style:italic;font-size:14px;color:#5A6B60;margin:2px 0 12px;line-height:1.45}
@@ -1156,8 +1286,10 @@ const CSS = `
 .st b{display:block;font-family:'Fraunces',Georgia,serif;font-size:15px}
 .st span{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#8A8875}
 .catstats{display:flex;flex-wrap:wrap;gap:6px}
-.catstat{display:inline-flex;align-items:center;gap:6px;background:#FFF;border:1px solid #E3E1D6;border-radius:99px;padding:6px 11px;font-size:12px;font-weight:700}
+.catstat{display:inline-flex;align-items:center;gap:6px;background:#FFF;border:1.5px solid #E3E1D6;border-radius:99px;padding:6px 11px;font-family:'Karla';font-size:12px;font-weight:700;color:#4A554D;cursor:pointer;transition:background .16s ease,color .16s ease,border-color .16s ease}
 .catstat b{background:#29382F;color:#F6F5EF;border-radius:99px;padding:1px 7px;font-size:11px}
+.catstat.on{background:#29382F;color:#F6F5EF;border-color:#29382F}
+.catstat.on b{background:#E9A23B;color:#29382F}
 .ins{margin:8px 0}
 .in{display:flex;gap:9px;border-radius:13px;padding:11px 12px;margin-bottom:7px;font-size:13px;line-height:1.45;align-items:flex-start}
 .in p{margin:0}.in.up{background:#DEEAEF}.in.pa{background:#ECEAE0}
@@ -1174,16 +1306,35 @@ const CSS = `
 .mnote{font-size:13px;font-style:italic;color:#5A6B60}
 .jtext{font-family:'Fraunces',Georgia,serif;font-size:14.5px;line-height:1.55;color:#3D4A42}
 .strip{display:flex;gap:9px;flex-wrap:wrap;margin:12px 4px 8px}
-.tb{border:none;padding:0;background:none;cursor:pointer;position:relative;border-radius:10px;overflow:hidden}
-.tb img{width:62px;height:62px;object-fit:cover;display:block;border:1px solid #E3E1D6;border-radius:10px}
+.thumb{border:none;padding:0;background:none;cursor:pointer;position:relative;border-radius:10px;overflow:hidden}
+.thumb img{width:62px;height:62px;object-fit:cover;display:block;border:1px solid #E3E1D6;border-radius:10px}
 .vid{display:flex;width:62px;height:62px;align-items:center;justify-content:center;background:#29382F;color:#F6F5EF;border-radius:10px;font-size:22px}
-.tb.del{overflow:visible}
-.tb.del i{position:absolute;top:-6px;right:-6px;z-index:3;box-shadow:0 1px 3px rgba(0,0,0,.3);background:#A14E33;color:#FFF;border-radius:99px;font-size:11px;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:700}
+.thumb.del{overflow:visible}
+.thumb.del i{position:absolute;top:-6px;right:-6px;z-index:3;box-shadow:0 1px 3px rgba(0,0,0,.3);background:#A14E33;color:#FFF;border-radius:99px;font-size:11px;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:700}
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
 .gc{border:none;padding:0;background:none;cursor:pointer;border-radius:11px;overflow:hidden;aspect-ratio:1}
 .gc img{width:100%;height:100%;object-fit:cover;display:block}
 .gc .vid{width:100%;height:100%;border-radius:0}
-.uarow{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px dashed #E3E1D6;font-size:13.5px;font-weight:700}
+/* FB3-06 aesthetic pass -------------------------------------------------
+   Four changes only, all of them things the founder rounds flagged indirectly:
+   nothing may move without a reason, focus must be visible for keyboard and
+   switch users, tab changes should read as a change of place rather than a
+   hard cut, and taps need to acknowledge themselves on a touch screen. */
+@media (prefers-reduced-motion:no-preference){
+  .pad{animation:fadein .22s ease-out}
+  @keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+}
+/* One visible focus treatment for every interactive element, instead of the
+   browser default that the custom border-radius was cropping. */
+.tb:focus-visible,.chip:focus-visible,.catstat:focus-visible,.sug:focus-visible,.pillbtn:focus-visible,
+.wide:focus-visible,.mini:focus-visible,.primary:focus-visible,.ghost:focus-visible,.locbar:focus-visible,
+.kidchip:focus-visible,.sughome:focus-visible,.thumb:focus-visible,.gc:focus-visible{
+  outline:2.5px solid #33606F;outline-offset:2px}
+/* Touch feedback: these are one-handed taps with a toddler on the hip. */
+@media (hover:none){
+  .tb:active,.chip:active,.catstat:active,.pillbtn:active,.wide:active,.sug:active{transform:scale(.97)}
+}
+.tb,.chip,.catstat,.pillbtn,.wide,.sug{-webkit-tap-highlight-color:transparent}
 .sheetbg{position:absolute;inset:0;background:rgba(41,56,47,.45);display:flex;align-items:flex-end;z-index:30;overflow:auto}
 .sheet{background:#F6F5EF;width:100%;border-radius:20px 20px 0 0;padding:18px 16px 24px;max-height:92vh;overflow-y:auto}
 /* five tiers (FB2-11): grid, not flex — equal columns that survive the narrower
