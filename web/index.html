@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+<title>Rambles</title>
+<meta name="description" content="Age-right outings, one-tap logging, and a journal that writes itself." />
+<link rel="manifest" href="manifest.webmanifest" />
+<meta name="theme-color" content="#29382F" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Rambles" />
+<style>
+  html,body{margin:0;padding:0;background:#E9EAE0;-webkit-text-size-adjust:100%;}
+  #root{min-height:100vh;}
+  .boot{font-family:system-ui,sans-serif;color:#29382F;text-align:center;padding:80px 20px;font-size:15px;}
+</style>
+</head>
+<body>
+<div id="root"><div class="boot">〰️<br/>Rambles is starting…</div></div>
+<script src="app.js"></script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function(){}); });
+}
+</script>
+</body>
+</html>
