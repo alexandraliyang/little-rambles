@@ -1,0 +1,10 @@
+# ADR-0013: Curated "featured venue" per idea, city by city, before the Places API
+Date: 2026-07-29 · Status: Accepted · Origin: founder — "the experience is so much different if you can see and choose from real activities"; use the top real place as the bait, with breadth behind it.
+## Context
+ADR-0004 chose category archetypes to avoid the events-database tar pit, delegating venue choice to Google. That kept maintenance near zero but produced abstract cards ("Beach at low tide") with no real-place pull, and — per ADR-0011 — logged the category rather than the venue. Full venue-level data needs the Places API (backend + key + cost), which is Phase 4.
+## Decision
+Add a hand-curated **featured venue per idea, scoped to one city** (Metro Vancouver seed set: 45 entries, name + neighbourhood + one-line character note). Cards lead with the real place; every card also carries "See every <category> nearby →" so breadth is one tap away. Tapping "Let's go" on a featured card opens Maps at that venue **and auto-fills the journal place name** — partially delivering ADR-0011 rung 3 with zero API. Featured picks are suppressed automatically when an away-mode spot is set (a Vancouver pick is wrong near an out-of-town appointment).
+## Constraints deliberately accepted
+Names/areas/character only — **no hours, prices, or programme times asserted** (those are the rot-prone fields; availability continues to come from the typical-hours model with its honesty labels). Data is small and slow-moving: ~45 rows per city, changing on the order of years.
+## Consequences
+Real-place feel + journal specificity now, at a maintenance cost of one small table per launch city — the same "curate one city before automating" path Phase 5 already assumed. Verification debt **D5** opened: the seed set is founder-verifiable local knowledge, unverified by external source; must be checked before any non-founder user sees it. Second city = another 45 rows, so this scales by curation, not code — an explicit constraint on expansion speed until Phase 4.
