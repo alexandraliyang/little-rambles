@@ -11,3 +11,5 @@ A companion for caregivers of babies and toddlers (~6–42 months): developmenta
 - Founder's software primer: [`docs/learning/software-development-primer.md`](docs/learning/software-development-primer.md)
 
 Private repository. Provenance discipline applies: nothing labeled EVIDENCE may be AI-generated.
+
+test
