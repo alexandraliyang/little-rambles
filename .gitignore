@@ -6,7 +6,12 @@ Thumbs.db
 .idea/
 # Future app builds (Phase 2+)
 node_modules/
+# Deployable bundle — regenerate with `npm run dist` from web/
+web/dist/
 .next/
 .env
 .env.*
 !.env.example
+
+# Local Netlify folder
+.netlify

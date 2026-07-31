@@ -126,13 +126,24 @@ async function nominatim(q, near) {
    ties inside a band, so an exact name match never drops below a vague one. */
 function rankByProximity(hits, near) {
   if (!near || near.lat == null) return hits.slice(0, 7);
-  /* Bands, not raw kilometres: inside a band the geocoder's own text relevance
-     decides, so an exact name match never loses to a vaguer one 200m closer.
-     They stay open-ended at the top so a genuinely distant match still sorts
-     behind a merely far one. */
-  const band = (km) => (km == null ? 6 : km < 2 ? 0 : km < 10 ? 1 : km < 30 ? 2 : km < 100 ? 3 : km < 500 ? 5 : km < 2000 ? 7 : 9);
+  /* Bands, not raw kilometres — but only where banding earns its keep.
+     Under 100km everything is a plausible outing, so the geocoder's own text
+     relevance breaks ties and an exact name match never loses to a vaguer one
+     200m closer. Past that nothing is reachable today, relevance stops meaning
+     anything, and the only number the user can act on is the one we print — so
+     it sorts strictly by distance. Mixing the two is what made a far tail read
+     1,765 / 1,772 / 1,595 and look broken. */
+  const NEAR = 100;
+  const band = (km) => (km == null ? 6 : km < 2 ? 0 : km < 10 ? 1 : km < 30 ? 2 : km < NEAR ? 3 : km < 500 ? 5 : km < 2000 ? 7 : 9);
+  /* Kept strictly under the 2-point gap between bands, so this orders results
+     inside a band without ever letting a far one jump a nearer band. */
+  const tail = (km) => Math.min(km, 20000) / 20000 * 1.9;
   return hits
-    .map((h, i) => { const km = haversine(near, h); return { h: { ...h, km }, s: band(km) * 2 + i * 0.5 }; })
+    .map((h, i) => {
+      const km = haversine(near, h);
+      const within = km == null || km < NEAR ? i * 0.5 : tail(km);
+      return { h: { ...h, km }, s: band(km) * 2 + within };
+    })
     .sort((a, b) => a.s - b.s)
     .slice(0, 7)
     .map((x) => x.h);
@@ -222,6 +233,30 @@ const Icon = ({ n }) => (
   </svg>
 );
 
+/* FB3-07. The four one-tap actions from the v0-13 "recent outing" card, which
+   the founder asked for back. Deliberately no dialogs: Snap opens the camera
+   straight away and Pin writes a coordinate, both attaching to the plan so the
+   check-in later folds them in instead of asking twice. Once pinned, the button
+   becomes a link to the map — the pin is only worth taking if you can follow it. */
+function CaptureRow({ p, media, onCheck, onSnap, onPin, onDrop, dropLabel, checkLabel, directions }) {
+  const shots = media || [];
+  return <>
+    <div className="pills cap">
+      <button className="pillbtn dark" onClick={() => onCheck(p)}>{checkLabel}</button>
+      <label className="pillbtn snap">📸 Snap{shots.length ? ` (${shots.length})` : ""}
+        <input type="file" accept="image/*" capture="environment" multiple hidden onChange={(e) => onSnap(p, e)} /></label>
+      {p.pin
+        ? <a className="pillbtn pinned" href={"https://www.google.com/maps/search/?api=1&query=" + p.pin.lat + "," + p.pin.lng}
+            target="_blank" rel="noreferrer">📍 Pinned — open map</a>
+        : <button className="pillbtn" onClick={() => onPin(p)}>📍 Pin where we are</button>}
+      <button className="pillbtn" onClick={() => onDrop(p.id)}>{dropLabel}</button>
+    </div>
+    {shots.length > 0 && <div className="strip sm">{shots.map((m, i) =>
+      <span className="thumb" key={i}>{m.t === "v" ? <span className="vid">🎥</span> : <img src={m.d} alt="" />}</span>)}</div>}
+    {directions && <a className="more" href={directions} target="_blank" rel="noreferrer">🗺️ Directions ↗</a>}
+  </>;
+}
+
 /* ============================== APP ============================= */
 export default function App() {
   const [loaded, setLoaded] = useState(false);
@@ -237,6 +272,7 @@ export default function App() {
   const [tab, setTab] = useState("discover");
   const [toast, setToast] = useState(null);
   const [photosBy, setPhotosBy] = useState({});
+  const [planMedia, setPlanMedia] = useState({});   // FB3-07: snaps taken mid-outing, before the check-in exists
   const [locOpen, setLocOpen] = useState(false);
   const [locText, setLocText] = useState("");
   const [locHits, setLocHits] = useState([]);
@@ -291,6 +327,13 @@ export default function App() {
       try { const r = await store.get("lrm:" + v.id); setPhotosBy((m) => ({ ...m, [v.id]: JSON.parse(r.value) })); } catch (e) {}
     }
   })(); }, [tab, visits]);
+  /* FB3-07. Snaps live against the plan until the check-in turns them into a
+     memory, so they must survive a reload the same way visit photos do. */
+  useEffect(() => { if (!loaded) return; (async () => {
+    for (const p of plans) if (p.mediaCount > 0 && !planMedia[p.id]) {
+      try { const r = await store.get("lrp:" + p.id); setPlanMedia((m) => ({ ...m, [p.id]: JSON.parse(r.value) })); } catch (e) {}
+    }
+  })(); }, [loaded, plans]);
 
   /* One scroll container serves all four tabs, so switching tabs would otherwise
      drop you at the previous tab's scroll offset. */
@@ -380,10 +423,46 @@ export default function App() {
   };
   const goNow = (a) => { upsertPlan(a, "out"); const f = featFor(a); say(f ? `Heading to ${f.name} — tap Our List to log it afterwards.` : `${a.name} — tap Our List to log it afterwards.`); };
   const saveLater = (a) => { upsertPlan(a, "planned"); say("Saved to Our List 💛"); };
-  const removePlan = (id) => setPlans((ps) => ps.filter((p) => p.id !== id));
+  const removePlan = (id) => {
+    setPlans((ps) => ps.filter((p) => p.id !== id));
+    setPlanMedia((m) => { const n = { ...m }; delete n[id]; return n; });
+    store.del("lrp:" + id).catch(() => {});                          // FB3-07: don't orphan snaps
+  };
+
+  /* ---------------- FB3-07: one-tap capture while you are still out ----------
+     Restores the v0-13 pending-outing card. The point is that none of these
+     needs a form: you are holding a toddler, so Snap and Pin are single taps
+     that attach to the plan, and the check-in later folds them into the memory
+     rather than asking for them again. */
+  const snapOnPlan = async (p, e) => {
+    const files = Array.from(e.target.files || []); e.target.value = "";
+    if (!files.length) return;
+    try {
+      const shot = []; for (const f of files) shot.push(await shrink(f));
+      const arr = [...(planMedia[p.id] || []), ...shot].slice(0, 8);
+      await store.set("lrp:" + p.id, JSON.stringify(arr));
+      setPlanMedia((m) => ({ ...m, [p.id]: arr }));
+      setPlans((ps) => ps.map((x) => (x.id === p.id ? { ...x, mediaCount: arr.length } : x)));
+      say(`Snapped 📸 (${arr.length}/8) — it lands in the story when you check in.`);
+    } catch (err) { say("Couldn't save that one — try again?"); }
+  };
+  const pinPlan = (p) => {
+    if (!navigator.geolocation) { say("Location isn't available on this device."); return; }
+    say("Pinning…");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setPlans((ps) => ps.map((x) => (x.id === p.id
+          ? { ...x, pin: { lat: +pos.coords.latitude.toFixed(6), lng: +pos.coords.longitude.toFixed(6) } } : x)));
+        say("Pinned 📍 Even if you forget the name, the map won't.");
+      },
+      () => say("Couldn't get location — check the permission prompt and try again."),
+      { enableHighAccuracy: true, timeout: 9000 });
+  };
 
   /* ---------------- check-in ---------------- */
-  const openCheck = (p) => { setCiRating(null); setCiPlace(p.place || ""); setCiNote(""); setCiBy((profile.caregivers && profile.caregivers[0]) || ""); setCiMedia([]); setCheckIn(p); };
+  /* Anything already snapped against this plan opens pre-loaded, so the check-in
+     is confirming what you captured rather than starting from an empty sheet. */
+  const openCheck = (p) => { setCiRating(null); setCiPlace(p.place || ""); setCiNote(""); setCiBy((profile.caregivers && profile.caregivers[0]) || ""); setCiMedia(planMedia[p.id] || []); setCheckIn(p); };
   const addMedia = async (e, setter, cap = 8) => {
     const files = Array.from(e.target.files || []); e.target.value = "";
     try { const out = []; for (const f of files) out.push(await shrink(f)); setter((prev) => [...prev, ...out].slice(0, cap)); }
@@ -393,7 +472,8 @@ export default function App() {
     if (!ciRating) { say("Pick how it went first — one tap."); return; }
     const id = Date.now();
     const v = { id, kind: "visit", ideaId: checkIn.ideaId, name: checkIn.name, cat: checkIn.cat, emoji: checkIn.emoji, ts: id,
-      rating: ciRating, note: ciNote.trim(), place: ciPlace.trim() || null, by: ciBy || null, locLabel: checkIn.locLabel, mediaCount: ciMedia.length };
+      rating: ciRating, note: ciNote.trim(), place: ciPlace.trim() || null, by: ciBy || null, locLabel: checkIn.locLabel,
+      pin: checkIn.pin || null, mediaCount: ciMedia.length };   // FB3-07: the pin follows the outing into the story
     setVisits((vs) => [v, ...vs]);
     if (ciMedia.length) { try { await store.set("lrm:" + id, JSON.stringify(ciMedia)); setPhotosBy((m) => ({ ...m, [id]: ciMedia })); } catch (e) { say("Media couldn't save, but the memory did."); } }
     removePlan(checkIn.id); setCheckIn(null);
@@ -689,16 +769,15 @@ export default function App() {
           {tab === "upnext" && <div className="pad">
             <div className="nudge sm"><span>💡</span><p><b>Our List is your shortlist.</b> Swipe right (or tap Save) to keep an idea here. Tap <b>Let's go</b> and it moves to "Out now" — then one tap logs it into the Story.</p></div>
             {!plans.length && <div className="card dash"><p className="why">Nothing saved yet. Swipe right in <b>Swipe</b>, or tap <b>Save</b> on anything in <b>Browse</b>.</p></div>}
-            {outRows.length > 0 && <><div className="lbl">📍 Out now — tap to log afterwards</div>
+            {outRows.length > 0 && <><div className="lbl">📍 Out now — one tap each, no forms</div>
               {outRows.map((p) => <div className="card out" key={p.id}>
                 <div className="rowtop"><span className="eyebrow">Started {fmtDate(p.ts)}{p.times > 1 ? ` · ${p.times} trips` : ""}</span></div>
                 <h3 className="ctitle">{p.emoji} {p.place || p.name}</h3>
                 {p.place && <p className="dsub">{p.name}{p.area ? " · " + p.area : ""}</p>}
-                <div className="pills">
-                  <button className="pillbtn dark" onClick={() => openCheck(p)}>Log this outing</button>
-                  <a className="pillbtn" href={p.place ? venueQuery(p.place, p.area, activePlace) : nearQuery(p.name, activePlace)} target="_blank" rel="noreferrer">🗺️ Directions</a>
-                  <button className="pillbtn" onClick={() => removePlan(p.id)}>Didn't go</button>
-                </div>
+                <p className="why">How did it go? One tap — or skip it, no guilt.</p>
+                <CaptureRow p={p} media={planMedia[p.id]} onCheck={openCheck} onSnap={snapOnPlan} onPin={pinPlan} onDrop={removePlan}
+                  dropLabel="Didn't go" checkLabel="Check in"
+                  directions={p.place ? venueQuery(p.place, p.area, activePlace) : nearQuery(p.name, activePlace)} />
               </div>)}</>}
             {planRows.length > 0 && <><div className="lbl">💛 Saved for later</div>
               {planRows.map((p) => { const a = pool.find((x) => x.id === p.ideaId); const av = a ? availability(a) : null; return <div className="card" key={p.id}>
@@ -706,9 +785,11 @@ export default function App() {
                 {p.place && <p className="dsub">{p.name}{p.area ? " · " + p.area : ""}</p>}
                 <div className="pills">
                   <a className="pillbtn dark" href={p.place ? venueQuery(p.place, p.area, activePlace) : nearQuery(a ? a.mapsQuery : p.name, activePlace)} target="_blank" rel="noreferrer" onClick={() => a && goNow(a)}>🚗 Let's go</a>
-                  <button className="pillbtn" onClick={() => openCheck(p)}>Log it</button>
-                  <button className="pillbtn" onClick={() => removePlan(p.id)}>Remove</button>
                 </div>
+                {/* FB3-07: the same four one-tap actions here too — you are often
+                    already at the place before you remember to tap "Let's go". */}
+                <CaptureRow p={p} media={planMedia[p.id]} onCheck={openCheck} onSnap={snapOnPlan} onPin={pinPlan} onDrop={removePlan}
+                  dropLabel="Remove" checkLabel="Check in" />
               </div>; })}</>}
           </div>}
 
@@ -795,6 +876,9 @@ export default function App() {
                   <button className="mini" onClick={() => setEditMem(v)}>✏️</button></div></div>
                 {v.kind !== "journal" && <div className="mtitle">{v.emoji} {v.place || v.name}{v.place && v.name !== v.place ? <span className="msub"> · {v.name}</span> : null}</div>}
                 {v.by && <div className="msub">with {v.by}</div>}
+                {/* FB3-07: a pin taken on the day is only useful if you can follow it later */}
+                {v.pin && <a className="more" href={"https://www.google.com/maps/search/?api=1&query=" + v.pin.lat + "," + v.pin.lng}
+                  target="_blank" rel="noreferrer">📍 Open the exact spot on the map ↗</a>}
                 {v.note && <div className={v.kind === "journal" ? "jtext" : "mnote"}>{v.kind === "journal" ? v.note : "“" + v.note + "”"}</div>}
                 {photosBy[v.id] && <div className="strip">{photosBy[v.id].map((m, i) => <button className="thumb" key={i} onClick={() => setLightbox({ ...m, label: (v.place || v.name) + " · " + fmtDate(v.ts) })}>{m.t === "v" ? <span className="vid">🎥</span> : <img src={m.d} alt="" />}</button>)}</div>}
               </div>)}
@@ -1358,6 +1442,15 @@ const CSS = `
 .pills{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 .pillbtn{border:1.5px solid #DDDACB;background:#FFF;border-radius:99px;padding:10px 16px;font-family:'Karla';font-size:13.5px;font-weight:700;color:#29382F;cursor:pointer;text-decoration:none;display:inline-block}
 .pillbtn.dark{background:#29382F;color:#F6F5EF;border-color:#29382F}
+/* FB3-07 capture row. The label-wrapped file input has to sit on the same
+   baseline as the real buttons, hence the explicit flex/line-height. */
+.pills.cap{gap:7px}
+.pills.cap .pillbtn{padding:10px 14px;font-size:13px;display:inline-flex;align-items:center;line-height:1.2}
+.pillbtn.snap{border-color:#8FB3C0;background:#DEEAEF;color:#33606F}
+.pillbtn.pinned{border-color:#7FA07F;background:#E4EEE2;color:#2F5138}
+.strip.sm{gap:6px;margin:10px 2px 0}
+.strip.sm .thumb img,.strip.sm .vid{width:46px;height:46px;border-radius:8px}
+.strip.sm .vid{font-size:17px}
 .sugrow{display:flex;gap:6px;align-items:stretch}
 .sugrow .sug{flex:1}
 .sug b{display:block;font-size:13px}

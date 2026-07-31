@@ -25,7 +25,13 @@ const seed = {
     { id: 2, ideaId: "splashpad", name: "Splash pad", cat: "water", emoji: "💦", ts: Date.now() - 172800000, rating: "loved", note: "" },
     { id: 3, kind: "custom", ideaId: null, name: "Beach with cousins", cat: "nature", emoji: "🏖️", ts: Date.now() - 259200000, rating: "nope", note: "our own outing", userAdded: true },
   ],
-  plans: [], swipes: {}, customActs: [], dropped: [], spot: null,
+  /* One started outing and one shortlisted, so the FB3-07 capture row has
+     both card shapes to render against. */
+  plans: [
+    { id: 201, ideaId: "market", name: "Market wander", cat: "food", emoji: "🥐", place: null, area: null, status: "out", ts: Date.now(), times: 1 },
+    { id: 202, ideaId: "aquarium", name: "Aquarium", cat: "animals", emoji: "🐠", place: "Vancouver Aquarium", area: "Stanley Park", status: "planned", ts: Date.now(), times: 1 },
+  ],
+  swipes: {}, customActs: [], dropped: [], spot: null,
 };
 
 const dom = new JSDOM("<!doctype html><html><body><div id='root'></div></body></html>", {
@@ -127,6 +133,22 @@ const gear = findByText("button", "⚙️");
 if (gear) { click(gear); await settle(); }
 ok("FB3-04 Settings no longer carries a Your-activities list", !text().includes("Your activities ("));
 ok("FB3-04 Settings still carries the data section", text().includes("Export my data"));
+
+/* --- FB3-07: the v0-13 four-action capture row is back on Our List --- */
+const listTab = findByText("button", "Our List");
+if (listTab) { click(listTab); await settle(); }
+const capRows = [...root.querySelectorAll(".pills.cap")];
+ok("FB3-07 both card shapes get a capture row", capRows.length === 2, "rows " + capRows.length);
+const outActions = capRows.length ? [...capRows[0].children].map((c) => c.textContent) : [];
+ok("FB3-07 out-now shows Check in / Snap / Pin / Didn't go",
+   outActions.length === 4 && /Check in/.test(outActions[0]) && /Snap/.test(outActions[1])
+   && /Pin where we are/.test(outActions[2]) && /Didn't go/.test(outActions[3]),
+   outActions.join(" | "));
+ok("FB3-07 Snap is a real camera input, not a dialog",
+   !!capRows[0] && !!capRows[0].querySelector('input[type="file"][capture]'));
+ok("FB3-07 the shortlisted card ends in Remove, not Didn't go",
+   capRows.length > 1 && /Remove/.test(capRows[1].lastElementChild.textContent),
+   capRows.length > 1 ? capRows[1].lastElementChild.textContent : "");
 
 /* --- every tab renders without throwing --- */
 for (const t of ["Swipe", "Browse", "Our List", "Yours", "Memories"]) {
