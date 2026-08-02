@@ -29,9 +29,15 @@ const seed = {
   ],
   /* One started outing and one shortlisted, so the FB3-07 capture row has
      both card shapes to render against. */
+  /* FB6-03 mirrors the founder's actual flow: several outings of ONE category
+     saved in a row. The reminder must fire on that pattern, before any of them
+     has been visited — which is the case the first version missed. */
   plans: [
     { id: 201, ideaId: "market", name: "Market wander", cat: "food", emoji: "🥐", place: null, area: null, status: "out", ts: Date.now(), times: 1 },
     { id: 202, ideaId: "aquarium", name: "Aquarium", cat: "animals", emoji: "🐠", place: "Vancouver Aquarium", area: "Stanley Park", status: "planned", ts: Date.now(), times: 1 },
+    { id: 203, ideaId: "zoo", name: "Zoo or wildlife park", cat: "animals", emoji: "🦒", place: null, area: null, status: "planned", ts: Date.now(), times: 1 },
+    { id: 204, ideaId: "pettingfarm", name: "Petting farm", cat: "animals", emoji: "🐐", place: null, area: null, status: "planned", ts: Date.now(), times: 1 },
+    { id: 205, ideaId: "petstore", name: "Pet store visit", cat: "animals", emoji: "🐹", place: null, area: null, status: "planned", ts: Date.now(), times: 1 },
   ],
   swipes: {}, customActs: [], dropped: [], spot: null,
 };
@@ -140,7 +146,7 @@ ok("FB3-04 Settings still carries the data section", text().includes("Export my 
 const listTab = findByText("button", "Our List");
 if (listTab) { click(listTab); await settle(); }
 const capRows = [...root.querySelectorAll(".pills.cap")];
-ok("FB3-07 both card shapes get a capture row", capRows.length === 2, "rows " + capRows.length);
+ok("FB3-07 both card shapes get a capture row", capRows.length === 5, "rows " + capRows.length);
 const outActions = capRows.length ? [...capRows[0].children].map((c) => c.textContent) : [];
 ok("FB3-07 out-now shows Check in / Snap / Pin / Didn't go",
    outActions.length === 4 && /Check in/.test(outActions[0]) && /Snap/.test(outActions[1])
@@ -149,7 +155,7 @@ ok("FB3-07 out-now shows Check in / Snap / Pin / Didn't go",
 ok("FB3-07 Snap is a real camera input, not a dialog",
    !!capRows[0] && !!capRows[0].querySelector('input[type="file"][capture]'));
 ok("FB3-07 the shortlisted card ends in Remove, not Didn't go",
-   capRows.length > 1 && /Remove/.test(capRows[1].lastElementChild.textContent),
+   capRows.slice(1).every((r) => /Remove/.test(r.lastElementChild.textContent)),
    capRows.length > 1 ? capRows[1].lastElementChild.textContent : "");
 
 /* --- FB4-01: the deck must be stable under re-render (cards were flicking past) --- */
@@ -209,6 +215,73 @@ const imgs = [...root.querySelectorAll(".art img")].map((i) => i.getAttribute("s
 ok("FB4-04 card art comes from the curated set",
    imgs.length === 0 || imgs.every((u) => u.includes("images.unsplash.com")),
    imgs.length ? imgs[0].slice(0, 52) : "no art loaded in jsdom");
+
+/* --- FB6-01: a memory can be reopened and logged again --- */
+const memTab6 = findByText("button", "Memories");
+if (memTab6) { click(memTab6); await settle(); }
+const memRow = root.querySelector(".mem:not(.jr)");
+ok("FB6-01 memories carry a 'we went again' action",
+   !!(memRow && [...memRow.querySelectorAll(".memacts .pillbtn")].some((b) => /went again/i.test(b.textContent))));
+ok("FB6-01 memories can be put back on Our List",
+   !!(memRow && [...memRow.querySelectorAll(".memacts .pillbtn")].some((b) => /Our List/i.test(b.textContent))));
+const again = [...root.querySelectorAll(".memacts .pillbtn")].find((b) => /went again/i.test(b.textContent));
+if (again) { click(again); await settle(); }
+ok("FB6-01 'we went again' opens a fresh check-in", !!root.querySelector(".sheet") && text().includes("How did it go?"));
+const notNow = findByText("button", "Not now");
+if (notNow) { click(notNow); await settle(); }
+
+/* --- FB6-02: Browse can be searched --- */
+const browse6 = findByText("button", "Browse");
+if (browse6) { click(browse6); await settle(); }
+const searchBox = root.querySelector(".searchrow input");
+ok("FB6-02 Browse has a search box", !!searchBox);
+if (searchBox) {
+  const before6 = root.querySelectorAll(".card").length;
+  const setV = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+  setV.call(searchBox, "train");
+  searchBox.dispatchEvent(new window.Event("input", { bubbles: true }));
+  await settle(); await settle();
+  const after6 = root.querySelectorAll(".card").length;
+  ok("FB6-02 searching narrows the list", after6 > 0 && after6 < before6, before6 + " -> " + after6);
+  ok("FB6-02 the matches are actually about the query",
+     /train/i.test(text()), "");
+  /* a search must reach even things the chips hide, or it looks broken */
+  setV.call(searchBox, "sledding");
+  searchBox.dispatchEvent(new window.Event("input", { bubbles: true }));
+  await settle(); await settle();
+  ok("FB6-02 search reaches out-of-season activities too", /sledding/i.test(text()), "searched in August");
+  setV.call(searchBox, "");
+  searchBox.dispatchEvent(new window.Event("input", { bubbles: true }));
+  await settle();
+}
+
+/* --- FB6-03: the streak reminder counts saved plans, not just logged visits --- */
+const listTab6 = findByText("button", "Our List");
+if (listTab6) { click(listTab6); await settle(); }
+/* the Aquarium card specifically: it is one of four ANIMAL outings saved, which
+   is the pattern the reminder exists to notice. */
+const animalCard = [...root.querySelectorAll(".card")].find((c) => /Aquarium/.test(c.textContent));
+const checkBtn = animalCard && [...animalCard.querySelectorAll("button.pillbtn")].find((b) => b.textContent.trim() === "Check in");
+if (checkBtn) { click(checkBtn); await settle(); }
+ok("FB6-03 the check-in sheet shows the repeat-pattern reminder",
+   text().includes("saved or logged in three weeks"),
+   (text().match(/That's \d+ [^?]*saved or logged[^?]*\?/) || ["not shown"])[0].slice(0, 96));
+const notNow2 = findByText("button", "Not now");
+if (notNow2) { click(notNow2); await settle(); }
+
+/* --- FB6-04: only the sheet scrolls, and it opens at its own top --- */
+if (checkBtn) {
+  const ac = [...root.querySelectorAll(".card")].find((c) => /Aquarium/.test(c.textContent));
+  const cb = ac && [...ac.querySelectorAll("button.pillbtn")].find((b) => b.textContent.trim() === "Check in");
+  if (cb) { click(cb); await settle(); }
+  const sheet = root.querySelector(".sheet");
+  ok("FB6-04 the sheet opens scrolled to its top", !!sheet && sheet.scrollTop === 0, sheet ? "scrollTop=" + sheet.scrollTop : "no sheet");
+  const order = [...root.querySelectorAll(".sheet .lbl, .sheet .rates")].map((e) => e.className);
+  ok("FB6-04 'How did it go?' is the first thing in the sheet",
+     order.length > 0 && /lbl/.test(order[0]), order.slice(0, 2).join(" / "));
+  const n2 = findByText("button", "Not now");
+  if (n2) { click(n2); await settle(); }
+}
 
 /* --- every tab renders without throwing --- */
 for (const t of ["Swipe", "Browse", "Our List", "Yours", "Memories"]) {

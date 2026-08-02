@@ -295,6 +295,7 @@ export default function App() {
   const [addOpen, setAddOpen] = useState(false);
   const [editMem, setEditMem] = useState(null);
   const [lightbox, setLightbox] = useState(null);
+  const [exSearch, setExSearch] = useState("");            // FB6-02: find an activity by name
   const [memFilter, setMemFilter] = useState("all");
   const [memSearch, setMemSearch] = useState("");
   const [memView, setMemView] = useState("story");
@@ -448,7 +449,7 @@ export default function App() {
     upsertPlan(a, "planned");
     /* FB5-04a: the warning belongs at the moment of choosing, not buried on a
        stats screen — that is the only point where it can change the choice. */
-    const w = similarWarning(a);
+    const w = similarWarning(a, 1);
     say(w ? "Saved 💛 — " + w : "Saved to Our List 💛");
   };
   const removePlan = (id) => {
@@ -487,6 +488,21 @@ export default function App() {
       { enableHighAccuracy: true, timeout: 9000 });
   };
 
+  /* FB6-01: reopen a past outing. `goAgain` starts a fresh check-in prefilled
+     from the memory; `planAgain` puts it back on Our List. Neither touches the
+     original memory — going again creates a new one, so the history stays a
+     history rather than being overwritten. */
+  const memAsPlan = (v) => ({ id: Date.now(), ideaId: v.ideaId, name: v.name, cat: v.cat, emoji: v.emoji,
+    place: v.place || null, area: null, status: "planned", ts: Date.now(), times: 1, pin: v.pin || null });
+  const goAgain = (v) => { openCheck(memAsPlan(v)); };
+  const planAgain = (v) => {
+    const p = memAsPlan(v);
+    if (plans.some((x) => x.ideaId && x.ideaId === v.ideaId) || plans.some((x) => x.name === v.name)) { say(v.name + " is already on Our List."); setTab("upnext"); return; }
+    setPlans((ps) => [p, ...ps]);
+    say(v.name + " is back on Our List 💛");
+    setTab("upnext");
+  };
+
   /* ---------------- check-in ---------------- */
   /* Anything already snapped against this plan opens pre-loaded, so the check-in
      is confirming what you captured rather than starting from an empty sheet. */
@@ -518,16 +534,26 @@ export default function App() {
 
   /* (a) "You have done a lot of this lately." Counts the same category in the
          last three weeks, so it fires on a pattern rather than a repeat. */
+  /* FB6-03. Counts what you have SAVED as well as what you have logged. The
+     first version counted visits only, so saving five animal outings in a row
+     produced nothing — the pattern was already obvious on Our List, and the
+     reminder was blind to it until each one had been visited and logged. */
   const catStreak = useMemo(() => {
     const cut = Date.now() - 21 * DAY, m = {};
     visits.forEach((v) => { if (v.cat && v.ts > cut) m[v.cat] = (m[v.cat] || 0) + 1; });
+    plans.forEach((p) => { if (p.cat && p.ts > cut) m[p.cat] = (m[p.cat] || 0) + 1; });
     return m;
-  }, [visits]);
-  const similarWarning = (a) => {
-    const n = catStreak[a.cat] || 0;
+  }, [visits, plans]);
+  /* `extra` lets a caller ask "...if I add one more of these?", so the message
+     is right at the moment of saving, before the new one is in state. */
+  const similarWarning = (a, extra = 0) => {
+    if (!a || !a.cat) return null;
+    const n = (catStreak[a.cat] || 0) + extra;
     if (n < 3) return null;
-    const label = CAT_META[a.cat] ? CAT_META[a.cat].label.toLowerCase() : a.cat;
-    return `That's ${n} ${label} outings in three weeks — still a favourite, or time for something different?`;
+    /* Quoted category label rather than a lowercased one: "4 animals outings"
+       is not English, and the labels are nouns of varying number. */
+    const label = CAT_META[a.cat] ? CAT_META[a.cat].label : a.cat;
+    return `That's ${n} “${label}” outings saved or logged in three weeks — still a favourite, or time for something different?`;
   };
 
   /* (b) "It has been a while." Measured from the last thing actually logged,
@@ -661,7 +687,13 @@ export default function App() {
      ruled out by the profile note — but never makes it unreachable: the
      "season" chip is the deliberate way in, and avoided items stay visible
      under their own category so the badge can explain why they are down there. */
+  const exQ = exSearch.trim().toLowerCase();
   const exMatch = (a, avail) => {
+    /* FB6-02. A search is an explicit request for one thing, so it overrides the
+       chips and the hide-rules — otherwise typing the name of a winter activity
+       in August returns nothing and looks broken. The card still carries its
+       season / "you're avoiding this" badge to explain itself. */
+    if (exQ) return ((a.name + " " + (a.why || "") + " " + (CAT_META[a.cat] ? CAT_META[a.cat].label : "") + " " + (a.tags || []).join(" ")).toLowerCase().includes(exQ));
     if (exCat !== "all" && a.cat !== exCat) return false;
     if (exFilter === "season") return avail.st === "offseason";
     if (avail.st === "offseason") return false;
@@ -823,6 +855,13 @@ export default function App() {
 
           {/* ---------------- EXPLORE ---------------- */}
           {tab === "explore" && <div className="pad">
+            {/* FB6-02: search sits above the filters — when you know what you
+                want, you should not have to work the chips to reach it. */}
+            <div className="searchrow">
+              <input className="inp flat" placeholder="Search activities — “train”, “swim”, “rainy day”…" value={exSearch} onChange={(e) => setExSearch(e.target.value)} />
+              {exSearch && <button className="mini x" onClick={() => setExSearch("")}>✕</button>}
+            </div>
+            {exQ && <p className="fine nb">{exNow.length + exLater.length} match “{exSearch.trim()}” · searching everything, including out of season</p>}
             <button className="wide" onClick={() => setAddOpen(true)}>➕ Add your own activity or place</button>
             <button className="wide alt" onClick={() => setShowLater((v) => !v)}>
               {showLater ? "Hide what's coming later" : `Show what's coming later (${exLater.length} for older kids)`}
@@ -966,6 +1005,15 @@ export default function App() {
                   target="_blank" rel="noreferrer">📍 Open the exact spot on the map ↗</a>}
                 {v.note && <div className={v.kind === "journal" ? "jtext" : "mnote"}>{v.kind === "journal" ? v.note : "“" + v.note + "”"}</div>}
                 {photosBy[v.id] && <div className="strip">{photosBy[v.id].map((m, i) => <button className="thumb" key={i} onClick={() => setLightbox({ ...m, label: (v.place || v.name) + " · " + fmtDate(v.ts) })}>{m.t === "v" ? <span className="vid">🎥</span> : <img src={m.d} alt="" />}</button>)}</div>}
+                {/* FB6-01. A memory is a record of somewhere that worked, so it is
+                    the most likely thing you want to do again — but until now it
+                    was a dead end and you had to go hunt the activity down in
+                    Browse. Log it straight from here, or put it back on the list. */}
+                {v.kind !== "journal" && <div className="pills memacts">
+                  <button className="pillbtn dark" onClick={() => goAgain(v)}>🔁 We went again</button>
+                  <button className="pillbtn" onClick={() => planAgain(v)}>💛 Add to Our List</button>
+                  <a className="pillbtn" href={v.pin ? ("https://www.google.com/maps/search/?api=1&query=" + v.pin.lat + "," + v.pin.lng) : venueQuery(v.place || v.name, null, activePlace)} target="_blank" rel="noreferrer">🗺️ Directions</a>
+                </div>}
               </div>)}
             </> : <>
               <div className="lbl">Every photo, one place</div>
@@ -1035,6 +1083,7 @@ export default function App() {
         {checkIn && <Sheet onClose={() => setCheckIn(null)}>
           <div className="eyebrow">Log this outing</div>
           <h3 className="ctitle">{checkIn.place || checkIn.name}</h3>
+          {similarWarning(checkIn) && <div className="nudge sm"><span>🔁</span><p>{similarWarning(checkIn)}</p></div>}
           <div className="lbl">How did it go?</div>
           <div className="rates">{Object.entries(RATE).map(([k, m]) => <button key={k} className={"rb " + m.c + (ciRating === k ? " on" : "")} onClick={() => setCiRating(k)}><span className="e">{m.e}</span><span>{m.l}</span></button>)}</div>
           {/* FB2-10: real geocoder instead of a bare text box, seeded with places
@@ -1134,7 +1183,13 @@ function PlaceInput({ value, onChange, onPick, placeholder, allowGps, onGps, rec
   </div>;
 }
 function Sheet({ children, onClose }) {
-  return <div className="sheetbg" onClick={onClose}><div className="sheet" onClick={(e) => e.stopPropagation()}>{children}</div></div>;
+  /* FB6-04: a reopened sheet must start at its own top. Without this, React
+     reuses the node and you inherit the previous sheet's scroll position. */
+  const box = useRef(null);
+  useEffect(() => { if (box.current) box.current.scrollTop = 0; }, []);
+  return <div className="sheetbg" onClick={onClose}>
+    <div className="sheet" ref={box} onClick={(e) => e.stopPropagation()}>{children}</div>
+  </div>;
 }
 /* Every activity gets its OWN picture: curated photo first; if it fails,
    a generated scene unique to that activity (pattern + palette from id hash). */
@@ -1486,6 +1541,11 @@ const CSS = `
 .st{flex:1;background:#FFF;border:1px solid #E3E1D6;border-radius:13px;padding:9px 3px;text-align:center}
 .st b{display:block;font-family:'Fraunces',Georgia,serif;font-size:15px}
 .st span{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#8A8875}
+/* FB6-01/02 */
+.searchrow{display:flex;gap:8px;align-items:center;margin:6px 0 2px}
+.searchrow .inp{flex:1;margin-bottom:0}
+.memacts{margin-top:10px;padding-top:10px;border-top:1px dashed #E3E1D6}
+.memacts .pillbtn{padding:8px 13px;font-size:12.5px}
 .catstats{display:flex;flex-wrap:wrap;gap:6px}
 .catstat{display:inline-flex;align-items:center;gap:6px;background:#FFF;border:1.5px solid #E3E1D6;border-radius:99px;padding:6px 11px;font-family:'Karla';font-size:12px;font-weight:700;color:#4A554D;cursor:pointer;transition:background .16s ease,color .16s ease,border-color .16s ease}
 .catstat b{background:#29382F;color:#F6F5EF;border-radius:99px;padding:1px 7px;font-size:11px}
@@ -1536,8 +1596,11 @@ const CSS = `
   .tb:active,.chip:active,.catstat:active,.pillbtn:active,.wide:active,.sug:active{transform:scale(.97)}
 }
 .tb,.chip,.catstat,.pillbtn,.wide,.sug{-webkit-tap-highlight-color:transparent}
-.sheetbg{position:absolute;inset:0;background:rgba(41,56,47,.45);display:flex;align-items:flex-end;z-index:30;overflow:auto}
-.sheet{background:#F6F5EF;width:100%;border-radius:20px 20px 0 0;padding:18px 16px 24px;max-height:92vh;overflow-y:auto}
+/* FB6-04. Only the sheet scrolls. With overflow on BOTH, align-items:flex-end
+   clips the top of a tall sheet and drops you partway down it - which is why
+   the check-in appeared to start at the bottom of the page. */
+.sheetbg{position:absolute;inset:0;background:rgba(41,56,47,.45);display:flex;align-items:flex-end;z-index:30;overflow:hidden}
+.sheet{background:#F6F5EF;width:100%;border-radius:20px 20px 0 0;padding:18px 16px calc(24px + env(safe-area-inset-bottom));max-height:92vh;overflow-y:auto;overscroll-behavior:contain}
 /* five tiers (FB2-11): grid, not flex — equal columns that survive the narrower
    share each button gets, with labels allowed to wrap to two lines */
 .minetag{position:absolute;left:10px;bottom:10px;background:rgba(255,255,255,.92);color:#5E4A7D;border-radius:99px;padding:3px 9px;font-size:10.5px;font-weight:700}
