@@ -286,6 +286,43 @@ function Logo({ size = 26 }) {
   </svg>;
 }
 
+
+/* ===================== FB10: "the next 90 minutes" =====================
+   The app could always answer "what could we do?" — sixty cards of it. It could
+   not answer "what should we do RIGHT NOW?", which is the question a caregiver
+   actually has, standing in the hallway with a coat in one hand. One answer,
+   with its reasoning shown, beats sixty ranked options. */
+
+/* WMO weather codes -> the only distinction that matters for a toddler outing:
+   can we be outside, and will we regret it. */
+function readWeather(code, temp, precip) {
+  const wet = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || (code >= 95) || precip > 0.1;
+  const snow = code >= 71 && code <= 77;
+  const fog = code === 45 || code === 48;
+  const clear = code <= 3;
+  const cold = temp != null && temp < 4;
+  const hot = temp != null && temp > 28;
+  const outdoorOk = !wet && !cold && !hot && !fog;
+  const label = wet ? "Wet" : snow ? "Snowy" : fog ? "Foggy" : clear ? "Clear" : "Cloudy";
+  const icon = wet ? "🌧️" : snow ? "❄️" : fog ? "🌫️" : clear ? "☀️" : "☁️";
+  return { wet, snow, fog, clear, cold, hot, outdoorOk, label, icon,
+    line: label + (temp != null ? " · " + Math.round(temp) + "°" : "") };
+}
+
+/* Nap time, read from the same free-text profile line people already write
+   ("naps at 12:30"). Asking for it in a separate field would be one more
+   onboarding question for something most caregivers already mention. */
+function parseNap(notes) {
+  const m = /nap[s]?\s*(?:at|around|~)?\s*(\d{1,2})(?:[:.](\d{2}))?\s*(am|pm)?/i.exec(String(notes || ""));
+  if (!m) return null;
+  let h = +m[1]; const min = m[2] ? +m[2] : 0, ap = (m[3] || "").toLowerCase();
+  if (ap === "pm" && h < 12) h += 12;
+  if (ap === "am" && h === 12) h = 0;
+  if (!ap && h <= 7) h += 12;            // "naps at 1" means the afternoon, not 1am
+  if (h > 23) return null;
+  return h + min / 60;
+}
+
 /* ============================== APP ============================= */
 export default function App() {
   const [loaded, setLoaded] = useState(false);
@@ -308,6 +345,8 @@ export default function App() {
   const [locBusy, setLocBusy] = useState(false);
   const [locErr, setLocErr] = useState(false);
   const [deviceLoc, setDeviceLoc] = useState(null);   // FB3-01: silent GPS fix, only for ranking
+  const [wx, setWx] = useState(null);                 // FB10: current conditions, keyless (Open-Meteo)
+  const [nowSkip, setNowSkip] = useState(0);          // FB10: "show me another" for the single pick
   const locTimer = useRef(null);
   const askedGps = useRef(false);
   const [checkIn, setCheckIn] = useState(null);
@@ -593,6 +632,63 @@ export default function App() {
   const [nudgeOff, setNudgeOff] = useState(false);
   const awayNudge = !nudgeOff && daysSinceOuting != null && daysSinceOuting >= 4 ? daysSinceOuting : null;
 
+  /* ---------------- FB10: the next 90 minutes ---------------- */
+  /* Open-Meteo: no key, CORS-friendly, no account. Failure is silent — the pick
+     still works from time and nap alone, it just stops mentioning the weather. */
+  useEffect(() => {
+    if (!geoNear || geoNear.lat == null) return;
+    let live = true;
+    const u = "https://api.open-meteo.com/v1/forecast?latitude=" + geoNear.lat + "&longitude=" + geoNear.lng +
+      "&current=temperature_2m,precipitation,weather_code&timezone=auto";
+    fetch(u).then((r) => r.json()).then((j) => {
+      if (!live || !j || !j.current) return;
+      setWx(readWeather(j.current.weather_code, j.current.temperature_2m, j.current.precipitation));
+    }).catch(() => {});
+    return () => { live = false; };
+  }, [geoNear && geoNear.lat, geoNear && geoNear.lng]);
+
+  const napAt = useMemo(() => parseNap(profile && profile.notes), [profile && profile.notes]);
+
+  /* One answer, and the reasons for it. Everything here is a HARD gate except
+     the final ordering: a suggestion you cannot act on in the next 90 minutes
+     is worse than no suggestion, because it costs a decision to reject. */
+  const rightNow = useMemo(() => {
+    const now = new Date();
+    const hr = now.getHours() + now.getMinutes() / 60;
+    const endHr = hr + 1.5;
+    const reasons = [];
+
+    /* Nap inside the window is disqualifying on its own — say so and stop. */
+    if (napAt != null && napAt > hr && napAt < endHr) {
+      return { blocked: true, why: "Nap is due around " + fmtHour(napAt) + ", so the next 90 minutes are spoken for. Worth a look after." };
+    }
+    if (hr > 19.5) return { blocked: true, why: "It's late — tomorrow morning will land better than anything now." };
+
+    const wetOut = wx ? !wx.outdoorOk : false;
+    const pool = openRanked.filter(({ a, avail }) => {
+      if (months < a.ageMin) return false;
+      if (avail.st !== "open" && avail.st !== "closing") return false;
+      /* must still be open when you arrive AND when you leave */
+      if (a.hours && a.hours.close != null && a.hours.close < endHr - 0.25) return false;
+      if (wetOut && !(a.tags.includes("indoor") || a.tags.includes("rainy"))) return false;
+      if (wx && wx.outdoorOk && wx.clear && a.tags.includes("indoor") && !a.tags.includes("outdoor")) return false;
+      return true;
+    });
+    if (!pool.length) {
+      return { blocked: true, why: wetOut
+        ? "Everything indoors nearby is shut or already done today. A blanket fort counts as an outing."
+        : "Nothing is open for a full 90 minutes right now." };
+    }
+    /* Freshness beats score here: the point is to get you out, not to be right. */
+    const ordered = [...pool].sort((x, y) => (recentIdeas[x.a.id] || 0) - (recentIdeas[y.a.id] || 0) || y.s - x.s);
+    const pick = ordered[nowSkip % ordered.length];
+    if (wx) reasons.push(wx.icon + " " + wx.line + (wetOut ? " — indoors only" : " — good to be out"));
+    reasons.push("🕑 Open until " + fmtHour(pick.a.hours.close));
+    if (napAt != null) reasons.push("😴 Back before " + fmtHour(napAt));
+    if (!recentIdeas[pick.a.id]) reasons.push("✨ You haven't done this one");
+    return { blocked: false, pick, reasons, alt: ordered.length };
+  }, [openRanked, wx, napAt, months, recentIdeas, nowSkip, tab]);
+
   /* ---------------- discover deck ---------------- */
   /* FB4-01. The reshuffle is seeded on `round`, not Math.random(). An unseeded
      shuffle inside a memo re-randomises every time the memo is invalidated, so
@@ -842,6 +938,27 @@ export default function App() {
         }}>
           {/* ---------------- DISCOVER ---------------- */}
           {tab === "discover" && <div className="pad">
+            {/* FB10. The decisive answer, above the browsable deck. It is allowed
+                to say "not now" — a suggestion you cannot act on costs a decision
+                to reject, which is worse than silence. */}
+            <section className={"rightnow" + (rightNow.blocked ? " off" : "")}>
+              <div className="rnhead">
+                <span className="rntag">Next 90 minutes</span>
+                {wx && <span className="rnwx">{wx.icon} {wx.line}</span>}
+              </div>
+              {rightNow.blocked ? <p className="rnwhy">{rightNow.why}</p> : <>
+                <h2 className="rntitle">{featFor(rightNow.pick.a) ? featFor(rightNow.pick.a).name : rightNow.pick.a.name}</h2>
+                <p className="rnsub">{rightNow.pick.a.emoji} {featFor(rightNow.pick.a) ? rightNow.pick.a.name + " · " + featFor(rightNow.pick.a).area : CAT_META[rightNow.pick.a.cat].label}</p>
+                <ul className="rnreasons">{rightNow.reasons.map((r) => <li key={r}>{r}</li>)}</ul>
+                <div className="pills">
+                  <a className="pillbtn dark" target="_blank" rel="noreferrer"
+                     href={featFor(rightNow.pick.a) ? venueQuery(featFor(rightNow.pick.a).name, featFor(rightNow.pick.a).area, activePlace) : nearQuery(rightNow.pick.a.mapsQuery, activePlace)}
+                     onClick={() => goNow(rightNow.pick.a)}>🚗 Let's go</a>
+                  <button className="pillbtn" onClick={() => saveLater(rightNow.pick.a)}>💛 Save it</button>
+                  {rightNow.alt > 1 && <button className="pillbtn" onClick={() => setNowSkip((n) => n + 1)}>Something else</button>}
+                </div>
+              </>}
+            </section>
             <p className="bandline">{band.theme}</p>
             {top ? <>
               {/* FB5-04b: shown once per session, dismissible — a reminder that
@@ -916,7 +1033,22 @@ export default function App() {
                     setDragX(0);
                     setTimeout(() => { doSwipe(dir); setFling(0); }, 190);
                   }}
-                  onPointerCancel={(e) => { try { e.currentTarget.releasePointerCapture(e.pointerId); } catch (err) {} dragFrom.current = null; axis.current = null; setDragX(0); }}>
+                  onPointerCancel={(e) => {
+                    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch (err) {}
+                    /* FB9-01. A cancel that arrives AFTER the drag already passed
+                       the commit threshold is the browser interrupting a decision
+                       the user has visibly made. Honour it rather than snapping
+                       back — otherwise an interrupted swipe silently does nothing,
+                       which is the failure that made this feel broken. */
+                    const x = dragX, w = e.currentTarget ? e.currentTarget.offsetWidth : 340;
+                    dragFrom.current = null; axis.current = null;
+                    if (Math.abs(x) > w * 0.25) {
+                      const dir = x > 0 ? "yes" : "no";
+                      setFling(dir === "yes" ? w * 1.5 : -w * 1.5);
+                      setDragX(0);
+                      setTimeout(() => { doSwipe(dir); setFling(0); }, 190);
+                    } else setDragX(0);
+                  }}>
                   <Art key={top.a.id} a={top.a} tall />
                   {dragX > 25 && <span className="stamp yes" style={{ opacity: Math.min(1, dragX / 90) }}>SAVE</span>}
                   {dragX < -25 && <span className="stamp no" style={{ opacity: Math.min(1, -dragX / 90) }}>SKIP</span>}
@@ -1631,12 +1763,20 @@ const CSS = `
 .inp{width:100%;border:1.5px solid #DDDACB;border-radius:12px;padding:11px 13px;font-family:'Karla';font-size:14px;background:#FFF;margin-bottom:10px;color:#29382F}
 .inp::placeholder{color:#A5A28E}.ta{min-height:70px;resize:vertical}.tall2{min-height:110px}
 .flab{display:block;font-size:12.5px;font-weight:700;margin:10px 0 5px}.opt{font-weight:400;color:#8A8875}
-.deckwrap{position:relative}
+/* FB9-01. touch-action:NONE on the card, not pan-y. pan-y hands vertical
+   panning to the browser, and a real thumb swipe is never purely horizontal —
+   so iOS began scrolling the page a few pixels in, took ownership of the
+   gesture, and fired pointercancel. The card visibly moved, the page moved with
+   it, and the release never committed. The card is a gesture surface: it owns
+   every touch that starts on it, which is exactly how a swipe deck behaves.
+   Page scrolling still works everywhere around it. */
+.deckwrap{position:relative;touch-action:none}
+.scroll{overscroll-behavior:contain}
 .deckcard.behind{position:absolute;left:0;right:0;top:0;bottom:0;transform:scale(.95) translateY(10px);opacity:.45;box-shadow:none;pointer-events:none;z-index:0;overflow:hidden}
 .deckcard.hint{animation:nudge 2.6s ease-in-out 1.2s 2}
 @keyframes nudge{0%,100%{transform:translateX(0) rotate(0)}25%{transform:translateX(-22px) rotate(-1.6deg)}60%{transform:translateX(22px) rotate(1.6deg)}}
 .swipehint{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);background:rgba(41,56,47,.86);color:#F6F5EF;font-size:11.5px;font-weight:700;letter-spacing:1px;padding:5px 12px;border-radius:99px;z-index:4}
-.deckcard{position:relative;z-index:1;background:#FFF;border:2px solid #29382F;box-shadow:5px 5px 0 #E9A23B;border-radius:20px;padding:18px;touch-action:pan-y;cursor:grab;user-select:none;position:relative;overflow:hidden}
+.deckcard{position:relative;z-index:1;background:#FFF;border:2px solid #29382F;box-shadow:5px 5px 0 #E9A23B;border-radius:20px;padding:18px;touch-action:none;cursor:grab;user-select:none;position:relative;overflow:hidden}
 /* FB4-06. The card is mostly photo, and a drag across an image starts the
    browser's OWN image-drag — which fires pointercancel and killed the swipe
    a few pixels in. On iOS the same press-and-hold raises the save-image
@@ -1654,6 +1794,21 @@ const CSS = `
 .nudge{display:flex;gap:9px;background:#FBEAC9;border-radius:14px;padding:12px;margin:8px 0;align-items:flex-start}
 .nudge p{margin:0;font-size:13px;line-height:1.5}.nudge.sm p{font-size:12.5px}
 /* FB5-04: the away reminder is calmer than a warning and always dismissible */
+/* FB10: deliberately the loudest thing on the screen — it is the answer. */
+.rightnow{background:#29382F;color:#F6F5EF;border-radius:20px;padding:16px 16px 14px;margin:6px 0 14px;box-shadow:0 14px 30px -16px rgba(41,56,47,.6)}
+.rightnow.off{background:#ECEAE0;color:#5A6B60}
+.rnhead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
+.rntag{font-size:10.5px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;opacity:.75}
+.rnwx{font-size:11.5px;font-weight:700;background:rgba(246,245,239,.14);border-radius:99px;padding:4px 9px;white-space:nowrap}
+.rightnow.off .rnwx{background:rgba(41,56,47,.08)}
+.rntitle{font-family:'Fraunces',Georgia,serif;font-size:23px;font-weight:600;margin:0;line-height:1.15;letter-spacing:-.3px}
+.rnsub{font-size:12.5px;opacity:.8;margin:5px 0 0}
+.rnwhy{font-size:13.5px;line-height:1.5;margin:0}
+.rnreasons{list-style:none;margin:11px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.rnreasons li{font-size:11.5px;font-weight:700;background:rgba(246,245,239,.13);border-radius:99px;padding:5px 10px}
+.rightnow .pills{margin-top:12px}
+.rightnow .pillbtn{background:rgba(246,245,239,.1);border-color:rgba(246,245,239,.28);color:#F6F5EF}
+.rightnow .pillbtn.dark{background:#E9A23B;border-color:#E9A23B;color:#29382F}
 .nudge.reshuf{align-items:flex-start}
 .nudge.reshuf .pills{margin-top:8px}
 .nudge.away{background:#DEEAEF;border:1.5px solid #8FB3C0;align-items:center}
