@@ -18,7 +18,9 @@ const ok = (name, cond, detail) => {
    condition under which the old slice(0,60) hid the "coming later" set. */
 const birthdate = (() => { const d = new Date(); d.setFullYear(d.getFullYear() - 6); return d.toISOString().slice(0, 10); })();
 const seed = {
-  profile: { name: "Mia", birthdate, notes: "", home: { label: "Kitsilano, Vancouver" }, caregivers: ["Mum", "Dad"], cOff: [] },
+  /* FB4-03: the note is the whole point of the constraint engine, so the fixture
+     has to carry one. "hates water" must remove water from recommendations. */
+  profile: { name: "Mia", birthdate, notes: "hates water, loves trains", home: { label: "Kitsilano, Vancouver" }, caregivers: ["Mum", "Dad"], cOff: [] },
   signedIn: true,
   visits: [
     { id: 1, ideaId: "storytime", name: "Library story time", cat: "stories", emoji: "📚", ts: Date.now() - 86400000, rating: "fine", note: "old three-tier record", place: "Kitsilano Library" },
@@ -149,6 +151,64 @@ ok("FB3-07 Snap is a real camera input, not a dialog",
 ok("FB3-07 the shortlisted card ends in Remove, not Didn't go",
    capRows.length > 1 && /Remove/.test(capRows[1].lastElementChild.textContent),
    capRows.length > 1 ? capRows[1].lastElementChild.textContent : "");
+
+/* --- FB4-01: the deck must be stable under re-render (cards were flicking past) --- */
+const swipeTab = findByText("button", "Swipe");
+if (swipeTab) { click(swipeTab); await settle(); }
+const deckTitle = () => { const el = root.querySelector(".deckcard:not(.behind) .dtitle"); return el ? el.textContent : null; };
+const first = deckTitle();
+ok("FB4-01 the swipe deck renders a card", !!first, first);
+/* Force the exact re-render storm a resting finger produces: pointer events on
+   the card, which previously reshuffled the deck on every one. */
+const card = root.querySelector(".deckcard:not(.behind)");
+if (card) {
+  for (let i = 0; i < 12; i++) {
+    card.dispatchEvent(new window.MouseEvent("pointermove", { bubbles: true, clientX: 100 + (i % 2) }));
+    await new Promise((r) => setTimeout(r, 12));
+  }
+}
+await settle();
+ok("FB4-01 the card does NOT change while a finger rests on it", deckTitle() === first,
+   first + " -> " + deckTitle());
+/* And a scroll/toast-style re-render must not swap it either */
+if (main) { main.dispatchEvent(new window.Event("scroll", { bubbles: true })); }
+await settle(); await settle();
+ok("FB4-01 unrelated re-renders do not reshuffle the deck", deckTitle() === first,
+   first + " -> " + deckTitle());
+const goHref = () => { const a = root.querySelector(".deckbtns a.dbtn.go"); return a ? a.getAttribute("href") : null; };
+const hrefBefore = goHref();
+if (card) card.dispatchEvent(new window.MouseEvent("pointermove", { bubbles: true, clientX: 103 }));
+await settle();
+ok("FB4-01 'Let's go' still points at the card you are looking at", goHref() === hrefBefore,
+   decodeURIComponent(String(hrefBefore)).slice(0, 60));
+
+/* --- FB4-02 / FB4-03: nothing out of season or ruled out reaches the deck --- */
+const deckAudit = await (async () => {
+  const seen = new Set(); let offseason = 0, water = 0, n = 0;
+  for (let i = 0; i < 40; i++) {
+    const t = deckTitle(); if (!t) break;
+    if (seen.has(t)) break;
+    seen.add(t); n++;
+    const badge = root.querySelector(".deckcard:not(.behind) .av");
+    if (badge && /In season/.test(badge.textContent)) offseason++;
+    if (/swim|splash|pool|paddl|wading/i.test(t)) water++;
+    const skip = root.querySelector("button.dbtn.skip");
+    if (!skip) break;
+    click(skip); await settle();
+  }
+  return { n, offseason, water, titles: [...seen] };
+})();
+ok("FB4-02 no out-of-season idea appears in the swipe deck",
+   deckAudit.offseason === 0, "checked " + deckAudit.n + " cards, " + deckAudit.offseason + " out of season");
+ok("FB4-03 'hates water' keeps water out of the deck entirely",
+   deckAudit.water === 0, "checked " + deckAudit.n + " cards, " + deckAudit.water + " water ideas");
+
+/* --- FB4-04: curated photos are used, not a keyword search --- */
+if (swipeTab) { click(swipeTab); await settle(); }
+const imgs = [...root.querySelectorAll(".art img")].map((i) => i.getAttribute("src")).filter(Boolean);
+ok("FB4-04 card art comes from the curated set",
+   imgs.length === 0 || imgs.every((u) => u.includes("images.unsplash.com")),
+   imgs.length ? imgs[0].slice(0, 52) : "no art loaded in jsdom");
 
 /* --- every tab renders without throwing --- */
 for (const t of ["Swipe", "Browse", "Our List", "Yours", "Memories"]) {

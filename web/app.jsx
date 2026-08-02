@@ -167,7 +167,11 @@ const venueQuery = (name, area, place) => gmaps(name + (area ? ", " + area : "")
 
 function availability(a, now = new Date()) {
   const h = a.hours, mo = now.getMonth() + 1, day = now.getDay(), hr = now.getHours() + now.getMinutes() / 60;
-  if (h.months) { const [s, e] = h.months; const inSeason = s <= e ? (mo >= s && mo <= e) : (mo >= s || mo <= e); if (!inSeason) return { st: "closed", rank: -1, label: `Season: ${MON[s]}–${MON[e]}` }; }
+  /* FB4-02. Out of season is NOT the same as closed. "Closed" means come back
+     tomorrow morning; out of season means come back in four months, and a
+     Christmas tree farm has no business being recommended in August. They shared
+     a status, so the ranker treated them identically. */
+  if (h.months) { const [s, e] = h.months; const inSeason = s <= e ? (mo >= s && mo <= e) : (mo >= s || mo <= e); if (!inSeason) return { st: "offseason", rank: -2, label: `In season ${MON[s]}–${MON[e]}` }; }
   if (!h.days.includes(day)) return { st: "closed", rank: -1, label: h.days.length === 2 ? "Weekends" : "Weekdays only" };
   if (hr < h.open) return h.open - hr <= 1.5 ? { st: "soon", rank: 0.5, label: `Opens ~${fmtHour(h.open)}` } : { st: "closed", rank: -1, label: `Opens ~${fmtHour(h.open)}` };
   if (hr >= h.close) return { st: "closed", rank: -1, label: "Done for today" };
@@ -373,6 +377,19 @@ export default function App() {
   const recentCats = useMemo(() => { const m = {}; visits.forEach((v) => { if (v.cat && (!m[v.cat] || v.ts > m[v.cat])) m[v.cat] = v.ts; }); return m; }, [visits]);
   const retryIds = useMemo(() => rated.filter((v) => rateW(v.rating) <= -1 && Date.now() - v.ts > 60 * DAY).map((v) => v.ideaId), [rated]);
 
+  /* FB4-03. "Hates water" used to be a -14 ranking penalty against a -50 cutoff,
+     so swimming still surfaced — just a bit further down. If a caregiver has
+     told us the child is frightened of something, ranking it lower is not the
+     job; leaving it out is. This is a hard exclusion from anything the app
+     *recommends*. Browse can still reach it deliberately, via its own filter. */
+  function blocked(a) {
+    if (a.userAdded) return false;               // your own additions are never second-guessed
+    return constraints.avoid.some((l) => {
+      const m = cmapFor(l);
+      return m.cats.includes(a.cat) || a.aff.some((f) => m.affs.includes(f));
+    });
+  }
+
   function score(a, avail) {
     if (months == null || months < a.ageMin) return -100;
     if (dropped.includes(a.id)) return -100;
@@ -397,7 +414,12 @@ export default function App() {
   }
   const ranked = useMemo(() => pool.map((a) => { const avail = availability(a); return { a, avail, s: score(a, avail) }; }).sort((x, y) => y.s - x.s),
     [pool, months, visits, swipes, dropped, constraints, tab, round]);
-  const openRanked = ranked.filter((r) => r.s > -50);
+  /* FB4-01. MUST stay memoised. This feeds the deck memo, and a fresh array
+     identity on every render made the deck recompute — and therefore reshuffle —
+     continuously, which is what made cards flick past under a resting finger. */
+  const openRanked = useMemo(
+    () => ranked.filter((r) => r.s > -50 && r.avail.st !== "offseason" && !blocked(r.a)),
+    [ranked, constraints]);
 
   function fit(a) {
     if (months < a.ageMin) return { k: "later", l: a.ageMin >= 60 ? "Best around 5+" : a.ageMin >= 42 ? "Best around 3½+" : a.ageMin >= 28 ? "Best around 2½" : `From ${fmtAge(a.ageMin)}` };
@@ -482,11 +504,19 @@ export default function App() {
   };
 
   /* ---------------- discover deck ---------------- */
+  /* FB4-01. The reshuffle is seeded on `round`, not Math.random(). An unseeded
+     shuffle inside a memo re-randomises every time the memo is invalidated, so
+     the card under your thumb changed identity mid-gesture — cards flicking past
+     while you rested a finger, and "Let's go" opening whatever card had just
+     rotated in. Seeded, a given round always produces the same order, and only
+     an actual swipe (which bumps `round`) reorders anything. */
   const deck = useMemo(() => {
     const fresh = openRanked.filter((r) => swipes[r.a.id] === undefined);
     if (fresh.length) return { list: fresh, reshuffled: false };
     const all = [...openRanked];
-    for (let i = all.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [all[i], all[j]] = [all[j], all[i]]; }
+    let seed = (round + 1) * 0x9e3779b1 >>> 0;
+    const rnd = () => { seed = (seed + 0x6d2b79f5) >>> 0; let t = seed; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    for (let i = all.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [all[i], all[j]] = [all[j], all[i]]; }
     return { list: all, reshuffled: true };
   }, [openRanked, swipes, round]);
   const top = deck.list[0];
@@ -591,8 +621,15 @@ export default function App() {
      than one ranked list filtered by age. Under-age activities score -100, so
      they sort below everything; the old single list then cut at .slice(0,60) and
      never reached them — the toggle changed its own label and nothing else. */
+  /* FB4-02/03. Browse hides what the app would not recommend — out of season, or
+     ruled out by the profile note — but never makes it unreachable: the
+     "season" chip is the deliberate way in, and avoided items stay visible
+     under their own category so the badge can explain why they are down there. */
   const exMatch = (a, avail) => {
     if (exCat !== "all" && a.cat !== exCat) return false;
+    if (exFilter === "season") return avail.st === "offseason";
+    if (avail.st === "offseason") return false;
+    if (blocked(a) && exCat === "all") return false;
     if (exFilter === "open") return avail.st === "open" || avail.st === "closing";
     if (exFilter === "free") return a.tags.includes("free");
     if (exFilter === "rainy") return a.tags.includes("indoor") || a.tags.includes("rainy");
@@ -601,6 +638,8 @@ export default function App() {
   };
   const exNow = ranked.filter(({ a, avail }) => months >= a.ageMin && exMatch(a, avail)).slice(0, 60);
   const exLater = ranked.filter(({ a, avail }) => months < a.ageMin && exMatch(a, avail)).slice(0, 40);
+  const offSeasonCount = ranked.filter((r) => r.avail.st === "offseason" && months >= r.a.ageMin).length;
+  const blockedCount = ranked.filter((r) => blocked(r.a) && r.avail.st !== "offseason" && months >= r.a.ageMin).length;
 
   /* FB3-05: "Yours" is a destination of its own now, not a strip inside Our List. */
   const TABS = [
@@ -749,7 +788,11 @@ export default function App() {
             <div className="chips">
               {[["all", "All"], ["open", "Open now"], ["free", "Free"], ["rainy", "Indoor"], ["new", "New to us"]].map(([k, l]) =>
                 <button key={k} className={"chip" + (exFilter === k ? " on" : "")} onClick={() => setExFilter(k)}>{l}</button>)}
+              {/* FB4-02: seasonal ideas stay reachable on purpose, just never recommended */}
+              {offSeasonCount > 0 && <button className={"chip" + (exFilter === "season" ? " on" : "")} onClick={() => setExFilter(exFilter === "season" ? "all" : "season")}>🗓️ Later in the year ({offSeasonCount})</button>}
             </div>
+            {exFilter === "season" && <div className="nudge sm"><span>🗓️</span><p>These are out of season today, so they never appear in Swipe. Saving one keeps it on Our List until its months come round.</p></div>}
+            {exFilter !== "season" && blockedCount > 0 && <div className="nudge sm"><span>🚫</span><p><b>{blockedCount} ideas hidden</b> because your profile note says {profile.name} avoids {constraints.avoid.join(" and ")}. Pick that category above to see them anyway, or edit the note in the profile.</p></div>}
             <div className="chips">
               <button className={"chip" + (exCat === "all" ? " on" : "")} onClick={() => setExCat("all")}>All types</button>
               {Object.entries(CAT_META).map(([c, m]) => <button key={c} className={"chip" + (exCat === c ? " on" : "")} onClick={() => setExCat(c)}>{m.emoji} {m.label}</button>)}
@@ -1061,11 +1104,16 @@ function GenArt({ a, m, h }) {
   const gid = "g" + a.id;
   const pats = [
     <g key="0"><path d="M0,64 Q40,50 80,64 T160,64 T240,64 T320,64 V120 H0 Z" fill="#fff" opacity=".38" /><path d="M0,80 Q40,68 80,80 T160,80 T240,80 T320,80 V120 H0 Z" fill="#fff" opacity=".55" /><circle cx={40 + (h % 200)} cy="26" r="15" fill={acc} opacity=".85" /></g>,
-    <g key="1">{[0, 1, 2, 3, 4, 5, 6, 7].map((i) => <circle key={i} cx={20 + i * 40 + (h % 17)} cy={22 + ((h >> i) % 60)} r={4 + ((h >> i) % 9)} fill={i % 2 ? acc : "#fff"} opacity=".55" />)}</g>,
-    <g key="2">{[0, 1, 2, 3, 4].map((i) => <polygon key={i} points={(30 + i * 60) + ",110 " + (58 + i * 60) + "," + (30 + ((h >> i) % 40)) + " " + (86 + i * 60) + ",110"} fill={i % 2 ? "#fff" : acc} opacity=".45" />)}</g>,
+    /* FB4-05: `>>>`, not `>>`. hash() returns a full uint32, so a signed shift
+       goes negative for any id hashing above 2^31, and `% 9` stays negative —
+       producing r="-4" on these circles. The browser rejects a negative radius,
+       so those shapes silently vanished and the console filled with errors.
+       (A `{...}` JSX comment here would be an empty object array element.) */
+    <g key="1">{[0, 1, 2, 3, 4, 5, 6, 7].map((i) => <circle key={i} cx={20 + i * 40 + (h % 17)} cy={22 + ((h >>> i) % 60)} r={4 + ((h >>> i) % 9)} fill={i % 2 ? acc : "#fff"} opacity=".55" />)}</g>,
+    <g key="2">{[0, 1, 2, 3, 4].map((i) => <polygon key={i} points={(30 + i * 60) + ",110 " + (58 + i * 60) + "," + (30 + ((h >>> i) % 40)) + " " + (86 + i * 60) + ",110"} fill={i % 2 ? "#fff" : acc} opacity=".45" />)}</g>,
     <g key="3">{[0, 1, 2, 3, 4, 5].map((i) => <rect key={i} x={i * 56 + (h % 20)} y="0" width="26" height="120" fill={i % 2 ? "#fff" : acc} opacity=".22" transform={"skewX(" + (-12 + (h % 20)) + ")"} />)}</g>,
     <g key="4"><circle cx={250 - (h % 90)} cy="34" r="26" fill={acc} opacity=".9" /><ellipse cx="160" cy="112" rx="200" ry="30" fill="#fff" opacity=".4" /><ellipse cx={90 + (h % 60)} cy="24" rx="26" ry="9" fill="#fff" opacity=".75" /></g>,
-    <g key="5">{[0, 1, 2, 3, 4, 5, 6].map((i) => <path key={i} d={"M" + i * 50 + ",120 Q" + (i * 50 + 25) + "," + (60 + ((h >> i) % 45)) + " " + (i * 50 + 50) + ",120 Z"} fill={i % 2 ? acc : "#fff"} opacity=".35" />)}</g>,
+    <g key="5">{[0, 1, 2, 3, 4, 5, 6].map((i) => <path key={i} d={"M" + i * 50 + ",120 Q" + (i * 50 + 25) + "," + (60 + ((h >>> i) % 45)) + " " + (i * 50 + 50) + ",120 Z"} fill={i % 2 ? acc : "#fff"} opacity=".35" />)}</g>,
   ];
   return <svg className="genart" viewBox="0 0 320 120" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
     <defs><linearGradient id={gid} x1="0" y1="0" x2="0.4" y2="1"><stop offset="0" stopColor={c1} /><stop offset="1" stopColor={c2} /></linearGradient></defs>
@@ -1088,8 +1136,12 @@ async function findPhoto(a) {
   const r = await fetch(url);
   const j = await r.json();
   const pages = j && j.query && j.query.pages ? Object.values(j.query.pages) : [];
+  /* FB4-04. Commons is full of engravings, clip art, posters and museum
+     paintings that all pass "filetype:bitmap". They are what produced the
+     illustrated, not-obviously-child-appropriate cards, so the reject list has
+     to name the artwork forms explicitly, not just the obvious non-photos. */
   const urls = pages.map((p) => p.imageinfo && p.imageinfo[0] && p.imageinfo[0].thumburl)
-    .filter((u) => u && !/\.svg|logo|map|diagram|icon|coat_of_arms/i.test(u));
+    .filter((u) => u && !/\.svg|logo|map|diagram|icon|coat_of_arms|drawing|illustration|painting|clip.?art|cartoon|sketch|engraving|lithograph|woodcut|poster|postcard|stamp|banknote|chart|graph|plaque|signage|blueprint|schematic|1[6-9]\d\d/i.test(u));
   const pick = urls.find((u) => !claimed[u]) || urls[0];
   if (pick) { claimed[pick] = a.id; photoCache[a.id] = pick; store.set("img:" + a.id, pick).catch(() => {}); }
   return pick || null;
@@ -1111,19 +1163,27 @@ function Art({ a, tall }) {
   const [src, setSrc] = useState(null);
   const [failed, setFailed] = useState(false);
   const h = hash(a.id);
+  /* FB4-04. Curated first, Commons only as a fallback — this order was inverted.
+     All 155 activities carry a hand-picked IMG id, so the keyword search was
+     overriding a known-good photo on every single card, and its misses are what
+     the founder saw: illustrations, and images not obviously about small
+     children. A hand-picked photo cannot regress; a search result can. Commons
+     now only serves activities with no curated image, which today means none of
+     the built-in set and only future or imported ones. */
   useEffect(() => {
     if (a.userAdded) return;                 // FB2-16: never look one up for your own places
     let live = true;
+    if (IMG[a.id]) { setSrc("https://images.unsplash.com/photo-" + IMG[a.id] + "?w=800&q=72&auto=format&fit=crop"); return; }
     findPhoto(a)
-      .then((u) => { if (!live) return; if (u) setSrc(u); else if (IMG[a.id]) setSrc("https://images.unsplash.com/photo-" + IMG[a.id] + "?w=800&q=72&auto=format&fit=crop"); else setFailed(true); })
-      .catch(() => { if (!live) return; if (IMG[a.id]) setSrc("https://images.unsplash.com/photo-" + IMG[a.id] + "?w=800&q=72&auto=format&fit=crop"); else setFailed(true); });
+      .then((u) => { if (!live) return; if (u) setSrc(u); else setFailed(true); })
+      .catch(() => { if (!live) return; setFailed(true); });
     return () => { live = false; };
   }, [a.id]);
   if (a.userAdded) return <div className={"art mineart" + (tall ? " tall" : "")}>
     <MineArt /><span className="ae">{a.emoji}</span><span className="minetag">💜 Yours</span>
   </div>;
   return <div className={"art" + (tall ? " tall" : "")}>
-    {src && !failed ? <img src={src} alt="" loading="lazy" onError={() => { if (IMG[a.id] && src.indexOf("unsplash") < 0) setSrc("https://images.unsplash.com/photo-" + IMG[a.id] + "?w=800&q=72&auto=format&fit=crop"); else setFailed(true); }} /> : <GenArt a={a} m={m} h={h} />}
+    {src && !failed ? <img src={src} alt="" loading="lazy" draggable={false} onError={() => { if (IMG[a.id] && src.indexOf("unsplash") < 0) setSrc("https://images.unsplash.com/photo-" + IMG[a.id] + "?w=800&q=72&auto=format&fit=crop"); else setFailed(true); }} /> : <GenArt a={a} m={m} h={h} />}
     <span className="ae">{a.emoji}</span>
   </div>;
 }
@@ -1330,6 +1390,8 @@ const CSS = `
 .b-paused,.b-later{background:#ECEAE0;color:#7B7965}.b-yours{background:#E7DFF3;color:#5B4A7A}
 .av{font-size:10.5px;font-weight:700;border-radius:99px;padding:4px 8px;white-space:nowrap}
 .a-open{background:#DDE8DC;color:#2F5138}.a-soon,.a-closing{background:#FBEAC9;color:#9A6410}.a-closed{background:#ECEAE0;color:#8A8875}
+/* FB4-02: out of season reads as "a different time of year", not "shut tonight" */
+.a-offseason{background:#E6E2EE;color:#5E4A7D}
 .aff{font-size:10.5px;font-weight:700;border-radius:99px;padding:4px 8px;background:#F0EFE4;color:#5A6B60}
 .chipline,.affs{display:flex;gap:5px;flex-wrap:wrap;margin:4px 0 8px}
 .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
@@ -1355,6 +1417,12 @@ const CSS = `
 @keyframes nudge{0%,100%{transform:translateX(0) rotate(0)}25%{transform:translateX(-22px) rotate(-1.6deg)}60%{transform:translateX(22px) rotate(1.6deg)}}
 .swipehint{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);background:rgba(41,56,47,.86);color:#F6F5EF;font-size:11.5px;font-weight:700;letter-spacing:1px;padding:5px 12px;border-radius:99px;z-index:4}
 .deckcard{position:relative;z-index:1;background:#FFF;border:2px solid #29382F;box-shadow:5px 5px 0 #E9A23B;border-radius:20px;padding:18px;touch-action:pan-y;cursor:grab;user-select:none;position:relative;overflow:hidden}
+/* FB4-06. The card is mostly photo, and a drag across an image starts the
+   browser's OWN image-drag — which fires pointercancel and killed the swipe
+   a few pixels in. On iOS the same press-and-hold raises the save-image
+   callout instead, which is what a resting finger triggered. Both have to be
+   suppressed or the gesture never reaches our handler. */
+.deckcard img{-webkit-user-drag:none;user-drag:none;-webkit-touch-callout:none;pointer-events:none}
 .deckbody{position:relative}
 .stamp{position:absolute;top:14px;font-size:15px;font-weight:700;padding:6px 12px;border-radius:8px;z-index:3;letter-spacing:1px}
 .stamp.yes{right:14px;background:#DDE8DC;color:#2F5138;border:2px solid #2F5138}

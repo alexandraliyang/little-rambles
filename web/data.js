@@ -206,7 +206,10 @@ A("observatory","Observatory / star night","science","🌟",48,84,"attention_spa
 A("rockshop","Rock and gem shop","science","💎",30,84,"naming_targets sensory_textures fine_motor","indoor free rainy","rock gem mineral shop","Shiny, cheap, endlessly sortable.","all",10,18,"daily"),
 A("weatherwalk","Weather-watching walk","science","🌬️",24,84,"cause_effect naming_targets calm_regulation","outdoor free","viewpoint park","Wind, clouds, puddles: free physics.","all",8,19,"daylight"),
 A("shadowwalk","Shadow / light hunt","science","🌗",18,84,"cause_effect naming_targets climb_run","outdoor free","sunny park plaza","Chase your own shadow. Free, weird, great.","all",9,18,"daylight"),
-A("tidepoolscience","Guided tide pool walk","science","🔬",24,84,"animal_watch naming_targets group_program attention_span_long","outdoor","guided tide pool walk","A biologist explaining a crab.","all",9,15,"schedule",5,9),
+/* FB4-03: carries water_play because it happens at the waterline with wet feet.
+   Without it the constraint engine could not see it as water, so "hates water"
+   let a shoreline wade through. Category alone is not enough to describe risk. */
+A("tidepoolscience","Guided tide pool walk","science","🔬",24,84,"animal_watch naming_targets group_program attention_span_long water_play","outdoor","guided tide pool walk","A biologist explaining a crab.","all",9,15,"schedule",5,9),
 A("librarystem","Library STEM drop-in","science","🧪",48,84,"cause_effect group_program rule_games attention_span_long","indoor free rainy","library stem program kids","Free experiments, no cleanup at home.","wd",15,17,"schedule"),
 ];
 
