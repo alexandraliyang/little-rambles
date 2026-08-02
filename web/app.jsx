@@ -444,7 +444,13 @@ export default function App() {
     });
   };
   const goNow = (a) => { upsertPlan(a, "out"); const f = featFor(a); say(f ? `Heading to ${f.name} — tap Our List to log it afterwards.` : `${a.name} — tap Our List to log it afterwards.`); };
-  const saveLater = (a) => { upsertPlan(a, "planned"); say("Saved to Our List 💛"); };
+  const saveLater = (a) => {
+    upsertPlan(a, "planned");
+    /* FB5-04a: the warning belongs at the moment of choosing, not buried on a
+       stats screen — that is the only point where it can change the choice. */
+    const w = similarWarning(a);
+    say(w ? "Saved 💛 — " + w : "Saved to Our List 💛");
+  };
   const removePlan = (id) => {
     setPlans((ps) => ps.filter((p) => p.id !== id));
     setPlanMedia((m) => { const n = { ...m }; delete n[id]; return n; });
@@ -502,6 +508,36 @@ export default function App() {
     say(ciRating === "loved" ? `Saved to ${profile.name}'s story — more like this.` : ciRating === "nope" ? "Saved. Resting this type for a while." : `Saved to ${profile.name}'s story.`);
     setTab("story");
   };
+
+  /* ---------------- FB5-04: reminders --------------------------------------
+     Both are in-app, computed from data already on the device. True push
+     notifications need a server and a VAPID key pair, and on iOS only reach an
+     installed PWA that has granted permission — a separate piece of work. These
+     land the moment the app is opened, which is when a caregiver can act on
+     them anyway. */
+
+  /* (a) "You have done a lot of this lately." Counts the same category in the
+         last three weeks, so it fires on a pattern rather than a repeat. */
+  const catStreak = useMemo(() => {
+    const cut = Date.now() - 21 * DAY, m = {};
+    visits.forEach((v) => { if (v.cat && v.ts > cut) m[v.cat] = (m[v.cat] || 0) + 1; });
+    return m;
+  }, [visits]);
+  const similarWarning = (a) => {
+    const n = catStreak[a.cat] || 0;
+    if (n < 3) return null;
+    const label = CAT_META[a.cat] ? CAT_META[a.cat].label.toLowerCase() : a.cat;
+    return `That's ${n} ${label} outings in three weeks — still a favourite, or time for something different?`;
+  };
+
+  /* (b) "It has been a while." Measured from the last thing actually logged,
+         not from app opens: opening the app is not an outing. */
+  const daysSinceOuting = useMemo(() => {
+    const last = visits.reduce((t, v) => Math.max(t, v.ts || 0), 0);
+    return last ? Math.floor((Date.now() - last) / DAY) : null;
+  }, [visits]);
+  const [nudgeOff, setNudgeOff] = useState(false);
+  const awayNudge = !nudgeOff && daysSinceOuting != null && daysSinceOuting >= 4 ? daysSinceOuting : null;
 
   /* ---------------- discover deck ---------------- */
   /* FB4-01. The reshuffle is seeded on `round`, not Math.random(). An unseeded
@@ -612,7 +648,7 @@ export default function App() {
   if (profile && !profile.name) { try { console.warn("profile missing name", profile); } catch (e) {} }
   if (!profileComplete || !signedIn || editProfile)
     return <div className="root"><style>{CSS}</style><div className="phone">
-      <Profile profile={profile} signedIn={signedIn} editing={editProfile}
+      <Profile near={deviceLoc} profile={profile} signedIn={signedIn} editing={editProfile}
         onDone={(p) => { setProfile(p); setSignedIn(true); setEditProfile(false); setTab("discover"); }}
         onCancel={editProfile ? () => setEditProfile(false) : null} constraints={constraints} />
     </div></div>;
@@ -741,6 +777,12 @@ export default function App() {
           {tab === "discover" && <div className="pad">
             <p className="bandline">{band.theme}</p>
             {top ? <>
+              {/* FB5-04b: shown once per session, dismissible — a reminder that
+                  cannot be dismissed becomes guilt, which is the opposite of
+                  what this app is for. */}
+              {awayNudge && <div className="nudge away"><span>👋</span><p><b>It's been {awayNudge} days since your last logged outing.</b> Nothing wrong with that — but if today's a good day, here's somewhere to start.</p>
+                <button className="mini x" onClick={() => setNudgeOff(true)}>✕</button></div>}
+              {top && similarWarning(top.a) && <div className="nudge sm"><span>🔁</span><p>{similarWarning(top.a)}</p></div>}
               {deck.reshuffled && <div className="nudge sm"><span>🔁</span><p>You've seen everything age-right for {profile.name} — reshuffling so there's always something next.</p></div>}
               <div className="deckwrap">
                 {deck.list[1] && <div className="deckcard behind" aria-hidden="true"><Art a={deck.list[1].a} tall /><div className="deckbody"><h2 className="dtitle">{deck.list[1].a.name}</h2></div></div>}
@@ -997,7 +1039,7 @@ export default function App() {
           <div className="rates">{Object.entries(RATE).map(([k, m]) => <button key={k} className={"rb " + m.c + (ciRating === k ? " on" : "")} onClick={() => setCiRating(k)}><span className="e">{m.e}</span><span>{m.l}</span></button>)}</div>
           {/* FB2-10: real geocoder instead of a bare text box, seeded with places
               already logged so a repeat venue is one tap rather than retyping */}
-          <PlaceInput value={ciPlace} onChange={setCiPlace} onPick={(h) => setCiPlace(h.label)}
+          <PlaceInput bias={geoNear} value={ciPlace} onChange={setCiPlace} onPick={(h) => setCiPlace(h.label)}
             placeholder="Which place exactly? (optional)" recent={pastPlaces} />
           <textarea className="inp ta" placeholder="Notes or a reminder for next time — e.g. “bring water shoes”, “arrive before 10 or no parking”" value={ciNote} onChange={(e) => setCiNote(e.target.value)} />
           {profile.caregivers && profile.caregivers.length > 1 && <select className="inp" value={ciBy} onChange={(e) => setCiBy(e.target.value)}>
@@ -1023,9 +1065,9 @@ export default function App() {
           setJournalOpen(false); say("Saved to the story ✍️");
         }} addMedia={addMedia} />}
 
-        {addOpen && <AddActivitySheet place={activePlace} onClose={() => setAddOpen(false)} onSave={(f) => { addCustomActivity(f); setAddOpen(false); }} />}
+        {addOpen && <AddActivitySheet place={activePlace} near={geoNear} onClose={() => setAddOpen(false)} onSave={(f) => { addCustomActivity(f); setAddOpen(false); }} />}
 
-        {editMem && <EditMemSheet mem={editMem} media={photosBy[editMem.id] || []} caregivers={profile.caregivers || []} addMedia={addMedia} pastPlaces={pastPlaces}
+        {editMem && <EditMemSheet mem={editMem} media={photosBy[editMem.id] || []} caregivers={profile.caregivers || []} addMedia={addMedia} pastPlaces={pastPlaces} near={geoNear}
           onClose={() => setEditMem(null)}
           onSaveNew={async (f, media) => { await addCustomMemory(f, media); setEditMem(null); }}
           onSave={async (patch, media) => {
@@ -1051,7 +1093,10 @@ export default function App() {
 }
 
 /* ============================ pieces ============================ */
-function PlaceInput({ value, onChange, onPick, placeholder, allowGps, onGps, recent }) {
+/* FB5-03. `near` was never threaded in, so every box except the main location
+   bar geocoded with no bias at all — which is why they kept offering places on
+   the other side of the world. Same ranking as the location bar now. */
+function PlaceInput({ value, onChange, onPick, placeholder, allowGps, onGps, recent, bias }) {
   const [hits, setHits] = useState([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(false);
@@ -1062,7 +1107,7 @@ function PlaceInput({ value, onChange, onPick, placeholder, allowGps, onGps, rec
     if (v.trim().length < 2) { setHits([]); setBusy(false); setErr(false); return; }
     setBusy(true); setErr(false);
     t.current = setTimeout(async () => {
-      try { setHits(await geoSearch(v, null)); setErr(false); } catch (e) { setHits([]); setErr(true); }
+      try { setHits(await geoSearch(v, bias)); setErr(false); } catch (e) { setHits([]); setErr(true); }
       setBusy(false);
     }, 300);
   };
@@ -1085,7 +1130,7 @@ function PlaceInput({ value, onChange, onPick, placeholder, allowGps, onGps, rec
     {busy && <p className="searching">Searching addresses…</p>}
     {err && <p className="fine">Address search unreachable — what you typed will still be used.</p>}
     {hits.length > 0 && <div className="locsug">{hits.map((h, i) =>
-      <button className="sug" key={i} onClick={() => { onPick(h); setHits([]); }}><b>{h.label}</b>{h.sub ? <small>{h.sub}</small> : null}</button>)}</div>}
+      <button className="sug" key={i} onClick={() => { onPick(h); setHits([]); }}><b>{h.label}</b>{(h.sub || h.km != null) ? <small>{[h.sub, fmtKm(h.km)].filter(Boolean).join(" · ")}</small> : null}</button>)}</div>}
   </div>;
 }
 function Sheet({ children, onClose }) {
@@ -1207,7 +1252,7 @@ function ActCard({ a, feat, fit, avail, affs, place, onGo, onSave, planned }) {
     </>}
   </div>;
 }
-function Profile({ profile, signedIn, editing, onDone, onCancel, constraints }) {
+function Profile({ profile, signedIn, editing, onDone, onCancel, constraints, near }) {
   const [name, setName] = useState((profile && profile.name) || "");
   const [bd, setBd] = useState((profile && profile.birthdate) || "");
   const [notes, setNotes] = useState((profile && profile.notes) || "");
@@ -1236,7 +1281,7 @@ function Profile({ profile, signedIn, editing, onDone, onCancel, constraints }) 
         <button key={k || "na"} type="button" className={"seg" + (gender === k ? " on" : "")} onClick={() => setGender(k)}>{l}</button>)}
     </div>
     <label className="flab">Home address <span className="opt">— sets where ideas are searched</span></label>
-    <PlaceInput value={home} onChange={setHome} onPick={(h) => { setHome(h.label); setHomeObj(h); }} placeholder="Start typing your address or neighbourhood" allowGps onGps={(h) => { setHome(h.label); setHomeObj(h); }} />
+    <PlaceInput bias={near} value={home} onChange={setHome} onPick={(h) => { setHome(h.label); setHomeObj(h); }} placeholder="Start typing your address or neighbourhood" allowGps onGps={(h) => { setHome(h.label); setHomeObj(h); }} />
     <label className="flab">Who takes {String(name || "").trim() || "them"} out? <span className="opt">— comma separated</span></label>
     <input className="inp" value={cg} onChange={(e) => setCg(e.target.value)} placeholder="Mum, Dad, Grandma" />
     <label className="flab">Anything I should know? <span className="opt">— optional, free text</span></label>
@@ -1267,7 +1312,7 @@ function JournalSheet({ name, onClose, onSave, addMedia }) {
     <button className="ghost full mt" onClick={onClose}>Not now</button>
   </Sheet>;
 }
-function AddActivitySheet({ onClose, onSave, place }) {
+function AddActivitySheet({ onClose, onSave, place, near }) {
   const [f, setF] = useState({ name: "", cat: "sensory", ageMin: 0, query: "", why: "", place: "" });
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   return <Sheet onClose={onClose}>
@@ -1280,7 +1325,7 @@ function AddActivitySheet({ onClose, onSave, place }) {
     <label className="flab">Good from (months old)</label>
     <input className="inp" type="number" min="0" max="84" value={f.ageMin} onChange={set("ageMin")} />
     <label className="flab">Where is it? <span className="opt">— real address search</span></label>
-    <PlaceInput value={f.place} onChange={(v) => setF({ ...f, place: v })} onPick={(h) => setF({ ...f, place: h.label, lat: h.lat, lng: h.lng })}
+    <PlaceInput bias={near} value={f.place} onChange={(v) => setF({ ...f, place: v })} onPick={(h) => setF({ ...f, place: h.label, lat: h.lat, lng: h.lng })}
       placeholder="Start typing the place or address" allowGps onGps={(h) => setF({ ...f, place: h.label, lat: h.lat, lng: h.lng })} />
     <label className="flab">Why it's good <span className="opt">— optional</span></label>
     <input className="inp" value={f.why} onChange={set("why")} placeholder="Shade, low swings, never busy" />
@@ -1288,7 +1333,7 @@ function AddActivitySheet({ onClose, onSave, place }) {
     <button className="ghost full mt" onClick={onClose}>Cancel</button>
   </Sheet>;
 }
-function EditMemSheet({ mem, media, caregivers, onClose, onSave, onSaveNew, onDelete, addMedia, pastPlaces }) {
+function EditMemSheet({ mem, media, caregivers, onClose, onSave, onSaveNew, onDelete, addMedia, pastPlaces, near }) {
   const isNew = mem.isNew;
   const [place, setPlace] = useState(mem.place || "");
   const [nm, setNm] = useState(isNew ? "" : mem.name || "");
@@ -1307,7 +1352,7 @@ function EditMemSheet({ mem, media, caregivers, onClose, onSave, onSaveNew, onDe
     <div className="lbl">How did it go?</div>
     <div className="rates">{Object.entries(RATE).map(([k, x]) => <button key={k} className={"rb " + x.c + (rating === k ? " on" : "")} onClick={() => setRating(k)}><span className="e">{x.e}</span><span>{x.l}</span></button>)}</div>
     {/* FB2-12: same geocoder as everywhere else, plus places already logged */}
-    {mem.kind !== "journal" && <><PlaceInput value={place} onChange={setPlace} onPick={(h) => setPlace(h.label)}
+    {mem.kind !== "journal" && <><PlaceInput bias={near} value={place} onChange={setPlace} onPick={(h) => setPlace(h.label)}
       placeholder="Which place exactly? (name or address)" recent={pastPlaces} allowGps onGps={(h) => setPlace(h.label)} />
       {place.trim() && <a className="more" href={"https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(place)} target="_blank" rel="noreferrer">Check this place on Maps ↗</a>}</>}
     <textarea className="inp ta" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Notes or a reminder for next time" />
@@ -1433,6 +1478,10 @@ const CSS = `
 .dbtn.go{background:#29382F;color:#F6F5EF;border-color:#29382F;font-size:19px}
 .nudge{display:flex;gap:9px;background:#FBEAC9;border-radius:14px;padding:12px;margin:8px 0;align-items:flex-start}
 .nudge p{margin:0;font-size:13px;line-height:1.5}.nudge.sm p{font-size:12.5px}
+/* FB5-04: the away reminder is calmer than a warning and always dismissible */
+.nudge.away{background:#DEEAEF;border:1.5px solid #8FB3C0;align-items:center}
+.nudge.away p{flex:1}
+.nudge.away .mini.x{background:none;border:none;color:#33606F;font-size:14px;cursor:pointer;padding:4px 6px}
 .stats{display:flex;gap:6px;margin:6px 0 4px}
 .st{flex:1;background:#FFF;border:1px solid #E3E1D6;border-radius:13px;padding:9px 3px;text-align:center}
 .st b{display:block;font-family:'Fraunces',Georgia,serif;font-size:15px}
