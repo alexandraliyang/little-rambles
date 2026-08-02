@@ -1,6 +1,6 @@
 {
   "name": "rambles-web",
-  "version": "3.3.0-beta",
+  "version": "3.4.0-beta",
   "private": true,
   "description": "Rambles PWA — deployable static build. Edit main.jsx / app.jsx / data.js, then npm run build to regenerate app.js.",
   "scripts": {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
+import { version as APP_VERSION } from "./package.json";
 import { AGE_BANDS, bandFor, AFF, CAT_META, ACTIVITIES, FEATURED, FEATURED_CITY, AREA_SUGGESTIONS, IMG, KIDQ } from "./data.js";
 
 /* ==================================================================
@@ -163,6 +164,17 @@ const gmaps = (q, place) => {
   return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q + (place && place.label ? " near " + place.label : ""));
 };
 const nearQuery = (q, place) => gmaps(q, place);
+/* FB8-01. "Directions" now means directions. When a memory recorded an exact
+   address — or a GPS pin — that is the destination, full stop: no "near home"
+   suffix and no map re-centring, both of which turned a known address back into
+   a fuzzy area search. Falls back to a search only when all we ever had was a
+   generic activity name. */
+const directionsTo = (place, pin) => {
+  if (pin && pin.lat != null) return "https://www.google.com/maps/dir/?api=1&destination=" + pin.lat + "," + pin.lng;
+  const p = String(place || "").trim();
+  if (!p) return null;
+  return "https://www.google.com/maps/dir/?api=1&destination=" + encodeURIComponent(p);
+};
 const venueQuery = (name, area, place) => gmaps(name + (area ? ", " + area : ""), place);
 
 function availability(a, now = new Date()) {
@@ -261,6 +273,19 @@ function CaptureRow({ p, media, onCheck, onSnap, onPin, onDrop, dropLabel, check
   </>;
 }
 
+/* FB7-03. The brand mark: one wandering line — the ramble itself — with a warm
+   point at the end. Chosen over three alternatives because it is the only one
+   still legible at 28px, which is the size it actually appears at. The stroke
+   inherits currentColor so the same mark works on cream, on green, and inside
+   the dark header chip without a second asset. */
+function Logo({ size = 26 }) {
+  return <svg className="logo" viewBox="0 0 120 120" width={size} height={size} aria-hidden="true" focusable="false">
+    <path d="M24 78 C38 78 38 50 54 50 C70 50 68 80 84 80 C92 80 96 72 98 66"
+      stroke="currentColor" strokeWidth="10" strokeLinecap="round" fill="none" />
+    <circle cx="99" cy="63" r="8.5" fill="#E9A23B" />
+  </svg>;
+}
+
 /* ============================== APP ============================= */
 export default function App() {
   const [loaded, setLoaded] = useState(false);
@@ -310,6 +335,9 @@ export default function App() {
   const [showTop, setShowTop] = useState(false);
   const [round, setRound] = useState(0);
   const dragFrom = useRef(null);
+  const dragY0 = useRef(0);          // FB8-04: direction lock origin
+  const axis = useRef(null);         // "x" once the gesture commits to a swipe
+  const vTrack = useRef({ x: 0, t: 0, v: 0 });  // instantaneous velocity sample
   const say = (m) => { setToast(m); setTimeout(() => setToast(null), 3600); };
 
   /* ---------------- load / persist ---------------- */
@@ -582,6 +610,13 @@ export default function App() {
     return { list: all, reshuffled: true };
   }, [openRanked, swipes, round]);
   const top = deck.list[0];
+  /* FB7-04. A new card must always arrive centred. dragX/fling are per-gesture,
+     but they live on the App rather than on the card, so a value left over from
+     the previous card carried into the next one — rendering it rotated and
+     shifted, wide enough to overhang the viewport. Reset whenever the top card
+     changes identity, not merely when a gesture ends. */
+  const topId = top ? top.a.id : null;
+  useEffect(() => { setDragX(0); setFling(0); dragFrom.current = null; }, [topId]);
   const doSwipe = (dir) => {
     if (!top) return;
     if (deck.reshuffled) { setRound((r) => r + 1); if (dir === "yes") saveLater(top.a); return; }
@@ -725,7 +760,7 @@ export default function App() {
     <div className="root"><style>{CSS}</style>
       <div className="phone">
         <header className="hdr">
-          <div className="brand"><span>〰️</span><b>Rambles</b><span className="ver">v3.3</span></div>
+          <div className="brand"><Logo /><b>Rambles</b><span className="ver">v{APP_VERSION}</span></div>
           <div className="hdrright">
             <button className="kidchip" onClick={() => setTab("profile")}>{profile.name} · {fmtAge(months)}</button>
             <button className="chip tiny" onClick={() => setTab("settings")}>⚙️</button>
@@ -815,23 +850,74 @@ export default function App() {
               {awayNudge && <div className="nudge away"><span>👋</span><p><b>It's been {awayNudge} days since your last logged outing.</b> Nothing wrong with that — but if today's a good day, here's somewhere to start.</p>
                 <button className="mini x" onClick={() => setNudgeOff(true)}>✕</button></div>}
               {top && similarWarning(top.a) && <div className="nudge sm"><span>🔁</span><p>{similarWarning(top.a)}</p></div>}
-              {deck.reshuffled && <div className="nudge sm"><span>🔁</span><p>You've seen everything age-right for {profile.name} — reshuffling so there's always something next.</p></div>}
+              {/* FB8-03. The old copy announced a reshuffle and gave no way to do one, so
+                  "how do I shuffle?" was the only sensible reaction. Both actions are
+                  now explicit: reorder what you have, or clear the skips and start over. */}
+              {deck.reshuffled && <div className="nudge sm reshuf"><span>🔁</span>
+                <div>
+                  <p>You've seen everything age-right for {profile.name}. These are the same ideas in a new order — nothing is lost.</p>
+                  <div className="pills">
+                    <button className="pillbtn dark" onClick={() => { setRound((r) => r + 1); say("Shuffled — new order."); }}>🔀 Shuffle again</button>
+                    <button className="pillbtn" onClick={() => { setSwipes({}); setRound((r) => r + 1); say("Starting fresh — everything is back in the deck."); }}>↩️ Start fresh</button>
+                  </div>
+                </div></div>}
               <div className="deckwrap">
-                {deck.list[1] && <div className="deckcard behind" aria-hidden="true"><Art a={deck.list[1].a} tall /><div className="deckbody"><h2 className="dtitle">{deck.list[1].a.name}</h2></div></div>}
+                {deck.list[1] && <div className="deckcard behind" aria-hidden="true"><Art key={deck.list[1].a.id} a={deck.list[1].a} tall /><div className="deckbody"><h2 className="dtitle">{deck.list[1].a.name}</h2></div></div>}
                 <div className={"deckcard" + (hintShown ? "" : " hint")}
                   style={{ transform: `translateX(${fling || dragX}px) rotate(${(fling || dragX) / 14}deg)`, opacity: fling ? 0 : 1,
                     transition: dragFrom.current == null ? "transform .32s cubic-bezier(.18,.9,.28,1), opacity .3s" : "none" }}
-                  onPointerDown={(e) => { dragFrom.current = e.clientX; dragT.current = Date.now(); setHintShown(true); e.currentTarget.setPointerCapture(e.pointerId); }}
-                  onPointerMove={(e) => { if (dragFrom.current != null) setDragX(e.clientX - dragFrom.current); }}
-                  onPointerUp={() => {
-                    const x = dragX, dt = Math.max(1, Date.now() - dragT.current), v = x / dt;
-                    dragFrom.current = null;
-                    if (x > 90 || v > 0.45) { setFling(520); setDragX(0); setTimeout(() => { doSwipe("yes"); setFling(0); }, 210); }
-                    else if (x < -90 || v < -0.45) { setFling(-520); setDragX(0); setTimeout(() => { doSwipe("no"); setFling(0); }, 210); }
-                    else setDragX(0);
+                  onPointerDown={(e) => {
+                    dragFrom.current = e.clientX; dragY0.current = e.clientY;
+                    dragT.current = Date.now(); axis.current = null;
+                    vTrack.current = { x: e.clientX, t: Date.now(), v: 0 };
+                    setHintShown(true); e.currentTarget.setPointerCapture(e.pointerId);
                   }}
-                  onPointerCancel={() => { dragFrom.current = null; setDragX(0); }}>
-                  <Art a={top.a} tall />
+                  onPointerMove={(e) => {
+                    if (dragFrom.current == null) return;
+                    /* FB7-04: a pointerup lost outside the window leaves the card
+                       still capturing; without this it drags untouched. */
+                    if (e.pointerType === "mouse" && e.buttons === 0) { dragFrom.current = null; setDragX(0); return; }
+                    const dx = e.clientX - dragFrom.current, dy = e.clientY - dragY0.current;
+                    /* FB8-04a. Direction lock, the way swipe decks do it: until the
+                       gesture has committed to an axis, a mostly-vertical move is a
+                       scroll and must not drag the card at all. Without this, any
+                       diagonal thumb movement fought the page scroll and the card
+                       lurched — which is what made "swipe right" feel unreliable. */
+                    if (axis.current == null) {
+                      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+                      axis.current = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+                    }
+                    if (axis.current === "y") return;
+                    /* FB8-04b. Velocity from the LAST sample, not the whole gesture.
+                       The old code divided total distance by total duration, so a
+                       pause before a flick averaged the flick away and the release
+                       fell short of the threshold — the single biggest reason a
+                       deliberate swipe did nothing. */
+                    const now = Date.now(), prev = vTrack.current;
+                    const dt = Math.max(1, now - prev.t);
+                    vTrack.current = { x: e.clientX, t: now, v: (e.clientX - prev.x) / dt };
+                    setDragX(dx);
+                  }}
+                  onPointerUp={(e) => {
+                    try { e.currentTarget.releasePointerCapture(e.pointerId); } catch (err) {}
+                    const x = dragX, v = vTrack.current.v;
+                    const el = e.currentTarget, w = el ? el.offsetWidth : 340;
+                    dragFrom.current = null; axis.current = null;
+                    /* FB8-04c. Commit on EITHER a short flick or a long drag, the
+                       pair of thresholds a dating-app deck uses: 25% of the card
+                       width, or 0.25px/ms of real flick velocity with enough travel
+                       to show intent. Distance alone made fast flicks fail; velocity
+                       alone made slow deliberate drags fail. */
+                    const far = Math.abs(x) > w * 0.25;
+                    const flick = Math.abs(v) > 0.25 && Math.abs(x) > 30;
+                    if (!far && !flick) { setDragX(0); return; }
+                    const dir = (far ? x : v) > 0 ? "yes" : "no";
+                    setFling(dir === "yes" ? w * 1.5 : -w * 1.5);
+                    setDragX(0);
+                    setTimeout(() => { doSwipe(dir); setFling(0); }, 190);
+                  }}
+                  onPointerCancel={(e) => { try { e.currentTarget.releasePointerCapture(e.pointerId); } catch (err) {} dragFrom.current = null; axis.current = null; setDragX(0); }}>
+                  <Art key={top.a.id} a={top.a} tall />
                   {dragX > 25 && <span className="stamp yes" style={{ opacity: Math.min(1, dragX / 90) }}>SAVE</span>}
                   {dragX < -25 && <span className="stamp no" style={{ opacity: Math.min(1, -dragX / 90) }}>SKIP</span>}
                   {!hintShown && <span className="swipehint">← swipe →</span>}
@@ -901,7 +987,7 @@ export default function App() {
                 <p className="why">How did it go? One tap — or skip it, no guilt.</p>
                 <CaptureRow p={p} media={planMedia[p.id]} onCheck={openCheck} onSnap={snapOnPlan} onPin={pinPlan} onDrop={removePlan}
                   dropLabel="Didn't go" checkLabel="Check in"
-                  directions={p.place ? venueQuery(p.place, p.area, activePlace) : nearQuery(p.name, activePlace)} />
+                  directions={directionsTo(p.place, p.pin) || nearQuery(p.name, activePlace)} />
               </div>)}</>}
             {planRows.length > 0 && <><div className="lbl">💛 Saved for later</div>
               {planRows.map((p) => { const a = pool.find((x) => x.id === p.ideaId); const av = a ? availability(a) : null; return <div className="card" key={p.id}>
@@ -1012,7 +1098,7 @@ export default function App() {
                 {v.kind !== "journal" && <div className="pills memacts">
                   <button className="pillbtn dark" onClick={() => goAgain(v)}>🔁 We went again</button>
                   <button className="pillbtn" onClick={() => planAgain(v)}>💛 Add to Our List</button>
-                  <a className="pillbtn" href={v.pin ? ("https://www.google.com/maps/search/?api=1&query=" + v.pin.lat + "," + v.pin.lng) : venueQuery(v.place || v.name, null, activePlace)} target="_blank" rel="noreferrer">🗺️ Directions</a>
+                  <a className="pillbtn" href={directionsTo(v.place, v.pin) || venueQuery(v.name, null, activePlace)} target="_blank" rel="noreferrer">🗺️ Directions</a>
                 </div>}
               </div>)}
             </> : <>
@@ -1225,6 +1311,8 @@ function GenArt({ a, m, h }) {
 /* Pictures: a real, topical, openly-licensed photo per activity, looked up once by
    keyword from Wikimedia Commons and cached forever. A global claim-set guarantees
    no two activities ever end up with the same image. */
+/* FB7-01: one place that knows the curated URL shape. */
+const unsplash = (id) => "https://images.unsplash.com/photo-" + id + "?w=800&q=72&auto=format&fit=crop";
 const photoCache = {};
 const claimed = {};
 async function findPhoto(a) {
@@ -1271,9 +1359,17 @@ function Art({ a, tall }) {
      now only serves activities with no curated image, which today means none of
      the built-in set and only future or imported ones. */
   useEffect(() => {
+    /* FB7-01. React reuses this component's slot as the deck advances, so the
+       PREVIOUS activity's `failed`/`src` survive into the next one unless they
+       are cleared here. One broken photo therefore poisoned the slot: every
+       later card rendered GenArt, which is why a run of cards all turned into
+       illustrations even though their own photos were fine. Reset first, then
+       resolve. */
+    setFailed(false);
+    setSrc(null);
     if (a.userAdded) return;                 // FB2-16: never look one up for your own places
     let live = true;
-    if (IMG[a.id]) { setSrc("https://images.unsplash.com/photo-" + IMG[a.id] + "?w=800&q=72&auto=format&fit=crop"); return; }
+    if (IMG[a.id]) { setSrc(unsplash(IMG[a.id])); return; }
     findPhoto(a)
       .then((u) => { if (!live) return; if (u) setSrc(u); else setFailed(true); })
       .catch(() => { if (!live) return; setFailed(true); });
@@ -1283,7 +1379,7 @@ function Art({ a, tall }) {
     <MineArt /><span className="ae">{a.emoji}</span><span className="minetag">💜 Yours</span>
   </div>;
   return <div className={"art" + (tall ? " tall" : "")}>
-    {src && !failed ? <img src={src} alt="" loading="lazy" draggable={false} onError={() => { if (IMG[a.id] && src.indexOf("unsplash") < 0) setSrc("https://images.unsplash.com/photo-" + IMG[a.id] + "?w=800&q=72&auto=format&fit=crop"); else setFailed(true); }} /> : <GenArt a={a} m={m} h={h} />}
+    {src && !failed ? <img src={src} alt="" loading="lazy" draggable={false} onError={() => { if (IMG[a.id] && src.indexOf("unsplash") < 0) setSrc(unsplash(IMG[a.id])); else setFailed(true); }} /> : <GenArt a={a} m={m} h={h} />}
     <span className="ae">{a.emoji}</span>
   </div>;
 }
@@ -1430,10 +1526,34 @@ const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Karla:wght@400;500;700&display=swap');
 *{box-sizing:border-box}
 .root{min-height:100vh;background:#E9EAE0;display:flex;justify-content:center;font-family:'Karla',system-ui,sans-serif;color:#29382F}
-.phone{width:100%;max-width:460px;background:#F6F5EF;display:flex;flex-direction:column;min-height:100vh;position:relative;box-shadow:0 0 40px rgba(41,56,47,.12)}
+.phone{width:100%;max-width:460px;background:#F6F5EF;display:flex;flex-direction:column;min-height:100vh;min-height:100dvh;height:100dvh;position:relative;box-shadow:0 0 40px rgba(41,56,47,.12)}
 .mid{align-items:center;justify-content:center}.big{font-size:40px}
 .hdr{display:flex;justify-content:space-between;align-items:center;padding:14px 16px 8px}
-.brand{display:flex;align-items:center;gap:7px;font-family:'Fraunces',Georgia,serif;font-size:18px}
+/* FB7-03 warmth pass. Nothing here changes behaviour — it is type, depth and
+   a little motion, which is what made the app read as a utility rather than
+   something made with care. */
+.brand{display:flex;align-items:center;gap:8px;font-family:'Fraunces',Georgia,serif;font-size:20px;font-weight:600;letter-spacing:-.2px}
+.brand .logo{color:#29382F;flex:none}
+/* Section labels were quieter than the body text beneath them, so long screens
+   had no scannable structure. */
+.lbl{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.1px;color:#6E7A6F;margin:20px 0 9px}
+/* Cards lift off the page instead of sitting flat on it. */
+.card{box-shadow:0 2px 0 rgba(41,56,47,.04),0 6px 18px -10px rgba(41,56,47,.28)}
+.deckcard{box-shadow:6px 7px 0 #E9A23B,0 18px 34px -16px rgba(41,56,47,.45)}
+.deckcard.behind{transform:scale(.94) translateY(14px) rotate(-1.2deg);opacity:.5}
+.ctitle,.dtitle{letter-spacing:-.2px}
+.dtitle{font-size:21px}
+/* A card arriving should feel like a card being dealt. */
+@media (prefers-reduced-motion:no-preference){
+  /* Opacity only. The front card's transform is owned by the drag handler, and
+     an animation on the same property overrides that inline style while it
+     runs — which knocked the card off-centre mid-gesture. Animate what the
+     gesture does not touch. */
+  .deckcard{animation:deal .3s ease-out}
+  @keyframes deal{from{opacity:0}to{opacity:1}}
+  .stamp{animation:pop .18s ease-out}
+  @keyframes pop{from{opacity:0}to{opacity:1}}
+}
 .ver{font-family:'Karla';font-size:10px;font-weight:700;color:#8A8875;background:#ECEAE0;border-radius:99px;padding:2px 6px}
 .locedit-box{margin:0 16px 10px;padding:12px;background:#FFF;border:2px solid #29382F;border-radius:16px}
 .locrow{display:flex;gap:8px;align-items:center}
@@ -1534,6 +1654,8 @@ const CSS = `
 .nudge{display:flex;gap:9px;background:#FBEAC9;border-radius:14px;padding:12px;margin:8px 0;align-items:flex-start}
 .nudge p{margin:0;font-size:13px;line-height:1.5}.nudge.sm p{font-size:12.5px}
 /* FB5-04: the away reminder is calmer than a warning and always dismissible */
+.nudge.reshuf{align-items:flex-start}
+.nudge.reshuf .pills{margin-top:8px}
 .nudge.away{background:#DEEAEF;border:1.5px solid #8FB3C0;align-items:center}
 .nudge.away p{flex:1}
 .nudge.away .mini.x{background:none;border:none;color:#33606F;font-size:14px;cursor:pointer;padding:4px 6px}
@@ -1599,8 +1721,13 @@ const CSS = `
 /* FB6-04. Only the sheet scrolls. With overflow on BOTH, align-items:flex-end
    clips the top of a tall sheet and drops you partway down it - which is why
    the check-in appeared to start at the bottom of the page. */
-.sheetbg{position:absolute;inset:0;background:rgba(41,56,47,.45);display:flex;align-items:flex-end;z-index:30;overflow:hidden}
-.sheet{background:#F6F5EF;width:100%;border-radius:20px 20px 0 0;padding:18px 16px calc(24px + env(safe-area-inset-bottom));max-height:92vh;overflow-y:auto;overscroll-behavior:contain}
+/* FB8-02. FIXED, not absolute. .phone is min-height:100vh, and on iOS 100vh is
+   the tall viewport that ignores the collapsing URL bar — so an absolutely
+   positioned overlay extended below the visible screen and a bottom-anchored
+   sheet landed partly off it. That is the "I still have to scroll down".
+   Fixed positioning is measured against the real viewport. */
+.sheetbg{position:fixed;inset:0;background:rgba(41,56,47,.45);display:flex;align-items:flex-end;justify-content:center;z-index:30;overflow:hidden}
+.sheet{background:#F6F5EF;width:100%;max-width:460px;border-radius:20px 20px 0 0;padding:18px 16px calc(24px + env(safe-area-inset-bottom));max-height:88dvh;overflow-y:auto;overscroll-behavior:contain}
 /* five tiers (FB2-11): grid, not flex — equal columns that survive the narrower
    share each button gets, with labels allowed to wrap to two lines */
 .minetag{position:absolute;left:10px;bottom:10px;background:rgba(255,255,255,.92);color:#5E4A7D;border-radius:99px;padding:3px 9px;font-size:10.5px;font-weight:700}

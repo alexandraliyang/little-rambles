@@ -283,6 +283,13 @@ if (checkBtn) {
   if (n2) { click(n2); await settle(); }
 }
 
+/* --- FB7-02: the displayed version must equal package.json, always --- */
+const pkgVersion = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")).version;
+const verChip = root.querySelector(".ver");
+ok("FB7-02 the header version matches package.json",
+   !!verChip && verChip.textContent.trim() === "v" + pkgVersion,
+   (verChip ? verChip.textContent.trim() : "no chip") + " vs package " + pkgVersion);
+
 /* --- every tab renders without throwing --- */
 for (const t of ["Swipe", "Browse", "Our List", "Yours", "Memories"]) {
   const b = findByText("button", t);
