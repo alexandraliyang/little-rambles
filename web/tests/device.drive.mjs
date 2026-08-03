@@ -619,6 +619,31 @@ ok("FB11 horizontal swiping still works alongside manual scrolling",
    (await page.locator(".deckcard:not(.behind) .dtitle").first().innerText()) !== before11,
    before11 + " -> " + (await page.locator(".deckcard:not(.behind) .dtitle").first().innerText()));
 
+/* ---------- FB12-01: tapping a suggested area must search for it ---------- */
+await page.getByRole("button", { name: /Swipe/ }).click();
+await page.waitForTimeout(400);
+await page.locator("button.locbar").click();
+await page.waitForTimeout(500);
+/* Exact text: the home row also contains "Kitsilano" and selecting it closes
+   the box, so hasText would test the wrong control. */
+const areaChip = page.locator(".locsug .sug").filter({ hasText: /^Kitsilano$/ }).first();
+ok("FB12-01 the box offers named areas before you type", await areaChip.count() > 0);
+if (await areaChip.count()) {
+  await areaChip.click();
+  await page.waitForTimeout(3200);                 // debounce + live geocoder
+  const st = await page.evaluate(() => {
+    const box = document.querySelector(".locedit-box");
+    return { text: box.querySelector("input").value,
+             hits: box.querySelectorAll(".sugrow .sug").length,
+             body: box.innerText };
+  });
+  ok("FB12-01 tapping an area fills the box", /Kitsilano/i.test(st.text), st.text);
+  ok("FB12-01 tapping an area actually SEARCHES for it", st.hits > 0, st.hits + " results");
+  ok("FB12-01 it no longer claims 'no matches' about its own suggestion",
+     !/No matches yet/i.test(st.body), (st.body.split(String.fromCharCode(10)).find((l) => /No matches yet/i.test(l)) || "clean"));
+  ok("FB12-01 the results are ranked with distances", /away/.test(st.body));
+}
+
 /* ---------- no runtime errors anywhere ---------- */
 const realErrors = errors.filter((e) => !/favicon|photon|nominatim|wikimedia|Failed to load resource/i.test(e));
 ok("no uncaught runtime errors across the whole walk", realErrors.length === 0, realErrors.slice(0, 2).join(" ; ") || "clean");

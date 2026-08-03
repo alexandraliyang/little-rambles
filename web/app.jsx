@@ -575,6 +575,24 @@ export default function App() {
   };
 
   /* ---------------- location ---------------- */
+  /* FB12-01. The search watches locText rather than living in the input's
+     onChange. Tapping a suggested area ("Kitsilano") sets the text but fires no
+     change event, so the geocoder never ran and the box said "no matches yet"
+     about a place it had itself proposed. Anything that sets the text — typing,
+     an area chip, a past place — now runs the same search. */
+  useEffect(() => {
+    if (!locOpen) return;
+    const v = locText.trim();
+    if (locTimer.current) clearTimeout(locTimer.current);
+    if (v.length < 2) { setLocHits([]); setLocBusy(false); setLocErr(false); return; }
+    setLocBusy(true); setLocErr(false);
+    locTimer.current = setTimeout(async () => {
+      try { const hits = await geoSearch(v, geoNear); setLocHits(hits); setLocErr(false); }
+      catch (err) { setLocHits([]); setLocErr(true); }
+      setLocBusy(false);
+    }, 300);
+    return () => { if (locTimer.current) clearTimeout(locTimer.current); };
+  }, [locText, locOpen]);
   /* FB3-01. Asked for once, when the address box is opened and we have no better
      anchor — the same moment a maps app asks. Failure is silent: ranking simply
      falls back to unbiased results, and nothing in the UI depends on this. */
@@ -730,17 +748,7 @@ export default function App() {
           <div className="locedit-box">
             <div className="locrow">
               <input className="inp flat" autoFocus placeholder={placeLabel ? "Currently: " + placeLabel + " — type an address" : "Type an address, place or city"} value={locText}
-                onChange={(e) => {
-                  const v = e.target.value; setLocText(v);
-                  if (locTimer.current) clearTimeout(locTimer.current);
-                  if (v.trim().length < 2) { setLocHits([]); setLocBusy(false); setLocErr(false); return; }
-                  setLocBusy(true); setLocErr(false);
-                  locTimer.current = setTimeout(async () => {
-                    try { const hits = await geoSearch(v, geoNear); setLocHits(hits); setLocErr(false); }
-                    catch (err) { setLocHits([]); setLocErr(true); }
-                    setLocBusy(false);
-                  }, 300);
-                }} />
+                onChange={(e) => setLocText(e.target.value)} />
               <button className="mini x" onClick={() => setLocOpen(false)}>✕</button>
             </div>
             <div className="locsug">

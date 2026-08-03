@@ -12,17 +12,32 @@ Debt is a decision, not an accident. Every row states what is wrong, what it cos
 
 ## T1 — Activity photos are wrong, not just missing · **OPEN** · high
 
-**What.** A visual audit of all 155 curated photos (contact sheets, 2026-08-02) found roughly a third are plainly wrong for the activity. Not stylistic — categorically wrong. Tide pools shows a black-and-white photo of a homeless man holding a "SEEKING HUMAN KINDNESS" sign. Car ferry shows a scuba diver. Conservatory shows a cat on a sofa. Salmon hatchery shows a tropical clownfish. Harbour ferry shows the Grand Canal, Venice. Separately, 15 of 155 URLs 404.
+**What.** A full visual audit of all 155 curated photos (contact sheets, reviewed by eye 2026-08-02/03) produced hard numbers rather than an impression:
 
-**Cost.** This is a trust defect in a product for parents of babies, not a cosmetic one. A wrong image on a child-outing card is the kind of thing a tester screenshots and forwards.
+| Verdict | Count |
+|---|---|
+| Confirmed correct | **51** |
+| Wrong subject | **91** |
+| Dead URL (404) | **13** |
 
-**Why still open.** Auto-substitution is what created the problem. Openverse labels an 1896 lithograph a "photograph"; candidate titles are frequently `IMG_3202`. Images cannot be chosen without being looked at.
+Not stylistic disagreements — categorically wrong. Tide pools showed a black-and-white photograph of a homeless man holding a "SEEKING HUMAN KINDNESS" sign. Car ferry: a scuba diver. Conservatory: a cat on a sofa. Salmon hatchery: a tropical clownfish. Harbour ferry: the Grand Canal, Venice. Toddler gym class: adults doing pilates. Kids' climbing gym: an adult on an outdoor rock face.
 
-**Mitigated by.** The slot-poisoning bug (one failed photo turning every later card into a drawing) is fixed, so the blast radius is now one card rather than a session.
+Every verdict is recorded per-image in `content/images.json` with a `note` naming what is actually in the picture, so this never has to be re-derived.
 
-**Closes when.** Every activity has an entry in `content/images.json` with `verified: "human"`, and `images.audit` passes with zero `null`. Founder and AI reviewing contact sheets together — founder has asked to do this jointly rather than have it run unattended.
+**Cost.** A trust defect in a product for parents of babies, not a cosmetic one.
 
----
+**Selection rule, adopted 2026-08-03 — prefer the subject, not people.** A swing, a carousel, pumpkins, orchids, a duck. Two reasons, and the second is the serious one:
+
+1. Object and scene photographs age better and are unambiguous at card size.
+2. **Openverse surfaces NGO and photojournalism images of identifiable, often vulnerable children.** Searching "library story time children" returned four frames from a documentary series on young Roma children. Those images are openly licensed, and using them to decorate a commercial product would still be wrong — the licence covers copyright, not the dignity or consent of an identifiable child. Any candidate showing a recognisable child's face is rejected regardless of licence.
+
+This also explains why the 51 survivors survived: nearly all are subjects, not people.
+
+**Method that works.** `candidates.mjs` assembles candidates (Openverse, `category=photograph`, title-filtered against artwork terms, each URL verified to resolve); a contact sheet is rendered; selection happens **by eye**. Nothing is auto-accepted — Openverse files 1896 lithographs as photographs, and candidate titles are frequently `IMG_3202`.
+
+**Progress.** 4 replaced and confirmed on the first batch (toddler playground, carousel, pumpkin patch, conservatory). One activity (`splashpad`) returned zero usable candidates, so some will need a different source or a hand-chosen image.
+
+**Closes when.** `npm run audit:images` reports 155 confirmed and zero rejected.
 
 ## T2 — No backend, so no family sharing and no real backup · **OPEN** · high
 

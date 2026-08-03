@@ -16,3 +16,4 @@ web/dist/
 # Local Netlify folder
 .netlify
 tests/shots/
+web/tests/cand/

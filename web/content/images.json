@@ -7,1395 +7,1395 @@
    "name": "Splash pad / spray park",
    "url": "https://images.unsplash.com/photo-1560421683-6856ea585c78?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: child painting, not a splash pad"
   },
   {
    "id": "wadingpool",
    "name": "Wading pool",
    "url": "https://images.unsplash.com/photo-1533000971552-6a962ff0b9f9?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: an open book at sunset"
   },
   {
    "id": "totswim",
    "name": "Parent-tot open swim",
    "url": "https://images.unsplash.com/photo-1576013551627-0cc20b96c2a7?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: empty resort pool, no toddler"
   },
   {
    "id": "swimlesson",
    "name": "Swim lessons",
    "url": "https://images.unsplash.com/photo-1560090995-01632a28895b?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: competitive lap pool"
   },
   {
    "id": "watertable",
    "name": "Park water table",
    "url": "https://images.unsplash.com/photo-1502086223501-7ea6ecd79368?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: children in a field, no water table"
   },
   {
    "id": "beachtide",
    "name": "Beach at low tide",
    "url": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: beach at low tide"
   },
   {
    "id": "tidepool",
    "name": "Tide pools",
    "url": "https://images.unsplash.com/photo-1518398046578-8cca57782e17?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: SEVERE - photo of a homeless man holding a sign"
   },
   {
    "id": "creekstomp",
    "name": "Creek stomping",
    "url": "https://images.unsplash.com/photo-1465188162913-8fb5709d6d57?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: mountain hikers"
   },
   {
    "id": "lakebeach",
    "name": "Lake beach",
    "url": "https://images.unsplash.com/photo-1471922694854-ff1b63b20054?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: empty ocean horizon"
   },
   {
    "id": "boatpond",
    "name": "Model boat pond",
    "url": "https://images.unsplash.com/photo-1534447677768-be436bb09401?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: night sky, not a model boat pond"
   },
   {
    "id": "skytrain",
    "name": "Rapid transit ride",
    "url": "https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: a coach at night, not rapid transit"
   },
   {
    "id": "busloop",
    "name": "Bus loop ride",
    "url": "https://images.unsplash.com/photo-1570125909232-eb263c188f7e?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: a bus"
   },
   {
    "id": "seabus",
    "name": "Harbour ferry / SeaBus",
    "url": "https://images.unsplash.com/photo-1520175480921-4edfa2983e0f?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: the Grand Canal, Venice"
   },
   {
    "id": "carferry",
    "name": "Car ferry crossing",
    "url": "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: a scuba diver underwater"
   },
   {
    "id": "trainspot",
    "name": "Train watching spot",
    "url": "https://images.unsplash.com/photo-1474487548417-781cb71495f3?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: a train"
   },
   {
    "id": "planespot",
    "name": "Plane spotting park",
    "url": "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: aircraft wing in flight"
   },
   {
    "id": "minitrain",
    "name": "Miniature park train",
    "url": "https://images.unsplash.com/photo-1527490087278-9c75be0b8052?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: two girls hugging"
   },
   {
    "id": "carousel",
    "name": "Carousel",
-   "url": "https://images.unsplash.com/photo-1516738901171-8eb4fc13bd20?w=800&q=72&auto=format&fit=crop",
-   "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "url": "https://api.openverse.org/v1/images/7ae2b088-c65e-4420-8c52-8ebad1df0411/thumb/",
+   "source": "openverse",
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: a child watching a carousel from behind - carousel unmistakable, face not visible"
   },
   {
    "id": "carwash",
    "name": "Drive-through car wash",
    "url": "https://images.unsplash.com/photo-1520340356584-f9917d1eea6f?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: car in a wash"
   },
   {
    "id": "construction",
    "name": "Construction site watching",
    "url": "https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: man drafting at a desk"
   },
   {
    "id": "naturewalk",
    "name": "Stroller-friendly nature walk",
    "url": "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: forest path"
   },
   {
    "id": "foresttrail",
    "name": "Forest trail ramble",
    "url": "https://images.unsplash.com/photo-1425913397330-cf8af2ff40a1?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: forest trail"
   },
   {
    "id": "botanical",
    "name": "Botanical garden",
    "url": "https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: botanical garden path"
   },
   {
    "id": "conservatory",
    "name": "Conservatory / glass house",
-   "url": "https://images.unsplash.com/photo-1518791841217-8f162f1e1131?w=800&q=72&auto=format&fit=crop",
-   "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "url": "https://api.openverse.org/v1/images/0bb169a7-cbb7-4032-bc81-01313c8634b6/thumb/",
+   "source": "openverse",
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: Allan Gardens Conservatory orchids under glass - literally a conservatory"
   },
   {
    "id": "rosegarden",
    "name": "Rose or scent garden",
    "url": "https://images.unsplash.com/photo-1490750967868-88aa4486c946?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: orange poppies, not a rose garden"
   },
   {
    "id": "japangarden",
    "name": "Japanese garden",
    "url": "https://images.unsplash.com/photo-1503803548695-c2a7b4a5b875?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: ocean sunset"
   },
   {
    "id": "arboretum",
    "name": "Arboretum / big tree walk",
    "url": "https://images.unsplash.com/photo-1502082553048-f009c37129b9?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: a big tree"
   },
   {
    "id": "duckpond",
    "name": "Duck pond",
    "url": "https://images.unsplash.com/photo-1459682687441-7761439a709d?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: a duck"
   },
   {
    "id": "birdsanctuary",
    "name": "Bird sanctuary",
    "url": "https://images.unsplash.com/photo-1444464666168-49d633b86797?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: a bird"
   },
   {
    "id": "hatchery",
    "name": "Salmon hatchery / fish ladder",
    "url": "https://images.unsplash.com/photo-1544552866-d3ed42536cfd?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: tropical clownfish, not a salmon hatchery"
   },
   {
    "id": "communitygarden",
    "name": "Community garden visit",
    "url": "https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: seedlings in beds"
   },
   {
    "id": "leafpile",
    "name": "Leaf pile walk",
    "url": "https://images.unsplash.com/photo-1507371341162-763b5e419408?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: autumn lake, no leaf pile"
   },
   {
    "id": "puddlewalk",
    "name": "Puddle-jumping walk",
    "url": "https://images.unsplash.com/photo-1428592953211-077101b2021b?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: grey rain on water"
   },
   {
    "id": "bughunt",
    "name": "Bug hunt",
    "url": "https://images.unsplash.com/photo-1500967571358-f9b5c6b1c8b6?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "404 - URL is dead"
   },
   {
    "id": "toddlerplayground",
    "name": "Toddler playground",
-   "url": "https://images.unsplash.com/photo-1547861749-0df4321e275e?w=800&q=72&auto=format&fit=crop",
-   "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "url": "https://api.openverse.org/v1/images/eddd1f7e-3da9-485f-bb74-9c2976f791d3/thumb/",
+   "source": "openverse",
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: a toddler swing on a wooden frame - subject only, no identifiable child"
   },
   {
    "id": "sandplay",
    "name": "Sand playground",
    "url": "https://images.unsplash.com/photo-1472162072942-cd5147eb3902?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: a boy on a bench"
   },
   {
    "id": "natureplayground",
    "name": "Nature playground",
    "url": "https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: tree-lined path"
   },
   {
    "id": "accessibleplay",
    "name": "Accessible / inclusive playground",
    "url": "https://images.unsplash.com/photo-1516627145497-ae6968895b74?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: girl in headphones indoors"
   },
   {
    "id": "adventureplay",
    "name": "Adventure playground",
    "url": "https://images.unsplash.com/photo-1587027271070-0a1e3d1f1e3e?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "404 - URL is dead"
   },
   {
    "id": "pumptrack",
    "name": "Bike / scooter pump track",
    "url": "https://images.unsplash.com/photo-1541625602330-2277a4c46182?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: adult road cyclists"
   },
   {
    "id": "skateparkwatch",
    "name": "Skate park watching",
    "url": "https://images.unsplash.com/photo-1520045892732-304bc3ac5d8e?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: skate ramp"
   },
   {
    "id": "bikeloop",
    "name": "Car-free bike loop",
    "url": "https://images.unsplash.com/photo-1571068316344-75bc76f77890?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: a bicycle"
   },
   {
    "id": "ropecourse",
    "name": "Low ropes course",
    "url": "https://images.unsplash.com/photo-1551632811-561732d1e306?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: adult backpackers hiking"
   },
   {
    "id": "trampoline",
    "name": "Trampoline park (toddler hour)",
    "url": "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: an empty weights gym"
   },
   {
    "id": "minigolf",
    "name": "Mini golf",
    "url": "https://images.unsplash.com/photo-1535131749006-b7f58c99034b?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: an adult playing real golf"
   },
   {
    "id": "indoorplaystructure",
    "name": "Indoor play structure",
    "url": "https://images.unsplash.com/photo-1566454419290-57a0589c9b17?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "404 - URL is dead"
   },
   {
    "id": "pettingfarm",
    "name": "Petting farm",
    "url": "https://images.unsplash.com/photo-1560807707-8cc77767d783?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: a puppy"
   },
   {
    "id": "aquarium",
    "name": "Aquarium",
    "url": "https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: a sunset field"
   },
   {
    "id": "zoo",
    "name": "Zoo or wildlife park",
    "url": "https://images.unsplash.com/photo-1534567110243-8875d64ca8ff?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: giraffe"
   },
   {
    "id": "wildliferescue",
    "name": "Wildlife rescue centre",
    "url": "https://images.unsplash.com/photo-1552728089-57bdde30beb3?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: a parrot"
   },
   {
    "id": "petstore",
    "name": "Pet store visit",
    "url": "https://images.unsplash.com/photo-1425082661705-1834bfd09dca?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: hamster"
   },
   {
    "id": "dogparkwatch",
    "name": "Dog park watching (from the fence)",
    "url": "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: dogs running"
   },
   {
    "id": "farmvisit",
    "name": "Working farm visit",
    "url": "https://images.unsplash.com/photo-1500595046743-cd271d694d30?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: cows"
   },
   {
    "id": "stablevisit",
    "name": "Horse stable / pony ride",
    "url": "https://images.unsplash.com/photo-1553284965-83fd3e82fa5a?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: white horse in a dark forest"
   },
   {
    "id": "insectexhibit",
    "name": "Insect / butterfly house",
    "url": "https://images.unsplash.com/photo-1444927714506-8492d94b4e3d?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: misty mountains"
   },
   {
    "id": "birdwatch",
    "name": "Eagle / heron watching",
    "url": "https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: a plate of salad"
   },
   {
    "id": "totdropin",
    "name": "Parent-tot drop-in",
    "url": "https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: toddler with face paint"
   },
   {
    "id": "gymtime",
    "name": "Rec centre gym / open play",
    "url": "https://images.unsplash.com/photo-1526401485004-46910ecc8e51?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: weight plates"
   },
   {
    "id": "playgroup",
    "name": "Neighbourhood playgroup",
    "url": "https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: loose Lego bricks"
   },
   {
    "id": "familyplace",
    "name": "Family resource centre",
    "url": "https://images.unsplash.com/photo-1476703993599-0035a21b17a9?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: adult with two children"
   },
   {
    "id": "librarybrowse",
    "name": "Library browsing (no program)",
    "url": "https://images.unsplash.com/photo-1521587760476-6c12a4b040da?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: library shelves"
   },
   {
    "id": "openstudio",
    "name": "Community open studio",
    "url": "https://images.unsplash.com/photo-1517971129774-8a2b38fa128e?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: a person writing"
   },
   {
    "id": "neighbourhoodhouse",
    "name": "Neighbourhood house program",
    "url": "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: adults from behind"
   },
   {
    "id": "babymassage",
    "name": "Baby massage / infant class",
    "url": "https://images.unsplash.com/photo-1519689680058-324335c77eba?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: baby in a pool float"
   },
   {
    "id": "singalong",
    "name": "Sing-along drop-in",
    "url": "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: a microphone"
   },
   {
    "id": "multicultural",
    "name": "Multicultural family program",
    "url": "https://images.unsplash.com/photo-1529333166437-7750a6dd5a70?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: three adults at sunset"
   },
   {
    "id": "storytime",
    "name": "Library story time",
    "url": "https://images.unsplash.com/photo-1512820790803-83ca734da794?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: a stack of business books"
   },
   {
    "id": "bilingualstory",
    "name": "Bilingual story time",
    "url": "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: coffee and glasses"
   },
   {
    "id": "bookstorestory",
    "name": "Bookstore story hour",
    "url": "https://images.unsplash.com/photo-1507842217343-583bb7270b66?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: bookshop shelves"
   },
   {
    "id": "puppetstory",
    "name": "Puppet show story time",
    "url": "https://images.unsplash.com/photo-1516575334481-f85287c2c82d?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: a woman with a camera"
   },
   {
    "id": "storywalk",
    "name": "StoryWalk trail",
    "url": "https://images.unsplash.com/photo-1533158307587-828f0a76ef46?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: scattered photographs"
   },
   {
    "id": "kidsauthor",
    "name": "Kids' author or storytelling event",
    "url": "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: library shelves"
   },
   {
    "id": "makerclub",
    "name": "Library LEGO / maker club",
    "url": "https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: a campfire"
   },
   {
    "id": "comicshop",
    "name": "Comic or picture-book shop",
    "url": "https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: comics rack"
   },
   {
    "id": "babymusic",
    "name": "Parent-baby music class",
    "url": "https://images.unsplash.com/photo-1514320291840-2e0a9bf2a9ae?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: an empty dark bar"
   },
   {
    "id": "kidsconcert",
    "name": "Kids' concert",
    "url": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: an adult concert crowd"
   },
   {
    "id": "drumcircle",
    "name": "Family drum circle",
    "url": "https://images.unsplash.com/photo-1516280440614-37939bbacd81?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: a microphone"
   },
   {
    "id": "outdoorconcert",
    "name": "Free outdoor summer concert",
    "url": "https://images.unsplash.com/photo-1470229722913-7ea0d3d8ec66?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "404 - URL is dead"
   },
   {
    "id": "instrumentzoo",
    "name": "Instrument petting zoo",
    "url": "https://images.unsplash.com/photo-1516214104703-d870798883c5?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: a dark forest"
   },
   {
    "id": "dancedropin",
    "name": "Toddler dance drop-in",
    "url": "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: a neon sign"
   },
   {
    "id": "buskerwatch",
    "name": "Street musician watching",
    "url": "https://images.unsplash.com/photo-1509909756405-be0199881695?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: balloons"
   },
   {
    "id": "messyart",
    "name": "Messy art drop-in",
    "url": "https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: paint and brushes"
   },
   {
    "id": "potterypaint",
    "name": "Paint-your-own pottery",
    "url": "https://images.unsplash.com/photo-1565193298357-c5b46b0d5b1a?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "404 - URL is dead"
   },
   {
    "id": "galleryfamily",
    "name": "Art gallery family day",
    "url": "https://images.unsplash.com/photo-1577083552431-6e5fd01aa632?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "404 - URL is dead"
   },
   {
    "id": "chalkwalk",
    "name": "Sidewalk chalk mural spot",
    "url": "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: night sky and mountains"
   },
   {
    "id": "craftprogram",
    "name": "Library craft program",
    "url": "https://images.unsplash.com/photo-1499892477393-f675706cbe6e?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: paints and brushes"
   },
   {
    "id": "sensorystudio",
    "name": "Sensory play studio",
    "url": "https://images.unsplash.com/photo-1504198266287-1659872e6590?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: a single leaf"
   },
   {
    "id": "publicart",
    "name": "Public art / sculpture walk",
    "url": "https://images.unsplash.com/photo-1499781350541-7783f6c6a0c8?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "404 - URL is dead"
   },
   {
    "id": "muralhunt",
    "name": "Mural hunt",
    "url": "https://images.unsplash.com/photo-1513622470522-26c3c8a854bc?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: Nyhavn, Copenhagen"
   },
   {
    "id": "indoorplaycafe",
    "name": "Play café",
    "url": "https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: cafe interior, no play area"
   },
   {
    "id": "publicmarket",
    "name": "Public market",
    "url": "https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: market produce stalls"
   },
   {
    "id": "sensoryhour",
    "name": "Sensory-friendly quiet hour",
    "url": "https://images.unsplash.com/photo-1533050487297-09b450131914?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: neon night alley"
   },
   {
    "id": "bubblepark",
    "name": "Bubble session in the park",
    "url": "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: abstract oil bubbles"
   },
   {
    "id": "mallplay",
    "name": "Mall play area",
    "url": "https://images.unsplash.com/photo-1519567241046-7f570eee3ce6?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: mall interior"
   },
   {
    "id": "fabricstore",
    "name": "Fabric / craft store touch tour",
    "url": "https://images.unsplash.com/photo-1528489496900-d841974f9398?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "404 - URL is dead"
   },
   {
    "id": "gardencentre",
    "name": "Garden centre wander",
    "url": "https://images.unsplash.com/photo-1462530260150-162092dbf011?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: flowers in a bedroom"
   },
   {
    "id": "hardwarestore",
    "name": "Hardware store tour",
    "url": "https://images.unsplash.com/photo-1607472586893-edb57bdc0e39?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: industrial pipework"
   },
   {
    "id": "aquariumstore",
    "name": "Aquarium / fish store",
    "url": "https://images.unsplash.com/photo-1520302630591-fd1c66edc19d?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: succulents"
   },
   {
    "id": "bakery",
    "name": "Bakery treat run",
    "url": "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: bread"
   },
   {
    "id": "dimsum",
    "name": "Dim sum / family restaurant",
    "url": "https://images.unsplash.com/photo-1563245372-f21724e3856d?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: dim sum baskets"
   },
   {
    "id": "icecream",
    "name": "Ice cream walk",
    "url": "https://images.unsplash.com/photo-1497034825429-c343d7c6a68f?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: ice cream cone"
   },
   {
    "id": "foodhall",
    "name": "Food hall / food truck lot",
    "url": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: food hall"
   },
   {
    "id": "nightmarket",
    "name": "Night market",
    "url": "https://images.unsplash.com/photo-1533900298318-6b8da08a523e?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: market stalls"
   },
   {
    "id": "farmersmarket",
    "name": "Farmers market breakfast",
    "url": "https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: market produce"
   },
   {
    "id": "teahouse",
    "name": "Tea house / bubble tea stop",
    "url": "https://images.unsplash.com/photo-1576092768241-dec231879fc3?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: tea"
   },
   {
    "id": "pizzamake",
    "name": "Make-your-own pizza spot",
    "url": "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: pizza"
   },
   {
    "id": "cookingclass",
    "name": "Kids' cooking class",
    "url": "https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: adults cooking"
   },
   {
    "id": "picnic",
    "name": "Picnic in a park",
    "url": "https://images.unsplash.com/photo-1526397751294-331021109fbd?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: a bonsai tree"
   },
   {
    "id": "totgym",
    "name": "Toddler gym class",
    "url": "https://images.unsplash.com/photo-1518611012118-696072aa579a?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: adults doing pilates"
   },
   {
    "id": "soccerintro",
    "name": "Intro soccer / ball skills",
    "url": "https://images.unsplash.com/photo-1543326727-cf6c39e8f84c?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: adult men playing football"
   },
   {
    "id": "bowling",
    "name": "Family bowling (bumpers up)",
    "url": "https://images.unsplash.com/photo-1538511047830-33a0e13a1d9b?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "404 - URL is dead"
   },
   {
    "id": "rollerskate",
    "name": "Roller skating rink",
    "url": "https://images.unsplash.com/photo-1590167409677-4f18f4b98ee1?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "404 - URL is dead"
   },
   {
    "id": "iceskate",
    "name": "Public ice skating",
    "url": "https://images.unsplash.com/photo-1548961119-4b26ff4ee36e?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "404 - URL is dead"
   },
   {
    "id": "gymnastics",
    "name": "Open gymnastics session",
    "url": "https://images.unsplash.com/photo-1520121401995-928cd50d4e27?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: green leaves"
   },
   {
    "id": "toddleryoga",
    "name": "Toddler yoga",
    "url": "https://images.unsplash.com/photo-1575052814086-f385e2e2ad1b?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: an adult doing yoga"
   },
   {
    "id": "martialarts",
    "name": "Intro martial arts",
    "url": "https://images.unsplash.com/photo-1555597673-b21d5c935865?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: an adult at sunset"
   },
   {
    "id": "familyrun",
    "name": "Family fun run / walk event",
    "url": "https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: an adult sprinter"
   },
   {
    "id": "climbgym",
    "name": "Kids climbing gym",
    "url": "https://images.unsplash.com/photo-1522163182402-834f871fd851?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: adult outdoor rock climbing"
   },
   {
    "id": "kidsmuseum",
    "name": "Children's museum",
    "url": "https://images.unsplash.com/photo-1566127444979-b3d2b654e3d7?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: the Louvre pyramid"
   },
   {
    "id": "heritagevillage",
    "name": "Heritage village",
    "url": "https://images.unsplash.com/photo-1533105079780-92b9be482077?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: Santorini coastline"
   },
   {
    "id": "maritime",
    "name": "Maritime museum / historic ship",
    "url": "https://images.unsplash.com/photo-1541876176131-3f5e84a7331a?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: dogs in snow"
   },
   {
    "id": "aviation",
    "name": "Aviation museum",
    "url": "https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: a power adapter"
   },
   {
    "id": "modeltrain",
    "name": "Model train museum / club",
    "url": "https://images.unsplash.com/photo-1495107334309-fcf20504a5ab?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: an empty green field"
   },
   {
    "id": "planetarium",
    "name": "Planetarium show",
    "url": "https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: night sky"
   },
   {
    "id": "theatre",
    "name": "Children's theatre / puppet show",
    "url": "https://images.unsplash.com/photo-1503095396549-807759245b35?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: stage and curtain"
   },
   {
    "id": "culturalfestival",
    "name": "Cultural festival",
    "url": "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: an adult concert crowd"
   },
   {
    "id": "templevisit",
    "name": "Temple / cathedral quiet visit",
    "url": "https://images.unsplash.com/photo-1548013146-72479768bada?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: a monument"
   },
   {
    "id": "libraryconcert",
    "name": "Library family performance",
    "url": "https://images.unsplash.com/photo-1533228876829-65c94e7b5025?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: a man standing at a lake"
   },
   {
    "id": "sledding",
    "name": "Sledding hill",
    "url": "https://images.unsplash.com/photo-1483664852095-d6cc6870702d?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: snowy trees, no sledding"
   },
   {
    "id": "snowplay",
    "name": "First-snow poke-around",
    "url": "https://images.unsplash.com/photo-1418985991508-e47386d96a71?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: snowy mountains"
   },
   {
    "id": "holidaylights",
    "name": "Holiday lights walk",
    "url": "https://images.unsplash.com/photo-1512389142860-9c449e58a543?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: a winter flat-lay"
   },
   {
    "id": "mallwalk",
    "name": "Indoor mall laps",
    "url": "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: a clothing rail"
   },
   {
    "id": "snowshoe",
    "name": "Snowshoe stroll",
    "url": "https://images.unsplash.com/photo-1517299321609-52687d1bc55a?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: empty snowy landscape"
   },
   {
    "id": "hotchocolate",
    "name": "Hot chocolate walk",
    "url": "https://images.unsplash.com/photo-1542990253-0d0f5be5f0ed?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: hot chocolate"
   },
   {
    "id": "wintermarket",
    "name": "Winter market",
    "url": "https://images.unsplash.com/photo-1481833761820-0509d3217039?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: a shop window"
   },
   {
    "id": "bunnyhill",
    "name": "Ski / snow bunny hill",
    "url": "https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: an adult on a steep piste"
   },
   {
    "id": "icesculpture",
    "name": "Ice sculpture / winter festival",
    "url": "https://images.unsplash.com/photo-1547754980-3df97fed72a8?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: falling snow"
   },
   {
    "id": "pumpkinpatch",
    "name": "Pumpkin patch",
-   "url": "https://images.unsplash.com/photo-1509622905150-fa66b891c9c1?w=800&q=72&auto=format&fit=crop",
-   "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "url": "https://api.openverse.org/v1/images/d01ba2b1-95bf-4a69-a36a-2a67e93893f9/thumb/",
+   "source": "openverse",
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: pumpkins stacked on straw bales - unambiguous, no people"
   },
   {
    "id": "cornmaze",
    "name": "Corn maze",
    "url": "https://images.unsplash.com/photo-1508615039623-a25605d2b022?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: an orange blur"
   },
   {
    "id": "treefarm",
    "name": "Christmas tree farm",
    "url": "https://images.unsplash.com/photo-1543589077-47d81606c1bf?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: tree ornaments close-up"
   },
   {
    "id": "sunflower",
    "name": "Sunflower field",
    "url": "https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: a couple in a wheat field"
   },
   {
    "id": "tulipfest",
    "name": "Tulip / flower festival",
    "url": "https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: seedlings in pots"
   },
   {
    "id": "blossoms",
    "name": "Cherry blossom walk",
    "url": "https://images.unsplash.com/photo-1522383225653-ed111181a951?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: cherry blossom"
   },
   {
    "id": "fallleaves",
    "name": "Fall colour walk",
    "url": "https://images.unsplash.com/photo-1508255139162-e1f7b7288ab7?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: autumn colour"
   },
   {
    "id": "applepick",
    "name": "Apple picking",
    "url": "https://images.unsplash.com/photo-1570913149827-d2ac84ab3f9a?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: apple in hand"
   },
   {
    "id": "berrypick",
    "name": "Berry picking",
    "url": "https://images.unsplash.com/photo-1464965911861-746a04b4bca6?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: strawberries"
   },
   {
    "id": "egghunt",
    "name": "Community egg hunt",
    "url": "https://images.unsplash.com/photo-1554941829-6f9e0ab0a1a9?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "404 - URL is dead"
   },
   {
    "id": "sciencecentre",
    "name": "Science centre",
    "url": "https://images.unsplash.com/photo-1446776811953-b23d57bd21aa?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: Earth from space"
   },
   {
    "id": "naturecentre",
    "name": "Nature interpretive centre",
    "url": "https://images.unsplash.com/photo-1502303756781-9b7ba26a5e40?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "404 - URL is dead"
   },
   {
    "id": "observatory",
    "name": "Observatory / star night",
    "url": "https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: a concert crowd"
   },
   {
    "id": "rockshop",
    "name": "Rock and gem shop",
    "url": "https://images.unsplash.com/photo-1518281420975-50db6e5d0a97?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: an hourglass"
   },
   {
    "id": "weatherwalk",
    "name": "Weather-watching walk",
    "url": "https://images.unsplash.com/photo-1504608524841-42fe6f032b4b?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: clouds"
   },
   {
    "id": "shadowwalk",
    "name": "Shadow / light hunt",
    "url": "https://images.unsplash.com/photo-1476611317561-60117649dd94?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: bubbles in sunlight"
   },
   {
    "id": "tidepoolscience",
    "name": "Guided tide pool walk",
    "url": "https://images.unsplash.com/photo-1559827260-dc66d52bef19?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "rejected",
+   "reviewedOn": "2026-08-03",
+   "note": "wrong subject: ocean waves"
   },
   {
    "id": "librarystem",
    "name": "Library STEM drop-in",
    "url": "https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=800&q=72&auto=format&fit=crop",
    "source": "unsplash",
-   "verified": null,
-   "reviewedOn": null,
-   "note": ""
+   "verified": "human",
+   "reviewedOn": "2026-08-03",
+   "note": "confirmed by eye: lab glassware"
   }
  ]
 }

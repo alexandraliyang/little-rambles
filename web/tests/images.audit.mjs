@@ -47,12 +47,19 @@ if (dead.length) {
 } else console.log("  PASS  liveness — all " + rows.length + " URLs resolve as images");
 
 /* --- 3. human review --- */
-const unreviewed = rows.filter((r) => r.verified !== "human");
-if (unreviewed.length) {
-  const msg = "  " + (strict ? "FAIL" : "TODO") + "  review — " + unreviewed.length + "/" + rows.length +
-              " not yet confirmed by a human (docs/DEBT.md T1)";
+const good = rows.filter((r) => r.verified === "human");
+const bad = rows.filter((r) => r.verified === "rejected");
+const unseen = rows.filter((r) => r.verified == null);
+console.log("  ----  review — " + good.length + " confirmed · " + bad.length + " rejected · " + unseen.length + " not yet looked at");
+if (bad.length || unseen.length) {
+  const msg = "  " + (strict ? "FAIL" : "TODO") + "  " + (bad.length + unseen.length) + "/" + rows.length +
+              " still need a replacement image (docs/DEBT.md T1)";
   console.log(msg);
   if (strict) hard++;
+  /* Show what is wrong, grouped, so the work is legible rather than a number. */
+  const byReason = {};
+  bad.forEach((r) => { const k = r.note.startsWith("404") ? "dead URL" : "wrong subject"; (byReason[k] = byReason[k] || []).push(r.id); });
+  Object.entries(byReason).forEach(([k, ids]) => console.log("          " + k + " (" + ids.length + "): " + ids.slice(0, 6).join(", ") + (ids.length > 6 ? " …" : "")));
 } else console.log("  PASS  review — every image has been looked at and confirmed");
 
 console.log("\n" + (hard ? hard + " gate(s) FAILED" : "image audit clean" + (unreviewed.length ? " (review still outstanding)" : "")) + "\n");

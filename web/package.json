@@ -14,7 +14,8 @@
     "test:ui": "npm run build && node tests/ui.smoke.mjs",
     "audit:images": "node tests/images.audit.mjs",
     "verify": "npm run test && npm run test:device && npm run audit:images",
-    "test:device": "node tests/device.drive.mjs"
+    "test:device": "node tests/device.drive.mjs",
+    "images:candidates": "node tests/candidates.mjs"
   },
   "dependencies": {
     "react": "18.3.1",
