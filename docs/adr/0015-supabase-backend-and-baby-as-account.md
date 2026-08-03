@@ -1,5 +1,5 @@
 # ADR-0015: A baby is the account; Supabase holds it; permissions are a pure function
-Date: 2026-08-03 · Status: Proposed — blocked on founder decision (backend account, data region, photo-upload consent) · Origin: founder — "I'm the mum, I'm the admin, I can invite dad, grandma, auntie to follow baby's page. They can like and leave a comment." Reference: 亲宝宝.
+Date: 2026-08-03 · Status: Accepted (region and photo-upload decided 2026-08-03; account pending) · Origin: founder — "I'm the mum, I'm the admin, I can invite dad, grandma, auntie to follow baby's page. They can like and leave a comment." Reference: 亲宝宝.
 
 ## Context
 
@@ -35,6 +35,8 @@ Easier: the journal survives a lost phone. A second caregiver becomes a user acq
 
 Harder, and knowingly accepted: a recurring cost against no revenue; an account-recovery surface where losing an account must not mean losing the journal; offline becomes a real sync problem rather than the only mode; and a third party now holds photographs of a named child.
 
-**Given up:** the current, literally true promise that photos never leave the device. This is the largest single change in the product's privacy posture, it must be stated in the founder's own words in Settings, and it is why this ADR is **Proposed rather than Accepted** — it is blocked on three founder decisions: the Supabase account, the data region (Canadian residency is available and relevant for child data), and explicit consent to upload children's photographs to a third-party host.
+**Given up:** the current, literally true promise that photos never leave the device. Founder decided 2026-08-03 to upload photos, on the grounds that a grandparent seeing an outing without its picture is most of the emotional value gone. The Settings copy must be rewritten in the founder's own words before any tester sees it.
+
+**Region: ca-central-1 (Montreal), decided 2026-08-03.** The founder asked for something that works "for Canada, US, Australia, EU — all over the developed world". A Supabase project lives in exactly one region, so this is a single choice, and Canada is the one that travels furthest. Canada holds an **EU adequacy decision** for commercial organisations under PIPEDA, so EU→Canada personal-data transfers need no Standard Contractual Clauses or additional safeguards. The US does not have that clean standing: the EU-US Data Privacy Framework replaced two invalidated arrangements and is itself under challenge, so a US region would put an EU legal question in the product's foundations. Australia imposes no residency requirement that Canada fails. Latency is the only cost, and it is small: the app is a static PWA served from a CDN, and only reads and writes cross the Atlantic.
 
 Revisit if: cost outgrows the product before revenue exists (self-host Supabase, same schema), or if research shows invited caregivers do not return — the PRD names that kill criterion, and it should be measured before anything is built on top of this.
