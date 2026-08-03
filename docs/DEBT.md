@@ -1,12 +1,27 @@
 # DEBT — known-unfixed, deliberately carried
 
-Updated: 2026-08-02 · Governed by [ADR-0014](adr/0014-layered-source-layout-and-feedback-routing.md)
+Updated: 2026-08-03 · Governed by [ADR-0014](adr/0014-layered-source-layout-and-feedback-routing.md)
 
 Debt is a decision, not an accident. Every row states what is wrong, what it costs, and what would close it. Items carried without an owner or a trigger are how a product rots quietly.
 
 `ROADMAP.md §Risks` holds *product* risk (will anyone want this). This file holds *build* debt (what we shipped knowing it was incomplete). D1–D5 predate this file and live in the Phase 0 gate review; numbering here continues from T1 to avoid collision.
 
 **Status:** OPEN · GUARDED (mitigated, still real) · CLOSED (with evidence)
+
+**How this list is used.** Founder feedback that is not fixed in the same sitting lands here as a numbered item, so nothing survives only in a chat scroll. Every item names what is wrong, what it costs, and what would close it. Reviewed whenever we open a session; closed items keep their evidence rather than being deleted.
+
+| # | Item | Status | Weight |
+|---|---|---|---|
+| T1 | Activity photos are wrong, not just missing | OPEN | high |
+| T2 | No backend: no family sharing, no real backup | OPEN | high |
+| T3 | CHANGELOG is manual and drifts | GUARDED | medium |
+| T4 | Views are still one large file | GUARDED | medium |
+| T5 | Featured venues single-city and unverified | OPEN | medium |
+| T6 | Desktop mouse-drag swipe does not commit | OPEN | low |
+| T7 | Reminders are in-app only, no push | OPEN | medium |
+| T8 | Typical-hours model is asserted, not sourced | GUARDED | medium |
+| T9 | Netlify refuses `--prod` publish | GUARDED | low |
+| T10 | Journal moments are outside the outing stats | OPEN | low |
 
 ---
 
@@ -108,3 +123,25 @@ This also explains why the 51 survivors survived: nearly all are subjects, not p
 **Cost.** The 90-minute answer (FB10) gates hard on closing time, so it now *acts* on this data rather than merely displaying it. A wrong closing time sends someone to a shut door with a toddler.
 
 **Closes when.** Places API (Phase 4) or per-venue curated hours. Until then the honesty labels are load-bearing and must not be removed.
+
+---
+
+## T9 — Netlify refuses the `--prod` publish · **GUARDED** · low
+
+**What.** `netlify deploy --prod` returns `JSONHTTPError: Forbidden` on the publish step. Uploads still succeed and reach `state: ready`, so production silently keeps serving an older bundle.
+
+**Cost.** The dangerous shape of failure: a change looks shipped and is not. It cost one round of confusion before it was spotted.
+
+**Mitigated by.** `deploy.mjs` uploads a draft, promotes it with `restoreSiteDeploy`, then **byte-compares what production actually serves** before reporting success. A deploy that does not land now fails loudly.
+
+**Closes when.** Netlify stops refusing `--prod` (most likely a free-tier rate limit from many deploys in one day) and the script reverts to the direct path. Worth retrying periodically rather than treating the workaround as permanent.
+
+---
+
+## T10 — Journal moments sit outside the outing stats · **OPEN** · low
+
+**What.** FB15-04 unified the Memories numbers onto one base: an outing is a memory that happened somewhere, so written journal moments are excluded from "outings", "places" and "by type". They are still counted in "photos" and still appear in the story list.
+
+**Cost.** A caregiver who writes ten journal moments and logs two outings sees "2 outings" and may read it as their record being lost.
+
+**Closes when.** Either the stats gain a separate "moments" figure, or the story list makes the distinction visible enough that the number is obviously about outings only. Deliberately deferred: adding a fifth number to a four-tile row to fix a subtle problem risks a louder one.

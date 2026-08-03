@@ -126,17 +126,21 @@ ok("FB3-02 tapping the same type again clears the filter", memCount() === allMem
    "back to " + memCount() + " of " + allMems);
 
 /* --- FB3-03: the nav badge is no longer clipped by a colliding .tb rule --- */
-ok("FB3-03 nav tabs use vector icons, not emoji", root.querySelectorAll("nav.topnav svg.ti").length === 5,
+ok("FB3-03 nav tabs use vector icons, not emoji", root.querySelectorAll("nav.topnav svg.ti").length === 4,
    "svg icons " + root.querySelectorAll("nav.topnav svg.ti").length);
 ok("FB3-03 only the photo strip uses the .thumb class now",
    root.querySelectorAll("nav.topnav .thumb").length === 0);
 
 /* --- FB3-04/05: Yours is a tab; Settings no longer duplicates the list --- */
-const mineTab = findByText("button", "Yours");
-ok("FB3-05 a top-level Yours tab exists", !!mineTab);
+/* FB15-02 moved this from its own tab into Memories. The behaviour under test is
+   unchanged: custom activities have exactly one home, and an add action lives
+   with them. */
+const mineTab = findByText("button", "Memories");
+ok("FB3-05 custom activities have a home", !!mineTab);
 if (mineTab) { click(mineTab); await settle(); }
-ok("FB3-05 Yours offers the add action", !!findByText("button", "Add your own activity"));
-ok("FB3-05 Yours explains itself when empty", text().includes("Nothing of your own yet"));
+ok("FB3-05 an add action lives with them", !!findByText("button", "Add an activity of your own"));
+ok("FB3-05 custom activities are not ALSO a tab (one home, not two)",
+   ![...root.querySelectorAll("nav.topnav .tl")].some((t) => t.textContent === "Yours"));
 const gear = findByText("button", "⚙️");
 if (gear) { click(gear); await settle(); }
 ok("FB3-04 Settings no longer carries a Your-activities list", !text().includes("Your activities ("));
@@ -314,15 +318,36 @@ ok("FB14-01 the stale v3.3 footer is gone", !/v3\.3/.test(text()), (text().match
 ok("FB14-01 any version shown in Settings is the real one",
    !text().includes("Dev-Map v1.2.0") && text().includes(pkgVersion), "expects " + pkgVersion);
 
-/* --- FB14-02: the view switch reads differently from the filters --- */
+/* --- FB15-02/03/04: four tabs, stats are the view switch, numbers agree --- */
 const memTab14 = findByText("button", "Memories");
 if (memTab14) { click(memTab14); await settle(); }
-ok("FB14-02 view switch uses its own control, not a filter chip",
-   root.querySelectorAll(".viewtab").length === 2, root.querySelectorAll(".viewtab").length + " view tabs");
-ok("FB14-02 'Photos' no longer means two different things",
-   !!findByText(".viewtab", "Gallery") && !!findByText(".chip", "With photos"),
-   [...root.querySelectorAll(".viewtab b")].map((b) => b.textContent).join(" / "));
-ok("FB14-02 each view explains itself", !!findByText(".viewtab", "every photo at once"));
+ok("FB15-02 the Yours tab is gone; four remain",
+   root.querySelectorAll("nav.topnav .tb").length === 4,
+   [...root.querySelectorAll("nav.topnav .tl")].map((t) => t.textContent).join("/"));
+ok("FB15-02 your own activities live inside Memories now",
+   text().includes("Your own activities") || text().includes("Add an activity of your own"));
+ok("FB14-02 'Photos' no longer means two different things", !!findByText(".chip", "With photos"));
+
+const statBtns = [...root.querySelectorAll(".st.act")];
+ok("FB15-03 two stat tiles are pressable view switches", statBtns.length === 2,
+   statBtns.map((b) => b.textContent).join(" | "));
+ok("FB15-03 the live view is marked on the tile", root.querySelectorAll(".st.act.on").length === 1);
+ok("FB15-03 the separate view-chip row is gone", root.querySelectorAll(".viewtab").length === 0);
+if (statBtns[1]) { click(statBtns[1]); await settle(); }
+ok("FB15-03 tapping the photos tile switches to the gallery",
+   !!root.querySelector(".grid") || text().includes("No media yet"), "");
+if (statBtns[0]) { click(root.querySelectorAll(".st.act")[0]); await settle(); }
+
+/* the numbers must agree with each other and with the list */
+const statVal = (label) => {
+  const el = [...root.querySelectorAll(".st")].find((s2) => (s2.textContent || "").includes(label));
+  return el ? parseInt(el.querySelector("b").textContent, 10) : null;
+};
+const outings = statVal("outings"), places = statVal("places");
+const catTotal = [...root.querySelectorAll("button.catstat b")].reduce((n, b) => n + parseInt(b.textContent, 10), 0);
+ok("FB15-04 'by type' totals cannot exceed the outings count",
+   catTotal <= outings, "by-type " + catTotal + " vs outings " + outings);
+ok("FB15-04 places cannot exceed outings", places <= outings, "places " + places + " vs outings " + outings);
 
 /* --- FB13-02: gallery photos link back to their memory --- */
 const photosView = [...root.querySelectorAll(".chip")].find((c) => c.textContent.trim() === "Photos" && !/📷/.test(c.textContent));

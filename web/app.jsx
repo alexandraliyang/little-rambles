@@ -642,8 +642,8 @@ export default function App() {
     /* FB3-05: it now lands in Yours (where it lives) and, because we also queue a
        plan row, on Our List (where you act on it). Show the former — that is the
        one the user just created and will want to confirm. */
-    say(form.name + " added — it's in Yours, and shortlisted on Our List.");
-    setTab("mine");
+    say(form.name + " added — it's on Our List, ready to go.");
+    setTab("upnext");
   };
   const addCustomMemory = async (form, media) => {
     const id = Date.now();
@@ -656,6 +656,15 @@ export default function App() {
 
   /* ---------------- memory views ---------------- */
   const memAll = visits.filter((v) => v.rating || v.kind === "journal" || v.kind === "custom");
+  /* FB15-04. Every number on this screen now comes from ONE base. They used to
+     come from four: "outings" counted rated visits, "places" counted distinct
+     names across memAll (which includes journal entries), "photos" summed over
+     ALL visits including unlogged ones, and "by type" used memAll again. That is
+     how you get 10 outings and 11 places from the same list. An outing is a
+     memory that happened somewhere; a written journal moment is not an outing. */
+  const memOutings = memAll.filter((v) => v.kind !== "journal");
+  const memPlaces = new Set(memOutings.map((v) => v.place || v.name).filter(Boolean));
+  const memPhotos = memAll.reduce((n, v) => n + (v.mediaCount || 0), 0);
   const q = memSearch.trim().toLowerCase();
   const memList = memAll.filter((v) => {
     if (memFilter === "fav" && !v.fav) return false;
@@ -753,7 +762,6 @@ export default function App() {
     ["discover", "Swipe", "swipe", 0],
     ["explore", "Browse", "browse", 0],
     ["upnext", "Our List", "heart", plans.length],
-    ["mine", "Yours", "star", customActs.length],
     ["story", "Memories", "book", 0],
   ];
   const _unusedPlaceLabel = placeLabel;
@@ -1064,42 +1072,16 @@ export default function App() {
               </div>; })}</>}
           </div>}
 
-          {/* ---------------- YOURS (FB3-05) ----------------
-              Was a strip buried at the top of Our List and a dead list in Settings.
-              It is the only place in the app the family's own content lives, so it
-              gets a tab of its own and one obvious way in. */}
-          {tab === "mine" && <div className="pad">
-            <button className="wide" onClick={() => setAddOpen(true)}>➕ Add your own activity or place</button>
-            {!customActs.length
-              ? <div className="card dash">
-                  <p className="why"><b>Nothing of your own yet.</b> Add a kind of outing we never suggest, or one specific place you love — a friend's back garden, the noodle shop that tolerates a toddler, the long way round to nursery.</p>
-                  <p className="fine">Anything you add joins your recommendations everywhere, marked “Yours”.</p>
-                </div>
-              : <>
-                <div className="lbl">Your own activities ({customActs.length})</div>
-                {customActs.map((a) => <div className="card mine" key={a.id}>
-                  <div className="rowtop"><div><h3 className="ctitle">{a.emoji} {a.name}</h3>{a.place && <p className="dsub">{a.place}</p>}</div><span className="badge b-yours">Yours</span></div>
-                  <p className="why">{a.why}</p>
-                  <div className="pills">
-                    <a className="pillbtn dark" href={nearQuery(a.place || a.mapsQuery, activePlace)} target="_blank" rel="noreferrer" onClick={() => goNow(a)}>🚗 Let's go</a>
-                    <button className="pillbtn" onClick={() => openCheck({ id: Date.now(), ideaId: a.id, name: a.name, cat: a.cat, emoji: a.emoji, place: a.place || null })}>Log a memory here</button>
-                    <button className="pillbtn" onClick={() => { setCustomActs((c) => c.filter((x) => x.id !== a.id)); say("Removed."); }}>Remove</button>
-                  </div>
-                </div>)}
-              </>}
-            <div className="lbl">Somewhere you went without us</div>
-            <div className="card">
-              <p className="why">Already been somewhere and just want it in the story? That is a memory, not an activity.</p>
-              <div className="pills"><button className="pillbtn" onClick={() => { setTab("story"); setEditMem({ isNew: true }); }}>📍 Log an outing we did on our own</button></div>
-            </div>
-          </div>}
-
           {/* ---------------- STORY ---------------- */}
           {tab === "story" && <div className="pad">
+            {/* FB15-03: the two numbers you would tap anyway ARE the view switch,
+                so there is no separate row of view chips restating them. */}
             <div className="stats">
-              <div className="st"><b>{visits.filter((v) => v.rating).length}</b><span>outings</span></div>
-              <div className="st"><b>{new Set(memAll.map((v) => v.place || v.name)).size}</b><span>places</span></div>
-              <div className="st"><b>{visits.reduce((n, v) => n + (v.mediaCount || 0), 0)}</b><span>photos</span></div>
+              <button className={"st act" + (memView === "story" ? " on" : "")} onClick={() => setMemView("story")}>
+                <b>{memOutings.length}</b><span>📖 outings</span></button>
+              <button className={"st act" + (memView === "grid" ? " on" : "")} onClick={() => setMemView("grid")}>
+                <b>{memPhotos}</b><span>🖼️ photos</span></button>
+              <div className="st"><b>{memPlaces.size}</b><span>places</span></div>
               <div className="st"><b>{memAll.length ? fmtDate(memAll[memAll.length - 1].ts) : "—"}</b><span>since</span></div>
             </div>
             {/* FB3-02: these were read-only counters. Tapping one now filters the
@@ -1119,12 +1101,28 @@ export default function App() {
               <button className="wide" onClick={() => setJournalOpen(true)}>✍️ Write a moment</button>
               <button className="wide" onClick={() => setEditMem({ isNew: true })}>📍 Add an outing we did on our own</button>
             </div>
-            <div className="lbl">How to look at them</div>
-            <div className="chips viewtabs">
-              {[["story", "📖 Story", "read them in order"], ["grid", "🖼️ Gallery", "every photo at once"]].map(([k, l, hint]) =>
-                <button key={k} className={"viewtab" + (memView === k ? " on" : "")} onClick={() => setMemView(k)}>
-                  <b>{l}</b><small>{hint}</small></button>)}
+            {/* FB15-02. "Yours" was a tab of its own for the outings you invented,
+                while the outings you *did* on your own were a filter in here. Two
+                homes for one idea. Both now live in Memories: the things you added
+                sit above the record of what you actually did with them. The
+                planning surface is still Our List — this section is the list, and
+                every action on it hands off there. */}
+            {customActs.length > 0 && <>
+              <div className="lbl">💜 Your own activities ({customActs.length})</div>
+              <div className="card">
+                {customActs.map((a) => <div className="uarow" key={a.id}>
+                  <span>{a.emoji} {a.name}{a.place ? " · " + a.place : ""}</span>
+                  <span className="uaacts">
+                    <button className="mini" title="Log an outing here" onClick={() => openCheck({ id: Date.now(), ideaId: a.id, name: a.name, cat: a.cat, emoji: a.emoji, place: a.place || null })}>＋</button>
+                    <button className="mini" title="Remove this activity" onClick={() => { setCustomActs((c) => c.filter((x) => x.id !== a.id)); say("Removed."); }}>✕</button>
+                  </span></div>)}
+                <p className="fine">These join your recommendations everywhere, marked “Yours”. Plan them from <b>Our List</b>.</p>
+              </div>
+            </>}
+            <div className="btns2">
+              <button className="wide" onClick={() => setAddOpen(true)}>➕ Add an activity of your own</button>
             </div>
+
             <div className="lbl">Narrow it down</div>
             {/* FB2-15: one tap toggles a filter on, the same tap again clears it */}
             <div className="chips">

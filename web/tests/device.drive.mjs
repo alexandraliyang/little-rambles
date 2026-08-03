@@ -135,12 +135,12 @@ const nav = await page.evaluate(() => {
     }),
   };
 });
-ok("FB3-03 five tabs render", nav.count === 5, nav.labels.join(" / "));
-ok("FB3-03 all icons are SVG at one size", nav.svgs === 5 && new Set(nav.iconBoxes).size === 1, nav.iconBoxes.join(", "));
+ok("FB3-03 four tabs render (Yours merged into Memories, FB15-02)", nav.count === 4, nav.labels.join(" / "));
+ok("FB3-03 all icons are SVG at one size", nav.svgs === 4 && new Set(nav.iconBoxes).size === 1, nav.iconBoxes.join(", "));
 ok("FB3-03 no tab label is truncated at 390px", nav.ellipsised.length === 0, nav.ellipsised.join(",") || "none clipped");
 ok("FB3-03 badge is fully inside its button (was clipped)", nav.badges.every((b) => b.insideParent), JSON.stringify(nav.badges.map((b) => b.text + " inside=" + b.insideParent)));
 ok("FB3-03 parent no longer sets overflow:hidden", nav.badges.every((b) => b.parentOverflow !== "hidden"), nav.badges[0] && nav.badges[0].parentOverflow);
-ok("FB3-03 badge text is the real count", nav.badges.map((b) => b.text).join(",") === "4,2", nav.badges.map((b) => b.text).join(","));
+ok("FB3-03 badge text is the real count", nav.badges.map((b) => b.text).join(",") === "4", nav.badges.map((b) => b.text).join(","));
 await page.locator("nav.topnav").screenshot({ path: SHOTS + "02-nav.png" });
 
 /* three-digit overflow: does 99+ still fit inside the button? */
@@ -154,13 +154,13 @@ ok("FB3-03 a 99+ badge still fits inside the button", wide.inside, wide.text + "
 await page.locator("nav.topnav").screenshot({ path: SHOTS + "03-nav-99plus.png" });
 await page.reload({ waitUntil: "networkidle" }); await page.waitForTimeout(800);
 
-/* ---------- 5. Yours tab ---------- */
-await page.getByRole("button", { name: /Yours/ }).click();
+/* ---------- 5. custom activities (FB15-02: now inside Memories) ---------- */
+await page.getByRole("button", { name: /Memories/ }).click();
 await page.waitForTimeout(400);
 const yours = await txt();
-ok("FB3-05 Yours tab opens and lists both custom activities",
+ok("FB3-05 both custom activities are listed in their one home (FB15-02)",
    yours.includes("Nana's back garden") && yours.includes("noodle place"), "");
-ok("FB3-05 Yours carries its own add button", yours.includes("Add your own activity or place"));
+ok("FB3-05 an add action lives with them", yours.includes("Add an activity of your own"));
 await shot("04-yours");
 
 /* ---------- 4. Settings no longer duplicates that list ---------- */
@@ -664,7 +664,8 @@ if (await areaChip.count()) {
 /* ---------- FB14-03: the lightbox is a reel, and its controls are visible ---------- */
 await page.getByRole("button", { name: /Memories/ }).click();
 await page.waitForTimeout(700);
-const gal = page.locator(".viewtab", { hasText: "Gallery" });
+/* FB15-03: the view switch is now the photos stat tile, not a chip. */
+const gal = page.locator(".st.act", { hasText: "photos" });
 if (await gal.count()) { await gal.click(); await page.waitForTimeout(600); }
 const cells = await page.locator(".grid .gc").count();
 ok("FB14-03 the gallery renders photo cells", cells > 0, cells + " cells");
