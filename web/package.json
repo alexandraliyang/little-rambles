@@ -6,10 +6,15 @@
   "scripts": {
     "build": "esbuild main.jsx --bundle --minify --target=es2017 --loader:.jsx=jsx --outfile=app.js --legal-comments=eof",
     "check": "esbuild main.jsx --bundle --target=es2017 --loader:.jsx=jsx --outfile=node_modules/.cache/check.js",
-    "test": "npm run build && node smoke.mjs",
+    "test": "npm run test:engine && npm run test:ui",
     "dist": "npm run build && node pack.mjs",
     "deploy": "npm run dist && netlify deploy --dir=dist --prod",
-    "serve": "node -e \"const h=require('http'),f=require('fs'),p=require('path');const d=p.join(process.cwd(),'dist');const t={'.html':'text/html','.js':'text/javascript','.json':'application/json','.webmanifest':'application/manifest+json','.png':'image/png'};h.createServer((q,s)=>{let u=q.url.split('?')[0];if(u==='/')u='/index.html';const fp=p.join(d,u);f.readFile(fp,(e,b)=>{if(e){s.writeHead(404);return s.end('not found')}s.writeHead(200,{'content-type':t[p.extname(fp)]||'application/octet-stream','cache-control':'no-cache'});s.end(b)})}).listen(8000,()=>console.log('serving web/dist on http://localhost:8000'))\""
+    "serve": "node -e \"const h=require('http'),f=require('fs'),p=require('path');const d=p.join(process.cwd(),'dist');const t={'.html':'text/html','.js':'text/javascript','.json':'application/json','.webmanifest':'application/manifest+json','.png':'image/png'};h.createServer((q,s)=>{let u=q.url.split('?')[0];if(u==='/')u='/index.html';const fp=p.join(d,u);f.readFile(fp,(e,b)=>{if(e){s.writeHead(404);return s.end('not found')}s.writeHead(200,{'content-type':t[p.extname(fp)]||'application/octet-stream','cache-control':'no-cache'});s.end(b)})}).listen(8000,()=>console.log('serving web/dist on http://localhost:8000'))\"",
+    "test:engine": "node tests/engine.test.mjs",
+    "test:ui": "npm run build && node tests/ui.smoke.mjs",
+    "audit:images": "node tests/images.audit.mjs",
+    "verify": "npm run test && npm run test:device && npm run audit:images",
+    "test:device": "node tests/device.drive.mjs"
   },
   "dependencies": {
     "react": "18.3.1",
@@ -17,9 +22,12 @@
   },
   "devDependencies": {
     "esbuild": "^0.28.1",
-    "jsdom": "^30.0.1"
+    "jsdom": "^30.0.1",
+    "netlify-cli": "^27.0.1",
+    "playwright-core": "^1.62.1"
   },
   "allowScripts": {
     "esbuild@0.28.1": true
-  }
+  },
+  "type": "module"
 }

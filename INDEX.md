@@ -1,5 +1,5 @@
 # Little Rambles — Repository Index & Manifest
-Updated: 2026-07-27 · **This file is the map of everything.** If an artifact isn't listed here with a status, it doesn't officially exist.
+Updated: 2026-08-02 · **This file is the map of everything.** If an artifact isn't listed here with a status, it doesn't officially exist.
 
 ## How this repository is managed (the three rules)
 
@@ -19,7 +19,9 @@ Updated: 2026-07-27 · **This file is the map of everything.** If an artifact is
 | `docs/README.md` | Documentation rules (docs-as-code, 7 rules) | [AI-GEN] | Canonical |
 | `docs/ROADMAP.md` | Phases, gates, kill criteria, risk register, debt ledger — **amended 2026-07-27** (D2/D3 applied, D4 closed, scan evidence) | [AI-GEN + DECISION gates] | Canonical, current position: Phase 1 |
 | `docs/CHANGELOG.md` | Everything shipped incl. 2026-07-27 correction release | [AI-GEN] | Canonical, append-only |
-| `docs/adr/0001–0007` | Seven founding decisions with rationale | [DECISION, drafted AI] | Canonical, immutable |
+| `docs/adr/0001–0014` | Fourteen decisions with rationale | [DECISION, drafted AI] | Canonical, immutable |
+| `docs/MAP.md` | **Feedback routing map** — symptom → files → tests. Read this before touching code | [AI-GEN] | Canonical, living |
+| `docs/DEBT.md` | Build-debt register T1–T8 (photos, backend, changelog drift, view split, …) | [AI-GEN + DECISION] | Canonical, living |
 | `docs/reviews/2026-07-27-phase-0-gate-review.md` | Phase 0 closure with debts D1–D4 | [DECISION + AI-GEN] | Filed |
 | `docs/design/founding-snapshot-design-doc-v1.md` | Full design doc (architecture, scoring, map framework, limitations) | [AI-GEN] | Founding snapshot — historical; superseded structurally by this system; content still accurate for v0.3 |
 | `docs/research/interview-guide.md` | Phase 1 interview script + scoring sheet + gate math | [AI-GEN] | Canonical, in active use |
@@ -30,10 +32,16 @@ Updated: 2026-07-27 · **This file is the map of everything.** If an artifact is
 | `app/developmental-map-v1.json` | Science layer v1.2.0 (0–84mo, 22 affordances) — **now carries verificationStatus flag (D2)** | [AI-GEN from cited frameworks; weights provisional] | Canonical; expert review pending (Phase 2) |
 | `app/little-rambles-v0-13.jsx` | Current working prototype (age 0–7 + big-kid ideas + editable Memories hub) | [AI-GEN, ASSUMPTION-driven] | Canonical build |
 | `web/main.jsx` | **Build entry point** — React mount, error boundary, global error handlers. Recovered from the bundle 2026-07-30 (it had never been committed, so `web/` could not be rebuilt from source); verified byte-identical against the previous `app.js` | [AI-GEN] | Canonical |
-| `web/app.jsx` | **Current app source** (v3.3-beta) — 4-tab UI, scoring engine, location system, memories | [AI-GEN, ASSUMPTION-driven] | Canonical |
+| `web/app.jsx` | **View + state layer** (v3.4-beta) — 5 tabs, gestures, screens. Pure logic now lives in `engine/` and `lib/` (ADR-0014) | [AI-GEN, ASSUMPTION-driven] | Canonical |
+| `web/engine/` | `availability.js` · `constraints.js` — pure decision logic, React-free, unit-tested | [AI-GEN] | Canonical |
+| `web/lib/` | `geo.js` · `format.js` · `media.js` — distance, geocoding, Maps URLs, formatting, image downscaling. Pure | [AI-GEN] | Canonical |
+| `web/content/images.json` | **Image manifest** — one row per activity with a `verified` field; source of truth for pictures, enforced by `audit:images` | [AI-GEN, review pending] | Canonical, **T1 open: 0/155 human-verified** |
+| `web/tests/engine.test.mjs` | 33 pure-logic unit checks (Node, no DOM) — seasons, constraints, distance, Maps URLs, formatting | [AI-GEN] | Canonical |
+| `web/tests/ui.smoke.mjs` | jsdom render/interaction checks — was `web/smoke.mjs` | [AI-GEN] | Canonical |
+| `web/tests/device.drive.mjs` | 80 real-Chrome checks with **real touch** — gestures, sheets, PWA install, live geocoder + weather | [AI-GEN] | Canonical |
+| `web/tests/images.audit.mjs` | Coverage / liveness / human-review gates over the image manifest | [AI-GEN] | Canonical |
 | `web/data.js` | 155 activities · 16 categories · age bands · featured venues · kid-oriented photo queries | [AI-GEN] | Canonical |
-| `web/package.json` | Pinned toolchain (React 18.3.1, esbuild) + `npm run build` / `npm test` | [AI-GEN] | Canonical |
-| `web/smoke.mjs` | 18 headless jsdom checks over the FB2 logic — run by `npm test` | [AI-GEN] | Canonical |
+| `web/package.json` | Pinned toolchain + **single source of the version number** (the header reads it; a test asserts they match) · scripts: `test` `test:engine` `test:ui` `test:device` `audit:images` `verify` `dist` `deploy` | [AI-GEN] | Canonical |
 | `web/app.js` | Bundled build (esbuild, React 18, es2017) — what Netlify serves | [BUILD ARTIFACT] | **Regenerate with `npm run build`, never edit** |
 | `web/index.html`, `manifest.webmanifest`, `sw.js`, `icon-*.png` | PWA shell: installable, offline-capable | [AI-GEN] | Canonical |
 | `docs/STATUS.md` | PM board — parallel-stream state, session-open reading | [AI-GEN] | Canonical, living |

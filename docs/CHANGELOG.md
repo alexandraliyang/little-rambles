@@ -1,6 +1,43 @@
 # Changelog
 Format: [Keep a Changelog](https://keepachangelog.com). Versioning: SemVer. Two tracks: **App** and **Dev-Map** (science layer, independent cycle). Docs events recorded here too.
 
+## App — 3.4.0-beta — 2026-08-02
+Founder device rounds FB3–FB11, then a structural change so future rounds cost less.
+
+### Added
+- **"Next 90 minutes"** — one decisive outing, gated hard on real weather (Open-Meteo, keyless), the nap time read from the existing profile note, and whether the place is still open when you *leave*. It is allowed to say "not now" rather than suggest something unusable.
+- **Yours** promoted to a top-level tab; custom activities have one home instead of a strip in Our List and a dead list in Settings.
+- **Capture row** on Our List — Check in · 📸 Snap · 📍 Pin where we are · Didn't go. Snaps and pins attach to the plan and fold into the memory at check-in.
+- **Reminders** — repeat-pattern ("4 'Animals' outings saved or logged in three weeks") and been-a-while, both in-app and dismissible.
+- **Memories are reopenable** — "We went again", "Add to Our List", and Directions that use the recorded address or GPS pin.
+- **Search in Browse**, deliberately overriding the hide-rules so a searched-for item is always findable.
+- **Shuffle controls** on the wrapped deck, replacing copy that announced a reshuffle and offered no way to do one.
+- **Brand mark** — a wandering path, chosen from four drafts by legibility at 28px; new PWA icon set.
+
+### Fixed
+- **Swipe (three separate causes).** The deck reshuffled on every render, so cards changed under a resting finger and "Let's go" opened the wrong card. Velocity was measured across the whole gesture, so a pause before a flick averaged the flick away. `touch-action: pan-y` handed vertical panning to the browser, which then claimed the gesture and fired `pointercancel` — the card moved, the page moved, nothing committed. Now: seeded shuffle, last-sample velocity, direction lock, and `touch-action: none` with the app driving vertical scrolling itself.
+- **Photos turned into drawings.** `Art` never reset its `failed` state between activities, so one broken photo poisoned the card slot and every later card rendered the generated fallback.
+- **Out-of-season ideas were recommended** — season and closing-time shared one status, putting Christmas tree farms in the August deck.
+- **"Hates water" still suggested swimming** — the profile note was a −14 ranking penalty against a −50 cutoff. It is now a hard exclusion, with Browse explaining what it hid.
+- **Address search ignored location** — results are ranked nearest-first with distances shown; `PlaceInput` had no bias threaded in at all.
+- **Check-in sheet opened off-screen** on iOS: the overlay was `position:absolute` inside a `100vh` container, which is taller than the visible viewport.
+- Nav badge clipped by a duplicate `.tb` CSS rule; negative SVG radius from a signed shift on a uint32 hash; version chip drifted from `package.json` for five rounds.
+
+### Changed
+- **Version has one source.** The header reads `package.json`; a test asserts they match.
+- **Curated photos are used first**, with Wikimedia keyword search demoted to a fallback — the search was overriding 155 hand-picked images on every card.
+
+## Docs / Architecture — 2026-08-02
+### Added
+- **ADR-0014** — layered source layout (`engine/` · `lib/` · views · `theme`/`content`) and feedback routing. Pure logic extracted first because that is where the shipped bugs lived and it needs no state refactor.
+- **`docs/MAP.md`** — routes founder-language symptoms to files and test groups, so feedback opens one layer instead of a 1,968-line file.
+- **`docs/DEBT.md`** — build-debt register T1–T8, replacing "things we remember are wrong".
+- **`web/tests/`** — three suites: `engine.test` (33 pure checks, Node, no DOM), `ui.smoke` (jsdom), `device.drive` (80 checks in real Chrome with **real touch**). Plus `images.audit`, which makes photo quality a query.
+- **`web/content/images.json`** — image manifest with a `verified` field; 0/155 human-verified, tracked as debt T1.
+
+### Changed
+- `web/app.jsx` 1,968 → 1,820 lines; `availability`, `constraints`, `geo`, `format`, `media` moved out and unit-tested. No behaviour change — all suites pass unchanged across the refactor.
+
 ## Docs — 2026-07-27 (parallel-tracks amendment)
 ### Changed
 - **ADR-0009:** Phase 1 and Phase 2 now run in parallel per founder decision; founder vision recorded as explicit assumption set A1 (pain real / dev-fit valued / logging used / WTP ~$6–8/mo); Phase 1 gate converted to a binding merge checkpoint, blocking before Phase 3. Kill/pivot thresholds unchanged and frozen. ROADMAP amended same-sitting per Rule 7.

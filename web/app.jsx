@@ -1,5 +1,13 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { version as APP_VERSION } from "./package.json";
+/* Layered imports — see docs/ADR-0014 and docs/MAP.md. engine/ and lib/ are
+   pure and React-free, so the logic that historically carried the bugs can be
+   unit-tested in Node without a DOM. */
+import { MON, DAY, monthsOld, fmtAge, fmtDate, fmtHour } from "./lib/format.js";
+import { haversine, fmtKm, geoSearch, nearQuery, venueQuery, directionsTo } from "./lib/geo.js";
+import { shrink } from "./lib/media.js";
+import { availability } from "./engine/availability.js";
+import { CMAP, parseConstraints, cmapFor } from "./engine/constraints.js";
 import { AGE_BANDS, bandFor, AFF, CAT_META, ACTIVITIES, FEATURED, FEATURED_CITY, AREA_SUGGESTIONS, IMG, KIDQ } from "./data.js";
 
 /* ==================================================================
@@ -75,162 +83,6 @@ const RATE_ORDER = Object.keys(RATE);
    every profile created before this build — gets they/them. */
 const PRONOUNS = { girl: { subj: "she", obj: "her", poss: "her" }, boy: { subj: "he", obj: "him", poss: "his" } };
 const pronounsFor = (p) => (p && PRONOUNS[p.gender]) || { subj: "they", obj: "them", poss: "their" };
-const DAY = 86400000;
-const monthsOld = (bd) => { const b = new Date(bd + "T00:00:00"), n = new Date(); let m = (n.getFullYear() - b.getFullYear()) * 12 + (n.getMonth() - b.getMonth()); if (n.getDate() < b.getDate()) m -= 1; return Math.max(0, m); };
-const fmtAge = (m) => (m < 24 ? m + " mo" : Math.floor(m / 12) + "y" + (m % 12 ? " " + (m % 12) + "m" : ""));
-const fmtDate = (ts) => new Date(ts).toLocaleDateString(undefined, { month: "short", day: "numeric" });
-const fmtHour = (h) => { const hh = Math.floor(h), mm = Math.round((h - hh) * 60), ap = hh >= 12 ? "pm" : "am", h12 = ((hh + 11) % 12) + 1; return mm ? `${h12}:${String(mm).padStart(2, "0")}${ap}` : `${h12}${ap}`; };
-/* FB3-01. Great-circle distance, used to rank address results the way a maps app
-   does: what is near you first, not whatever the geocoder happened to return. */
-const haversine = (a, b) => {
-  if (!a || !b || a.lat == null || b.lat == null) return null;
-  const rad = Math.PI / 180, dLat = (b.lat - a.lat) * rad, dLng = (b.lng - a.lng) * rad;
-  const s = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
-  return 6371 * 2 * Math.asin(Math.min(1, Math.sqrt(s)));
-};
-const fmtKm = (km) => (km == null ? ""
-  : km < 1 ? Math.round(km * 1000) + " m away"
-  : km < 10 ? km.toFixed(1) + " km away"
-  : Math.round(km).toLocaleString() + " km away");
-/* Keyless worldwide address autocomplete (Photon, OpenStreetMap data).
-   Returns {label, lat, lng} so Maps searches can be centred on real coordinates. */
-async function photon(q, near) {
-  /* location_bias_scale pulls results towards `near` inside Photon's own ranking;
-     without it a two-letter query returns the same global places for everyone. */
-  const bias = near && near.lat != null ? "&lat=" + near.lat + "&lon=" + near.lng + "&location_bias_scale=0.8&zoom=12" : "";
-  const r = await fetch("https://photon.komoot.io/api/?q=" + encodeURIComponent(q) + "&limit=12" + bias);
-  if (!r.ok) throw new Error("photon " + r.status);
-  const j = await r.json();
-  return (j.features || []).map((f) => {
-    const p = f.properties || {};
-    const l1 = [p.name, p.housenumber && p.street ? p.housenumber + " " + p.street : p.street].filter(Boolean).join(", ");
-    const l2 = [p.district, p.city || p.town || p.village, p.state, p.country].filter(Boolean).join(", ");
-    return { label: l1 || l2, sub: l1 && l2 !== l1 ? l2 : "", lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0] };
-  }).filter((x) => x.label);
-}
-async function nominatim(q, near) {
-  /* An unbounded viewbox: local matches float up, but somewhere genuinely far
-     away is still findable when you are planning a trip. */
-  const box = near && near.lat != null
-    ? "&viewbox=" + [near.lng - 1.2, near.lat + 0.9, near.lng + 1.2, near.lat - 0.9].map((n) => n.toFixed(4)).join(",")
-    : "";
-  const r = await fetch("https://nominatim.openstreetmap.org/search?format=jsonv2&limit=12&addressdetails=1" + box + "&q=" + encodeURIComponent(q));
-  if (!r.ok) throw new Error("nominatim " + r.status);
-  const j = await r.json();
-  return (j || []).map((x) => {
-    const parts = String(x.display_name).split(",").map((s) => s.trim());
-    return { label: parts.slice(0, 2).join(", "), sub: parts.slice(2, 5).filter(Boolean).join(", "), lat: +x.lat, lng: +x.lon };
-  });
-}
-/* Blend the provider's own text relevance with distance, rather than sorting on
-   either alone. Distance dominates (a nearby match wins) but relevance breaks
-   ties inside a band, so an exact name match never drops below a vague one. */
-function rankByProximity(hits, near) {
-  if (!near || near.lat == null) return hits.slice(0, 7);
-  /* Bands, not raw kilometres — but only where banding earns its keep.
-     Under 100km everything is a plausible outing, so the geocoder's own text
-     relevance breaks ties and an exact name match never loses to a vaguer one
-     200m closer. Past that nothing is reachable today, relevance stops meaning
-     anything, and the only number the user can act on is the one we print — so
-     it sorts strictly by distance. Mixing the two is what made a far tail read
-     1,765 / 1,772 / 1,595 and look broken. */
-  const NEAR = 100;
-  const band = (km) => (km == null ? 6 : km < 2 ? 0 : km < 10 ? 1 : km < 30 ? 2 : km < NEAR ? 3 : km < 500 ? 5 : km < 2000 ? 7 : 9);
-  /* Kept strictly under the 2-point gap between bands, so this orders results
-     inside a band without ever letting a far one jump a nearer band. */
-  const tail = (km) => Math.min(km, 20000) / 20000 * 1.9;
-  return hits
-    .map((h, i) => {
-      const km = haversine(near, h);
-      const within = km == null || km < NEAR ? i * 0.5 : tail(km);
-      return { h: { ...h, km }, s: band(km) * 2 + within };
-    })
-    .sort((a, b) => a.s - b.s)
-    .slice(0, 7)
-    .map((x) => x.h);
-}
-/* Two independent providers so one being blocked or slow never leaves the user stuck. */
-async function geoSearch(q, near) {
-  if (!q || q.trim().length < 2) return [];
-  const dedupe = (arr) => { const seen = {}; return arr.filter((x) => (seen[x.label + x.sub] ? false : (seen[x.label + x.sub] = true))); };
-  try { const a = await photon(q, near); if (a.length) return rankByProximity(dedupe(a), near); } catch (e) {}
-  return rankByProximity(dedupe(await nominatim(q, near)), near);
-}
-const MON = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-/* When we hold real coordinates we centre the Maps search on them (@lat,lng),
-   which is the only reliable way to move results off the phone's default area. */
-const gmaps = (q, place) => {
-  if (place && place.lat != null) return "https://www.google.com/maps/search/" + encodeURIComponent(q) + "/@" + place.lat + "," + place.lng + ",14z";
-  return "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q + (place && place.label ? " near " + place.label : ""));
-};
-const nearQuery = (q, place) => gmaps(q, place);
-/* FB8-01. "Directions" now means directions. When a memory recorded an exact
-   address — or a GPS pin — that is the destination, full stop: no "near home"
-   suffix and no map re-centring, both of which turned a known address back into
-   a fuzzy area search. Falls back to a search only when all we ever had was a
-   generic activity name. */
-const directionsTo = (place, pin) => {
-  if (pin && pin.lat != null) return "https://www.google.com/maps/dir/?api=1&destination=" + pin.lat + "," + pin.lng;
-  const p = String(place || "").trim();
-  if (!p) return null;
-  return "https://www.google.com/maps/dir/?api=1&destination=" + encodeURIComponent(p);
-};
-const venueQuery = (name, area, place) => gmaps(name + (area ? ", " + area : ""), place);
-
-function availability(a, now = new Date()) {
-  const h = a.hours, mo = now.getMonth() + 1, day = now.getDay(), hr = now.getHours() + now.getMinutes() / 60;
-  /* FB4-02. Out of season is NOT the same as closed. "Closed" means come back
-     tomorrow morning; out of season means come back in four months, and a
-     Christmas tree farm has no business being recommended in August. They shared
-     a status, so the ranker treated them identically. */
-  if (h.months) { const [s, e] = h.months; const inSeason = s <= e ? (mo >= s && mo <= e) : (mo >= s || mo <= e); if (!inSeason) return { st: "offseason", rank: -2, label: `In season ${MON[s]}–${MON[e]}` }; }
-  if (!h.days.includes(day)) return { st: "closed", rank: -1, label: h.days.length === 2 ? "Weekends" : "Weekdays only" };
-  if (hr < h.open) return h.open - hr <= 1.5 ? { st: "soon", rank: 0.5, label: `Opens ~${fmtHour(h.open)}` } : { st: "closed", rank: -1, label: `Opens ~${fmtHour(h.open)}` };
-  if (hr >= h.close) return { st: "closed", rank: -1, label: "Done for today" };
-  if (h.close - hr <= 1) return { st: "closing", rank: 0.6, label: `Closes ~${fmtHour(h.close)}` };
-  return { st: "open", rank: 1, label: { daily: "Open now", daylight: "Good now", seasonal: "Open now · in season", schedule: "Sessions today — check times" }[h.conf] };
-}
-
-async function shrink(file, max = 1000, q = 0.72) {
-  const data = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); });
-  if (!String(file.type).startsWith("image/")) return { t: "v", d: data };
-  const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = data; });
-  const sc = Math.min(1, max / Math.max(img.width, img.height));
-  const c = document.createElement("canvas"); c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
-  c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-  return { t: "i", d: c.toDataURL("image/jpeg", q) };
-}
-
-/* -------- constraints parsed from the free-text profile note ---- */
-const CMAP = [
-  { k: ["water", "pool", "swim", "wet"], cats: ["water"], affs: ["water_play"], label: "water" },
-  { k: ["animal", "animals", "dog", "dogs", "zoo"], cats: ["animals"], affs: ["animal_watch", "animal_touch"], label: "animals" },
-  { k: ["loud", "noise", "noisy", "crowd", "crowds", "busy", "chaos"], cats: [], affs: ["peer_faces", "music_rhythm", "group_program"], label: "loud/busy places" },
-  { k: ["snow", "cold", "winter"], cats: ["winter"], affs: ["snow_play"], label: "snow & cold" },
-  { k: ["sand", "mess", "messy", "paint"], cats: [], affs: ["sensory_textures", "art_materials"], label: "messy play" },
-  { k: ["climb", "climbing", "height", "heights"], cats: [], affs: ["climb_run", "big_kid_challenge"], label: "climbing" },
-  { k: ["car", "driving", "drive"], cats: [], affs: [], label: "long drives" },
-  { k: ["music", "singing"], cats: ["music"], affs: ["music_rhythm"], label: "music" },
-  { k: ["book", "books", "story", "stories", "reading"], cats: ["stories"], affs: ["story_language"], label: "books & stories" },
-  { k: ["food", "eating", "restaurant", "snack"], cats: ["food"], affs: ["food_ritual"], label: "food outings" },
-  { k: ["train", "trains", "bus", "plane", "planes", "truck", "trucks", "digger", "boat"], cats: ["transit"], affs: ["vehicle_watch"], label: "machines & rides" },
-];
-const NEG = ["hate", "hates", "dislike", "dislikes", "avoid", "avoids", "scared", "afraid", "fear", "not ", "no ", "won't", "doesn't like", "does not like"];
-const POS = ["love", "loves", "like", "likes", "obsessed", "adore", "enjoys", "favourite", "favorite"];
-function parseConstraints(notes) {
-  const out = { avoid: [], love: [] };
-  if (!notes) return out;
-  String(notes).toLowerCase().split(/[,;.\n·]+/).forEach((cl) => {
-    const c = cl.trim(); if (!c) return;
-    const neg = NEG.some((w) => c.includes(w)), pos = POS.some((w) => c.includes(w));
-    if (!neg && !pos) return;
-    CMAP.forEach((m) => { if (m.k.some((w) => new RegExp("\\b" + w).test(c))) (neg ? out.avoid : out.love).push(m.label); });
-  });
-  out.avoid = [...new Set(out.avoid)]; out.love = [...new Set(out.love.filter((l) => !out.avoid.includes(l)))];
-  return out;
-}
-const cmapFor = (label) => CMAP.find((m) => m.label === label) || { cats: [], affs: [] };
-
 /* FB3-03. Emoji were rendering at five different optical sizes and weights
    across iOS/Android/desktop, which is what made the tab bar look uneven. These
    are one grid, one stroke width, and they take the tab's colour, so the active

@@ -52,7 +52,7 @@ window.fetch = () => Promise.reject(new Error("offline in test"));
 window.scrollTo = () => {};
 /* The bundle is evaluated inside jsdom's own realm, so window/document/navigator
    resolve to jsdom's — nothing needs copying onto the Node globals. */
-const code = readFileSync(new URL("./app.js", import.meta.url), "utf8");
+const code = readFileSync(new URL("../app.js", import.meta.url), "utf8");
 new window.Function(code)();
 
 const settle = () => new Promise((r) => setTimeout(r, 260));
@@ -284,7 +284,7 @@ if (checkBtn) {
 }
 
 /* --- FB7-02: the displayed version must equal package.json, always --- */
-const pkgVersion = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")).version;
+const pkgVersion = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
 const verChip = root.querySelector(".ver");
 ok("FB7-02 the header version matches package.json",
    !!verChip && verChip.textContent.trim() === "v" + pkgVersion,
