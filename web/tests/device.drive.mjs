@@ -158,9 +158,16 @@ await page.reload({ waitUntil: "networkidle" }); await page.waitForTimeout(800);
 await page.getByRole("button", { name: /Memories/ }).click();
 await page.waitForTimeout(400);
 const yours = await txt();
-ok("FB3-05 both custom activities are listed in their one home (FB15-02)",
-   yours.includes("Nana's back garden") && yours.includes("noodle place"), "");
-ok("FB3-05 an add action lives with them", yours.includes("We went somewhere"));
+/* FB17-05: the separate list of your own activities was redundant (they are
+   already in recommendations, marked "Yours", and filterable as "Ours"), so it
+   is gone. What must survive is the ability to ADD and to REMOVE. */
+ok("FB3-05 an add action lives in Memories", yours.includes("We went somewhere"));
+ok("FB17-05 the redundant activities list is gone", !yours.includes("Your own activities ("));
+await page.getByRole("button", { name: /Browse/ }).click();
+await page.waitForTimeout(700);
+ok("FB17-05c your own activities can still be removed, from their own card",
+   await page.locator(".card .ghost.sm", { hasText: "Remove" }).count() > 0,
+   "remove buttons: " + (await page.locator(".card .ghost.sm", { hasText: "Remove" }).count()));
 await shot("04-yours");
 
 /* ---------- 4. Settings no longer duplicates that list ---------- */
@@ -177,20 +184,21 @@ await page.getByRole("button", { name: /Memories/ }).click();
 await page.waitForTimeout(500);
 const memCount = () => page.locator(".mem").count();
 const before = await memCount();
-const chips = await page.locator("button.catstat").allTextContents();
+const chips = await page.locator("button.chip.fc").allTextContents();
 ok("FB3-02 by-type counters are buttons", chips.length >= 3, chips.join(" / "));
 await shot("06-memories");
 
-await page.locator("button.catstat").first().click();
+await page.locator("button.chip.fc").first().click();
 await page.waitForTimeout(400);
 const after = await memCount();
-const onCount = await page.locator("button.catstat.on").count();
+const onCount = await page.locator("button.chip.fc.on").count();
 ok("FB3-02 tapping a type filters the list", after < before && after > 0, before + " memories -> " + after);
 ok("FB3-02 exactly one type reads as selected", onCount === 1, "on=" + onCount);
-ok("FB3-02 the header announces the filter is live", /filtering/i.test(await txt()));
+/* FB17-07 replaced the "· filtering" heading with an explicit clear control. */
+ok("FB3-02 an active filter offers a way out", await page.locator(".clearf").count() === 1);
 await shot("07-memories-filtered");
 
-await page.locator("button.catstat").first().click();
+await page.locator("button.chip.fc").first().click();
 await page.waitForTimeout(400);
 ok("FB3-02 tapping again clears it", (await memCount()) === before, "back to " + (await memCount()));
 

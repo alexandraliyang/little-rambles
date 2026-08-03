@@ -14,9 +14,12 @@ const ok = (name, cond, detail) => {
   else { console.log("  FAIL  " + name + (detail ? " — " + detail : "")); fails.push(name); }
 };
 
-/* A child old enough that >60 activities are age-appropriate — the exact
-   condition under which the old slice(0,60) hid the "coming later" set. */
-const birthdate = (() => { const d = new Date(); d.setFullYear(d.getFullYear() - 6); return d.toISOString().slice(0, 10); })();
+/* Two conditions must hold at once, and the fixture used to satisfy only one.
+   At 6 years old, 109+ activities are age-appropriate (which exercises the old
+   slice(0,60) bug) but ZERO sit above that age — so "for older kids" was empty
+   and FB2-06 was quietly passing on the empty-state card rather than on revealed
+   activities. Two years old gives both: >60 appropriate now, ~29 still ahead. */
+const birthdate = (() => { const d = new Date(); d.setFullYear(d.getFullYear() - 2); return d.toISOString().slice(0, 10); })();
 const seed = {
   /* FB4-03: the note is the whole point of the constraint engine, so the fixture
      has to carry one. "hates water" must remove water from recommendations. */
@@ -76,7 +79,7 @@ const memTab = findByText("button", "Memories");
 if (memTab) { click(memTab); await settle(); }
 ok("FB2-11 old 'fine' rating renders as the migrated tier", text().includes("It was okay"), text().slice(0, 200));
 ok("FB2-11 no dead three-tier label survives", !/>\s*Fine\s*</.test(root.innerHTML));
-ok("FB2-15 own-outing filter chip exists", !!findByText("button", "We did on our own"));
+ok("FB2-15 own-outing filter chip exists (renamed to Ours, FB17-05)", !!findByText("button", "Ours"));
 ok("FB2-14 favourite filter chip exists", !!findByText("button", "Favourites"));
 ok("FB2-14 a star toggle is rendered per memory", root.querySelectorAll("button.mini.fav").length >= 3,
    "found " + root.querySelectorAll("button.mini.fav").length);
@@ -92,13 +95,15 @@ const browse = findByText("button", "Browse");
 if (browse) { click(browse); await settle(); }
 const cardCount = () => root.querySelectorAll(".card").length;
 const before = cardCount();
-const laterBtn = findByText("button", "coming later");
-ok("FB2-04b 'coming later' toggle is present", !!laterBtn);
+const laterBtn = findByText("button", "For older kids");
+ok("FB2-04b the older-kids toggle is present (now a chip, FB17-02)", !!laterBtn);
 ok("FB2-06 Browse shows a full list first", before > 20, "cards " + before);
 if (laterBtn) { click(laterBtn); await settle(); }
 const after = cardCount();
-ok("FB2-06 toggling 'coming later' reveals MORE cards (the reported bug)", after > before,
+ok("FB2-06 toggling 'for older kids' reveals MORE cards (the reported bug)", after > before,
    "before " + before + " → after " + after);
+ok("FB2-06 the revealed cards are real activities, not an empty-state card",
+   after - before > 1, "revealed " + (after - before));
 ok("FB2-06 the later section is labelled", text().includes("Coming later"));
 
 /* --- FB2-07: no unconditional feminine copy anywhere in the rendered UI --- */
@@ -113,15 +118,15 @@ ok("FB2-05 scroll container is wired to a ref-driven handler", !!main);
 /* --- FB3-02: "By type" counters are filter buttons, and they actually filter --- */
 const memTab2 = findByText("button", "Memories");
 if (memTab2) { click(memTab2); await settle(); }
-const catBtns = [...root.querySelectorAll("button.catstat")];
-ok("FB3-02 by-type counters render as buttons", catBtns.length >= 2, "found " + catBtns.length);
+const catBtns = [...root.querySelectorAll("button.chip.fc")];
+ok("FB3-02 by-type counters render as buttons (now tinted chips, FB17-07)", catBtns.length >= 2, "found " + catBtns.length);
 const memCount = () => root.querySelectorAll(".mem").length;
 const allMems = memCount();
 if (catBtns[0]) { click(catBtns[0]); await settle(); }
 ok("FB3-02 tapping a type narrows the memory list", memCount() < allMems && memCount() > 0,
    allMems + " → " + memCount());
-ok("FB3-02 the tapped type shows as selected", root.querySelectorAll("button.catstat.on").length === 1);
-if (catBtns[0]) { click(root.querySelectorAll("button.catstat")[0]); await settle(); }
+ok("FB3-02 the tapped type shows as selected", root.querySelectorAll("button.chip.fc.on").length === 1);
+if (catBtns[0]) { click(root.querySelectorAll("button.chip.fc")[0]); await settle(); }
 ok("FB3-02 tapping the same type again clears the filter", memCount() === allMems,
    "back to " + memCount() + " of " + allMems);
 
@@ -337,13 +342,38 @@ ok("FB16-02 the stats readout contains no buttons",
 ok("FB16-02 pressable and non-pressable no longer share a shape", root.querySelectorAll(".st.act").length === 0);
 if (segs[1]) { click(segs[1]); await settle(); }
 ok("FB16-02 the Gallery segment switches view",
-   !!root.querySelector(".grid") || text().includes("No media yet"), "");
+   !!root.querySelector(".grid") || text().includes("No photos yet"), "");
 if (segs[0]) { click(root.querySelectorAll(".vseg")[0]); await settle(); }
 
 /* FB16-03: warmer language */
 ok("FB16-03 'outings' is renamed to something worth looking back on",
    /adventures together/.test(text()), (text().match(/\d+ adventures together/) || ["missing"])[0]);
 ok("FB16-03 the journal prompt is personal", text().includes("Something Mia did today"));
+
+/* FB17-05: "Ours" must include outings logged against your own activities */
+const oursChip = findByText("button", "Ours");
+ok("FB17-05 the Ours filter exists with a count", !!oursChip && !!oursChip.querySelector(".cnt"),
+   oursChip ? oursChip.textContent : "missing");
+ok("FB17-06 there is a Journal filter", !!findByText("button", "Journal"));
+ok("FB17-05 the redundant activities list with + and x is gone",
+   !text().includes("Your own activities ("));
+
+/* FB17-07: one filter block, grouped by tint not by heading */
+ok("FB17-07 filters live in a single block", root.querySelectorAll(".filterbox").length === 1);
+ok("FB17-07 the three groups are visually distinguished",
+   root.querySelectorAll(".chip.fk").length > 0 && root.querySelectorAll(".chip.fr").length > 0 && root.querySelectorAll(".chip.fc").length > 0,
+   "kind " + root.querySelectorAll(".chip.fk").length + " · rating " + root.querySelectorAll(".chip.fr").length + " · type " + root.querySelectorAll(".chip.fc").length);
+ok("FB17-07 the old section headings are gone", !text().includes("Narrow it down") && !text().includes("By type ·"));
+
+/* FB17-05b: the gallery is its own screen */
+const segsG = [...root.querySelectorAll(".vseg")];
+if (segsG[1]) { click(segsG[1]); await settle(); }
+ok("FB17-05b the gallery hides the story chrome",
+   root.querySelectorAll(".filterbox").length === 0 && !text().includes("We went somewhere"),
+   "filterbox " + root.querySelectorAll(".filterbox").length);
+ok("FB17-05b the gallery says what it is holding",
+   !!root.querySelector(".galhead") || text().includes("No photos yet"));
+if (segsG[0]) { click(root.querySelectorAll(".vseg")[0]); await settle(); }
 
 /* FB16-01: one add flow, not two */
 ok("FB16-01 there is a single way to add what you did",
@@ -362,7 +392,7 @@ const statText = (root.querySelector(".statline") || {}).textContent || "";
 const num = (re) => { const m = statText.match(re); return m ? parseInt(m[1], 10) : null; };
 const outings = num(/(\d+)\s*adventures/), places = num(/(\d+)\s*places/);
 ok("FB15-04 the stats readout exposes both numbers", outings != null && places != null, statText.replace(/\s+/g, " ").trim());
-const catTotal = [...root.querySelectorAll("button.catstat b")].reduce((n, b) => n + parseInt(b.textContent, 10), 0);
+const catTotal = [...root.querySelectorAll("button.chip.fc .cnt")].reduce((n, b) => n + parseInt(b.textContent, 10), 0);
 ok("FB15-04 'by type' totals cannot exceed the outings count",
    catTotal <= outings, "by-type " + catTotal + " vs outings " + outings);
 ok("FB15-04 places cannot exceed outings", places <= outings, "places " + places + " vs outings " + outings);

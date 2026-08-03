@@ -214,6 +214,7 @@ export default function App() {
   const [jumpTo, setJumpTo] = useState(null);
   const lbFrom = useRef(null);                 // FB14-03: lightbox swipe origin   // FB13-02: memory to scroll to and flash
   const [exSearch, setExSearch] = useState("");            // FB6-02: find an activity by name
+  const [planSearch, setPlanSearch] = useState("");        // FB17-04: find something on Our List
   const [memFilter, setMemFilter] = useState("all");
   const [memSearch, setMemSearch] = useState("");
   const [memView, setMemView] = useState("story");
@@ -374,6 +375,12 @@ export default function App() {
        stats screen — that is the only point where it can change the choice. */
     const w = similarWarning(a, 1);
     say(w ? "Saved 💛 — " + w : "Saved to Our List 💛");
+  };
+  /* FB17-05c: one place to delete one of your own activities — its own card. */
+  const removeCustom = (a) => {
+    setCustomActs((c) => c.filter((x) => x.id !== a.id));
+    setPlans((ps) => ps.filter((p) => p.ideaId !== a.id));
+    say(a.name + " removed from your activities.");
   };
   const removePlan = (id) => {
     setPlans((ps) => ps.filter((p) => p.id !== id));
@@ -672,6 +679,8 @@ export default function App() {
      ALL visits including unlogged ones, and "by type" used memAll again. That is
      how you get 10 outings and 11 places from the same list. An outing is a
      memory that happened somewhere; a written journal moment is not an outing. */
+  const isOurs = (v) => v.kind === "custom" || !!v.userAdded ||
+    (!!v.ideaId && customActs.some((c) => c.id === v.ideaId));
   const memOutings = memAll.filter((v) => v.kind !== "journal");
   const memPlaces = new Set(memOutings.map((v) => v.place || v.name).filter(Boolean));
   const memPhotos = memAll.reduce((n, v) => n + (v.mediaCount || 0), 0);
@@ -679,7 +688,13 @@ export default function App() {
   const memList = memAll.filter((v) => {
     if (memFilter === "fav" && !v.fav) return false;
     if (memFilter === "media" && !(v.mediaCount > 0)) return false;
-    if (memFilter === "own" && v.kind !== "custom") return false;                       // FB2-15: "we did on our own"
+    /* FB17-05. Was `v.kind !== "custom"`, which only matched outings typed in by
+       hand. An outing logged against one of YOUR OWN activities is a normal
+       "visit", so it failed this test and sat outside the filter — the founder
+       spotted one of their activities missing from "we did on our own". Ours
+       means ours, however it got here. */
+    if (memFilter === "own" && !isOurs(v)) return false;
+    if (memFilter === "journal" && v.kind !== "journal") return false;                 // FB17-06
     if (memFilter.slice(0, 2) === "r:" && rateKey(v.rating) !== memFilter.slice(2)) return false;
     if (memFilter.slice(0, 2) === "c:" && v.cat !== memFilter.slice(2)) return false;   // FB3-02: "by type" is a filter
 
@@ -696,17 +711,18 @@ export default function App() {
      collapse to 0/n the moment you pick one. */
   const memCounts = useMemo(() => {
     const base = memAll.filter((v) => !q || ((v.place || "") + " " + (v.name || "") + " " + (v.note || "") + " " + (v.by || "")).toLowerCase().includes(q));
-    const c = { all: base.length, fav: 0, media: 0, own: 0 };
+    const c = { all: base.length, fav: 0, media: 0, own: 0, journal: 0 };
     RATE_ORDER.forEach((k) => { c["r:" + k] = 0; });
     base.forEach((v) => {
       if (v.fav) c.fav++;
       if (v.mediaCount > 0) c.media++;
-      if (v.kind === "custom") c.own++;
+      if (isOurs(v)) c.own++;
+      if (v.kind === "journal") c.journal++;
       const rk = rateKey(v.rating);
       if (rk && c["r:" + rk] != null) c["r:" + rk]++;
     });
     return c;
-  }, [memAll, q]);
+  }, [memAll, q, customActs]);
 
   const memCatCounts = useMemo(() => { const m = {}; memAll.forEach((v) => { if (v.cat) m[v.cat] = (m[v.cat] || 0) + 1; }); return Object.entries(m).sort((a, b) => b[1] - a[1]); }, [memAll]);
 
@@ -775,8 +791,13 @@ export default function App() {
     ["story", "Memories", "book", 0],
   ];
   const _unusedPlaceLabel = placeLabel;
-  const outRows = plans.filter((p) => p.status === "out");
-  const planRows = plans.filter((p) => p.status === "planned");
+  /* FB17-04. Our List grows without bound — it is the only screen with no way
+     to find one thing in it. Matches name, place and area, and the count tells
+     you when a search has hidden something rather than leaving you to wonder. */
+  const pq = planSearch.trim().toLowerCase();
+  const planMatch = (p) => !pq || ((p.name || "") + " " + (p.place || "") + " " + (p.area || "")).toLowerCase().includes(pq);
+  const outRows = plans.filter((p) => p.status === "out" && planMatch(p));
+  const planRows = plans.filter((p) => p.status === "planned" && planMatch(p));
 
   return (
     <div className="root"><style>{CSS}</style>
@@ -1028,34 +1049,43 @@ export default function App() {
             </div>
             {exQ && <p className="fine nb">{exNow.length + exLater.length} match “{exSearch.trim()}” · searching everything, including out of season</p>}
             <button className="wide" onClick={() => setAddOpen(true)}>➕ Add your own activity or place</button>
-            <button className="wide alt" onClick={() => setShowLater((v) => !v)}>
-              {showLater ? "Hide what's coming later" : `Show what's coming later (${exLater.length} for older kids)`}
-            </button>
-            <div className="chips">
-              {[["all", "All"], ["open", "Open now"], ["free", "Free"], ["rainy", "Indoor"], ["new", "New to us"]].map(([k, l]) =>
-                <button key={k} className={"chip" + (exFilter === k ? " on" : "")} onClick={() => setExFilter(k)}>{l}</button>)}
-              {/* FB4-02: seasonal ideas stay reachable on purpose, just never recommended */}
-              {offSeasonCount > 0 && <button className={"chip" + (exFilter === "season" ? " on" : "")} onClick={() => setExFilter(exFilter === "season" ? "all" : "season")}>🗓️ Later in the year ({offSeasonCount})</button>}
+            {/* FB17-02/03. "Show what's coming later" was a full-width bar for
+                something that is simply another filter, and the two filter rows
+                (what it's like / what type) were separated by a heading each.
+                One block now, tinted by what the filter answers rather than
+                split by labels. */}
+            <div className="filterbox">
+              <div className="chips">
+                {[["all", "All"], ["open", "Open now"], ["free", "Free"], ["rainy", "Indoor"], ["new", "New to us"]].map(([k, l]) =>
+                  <button key={k} className={"chip fk" + (exFilter === k ? " on" : "")} onClick={() => setExFilter(k)}>{l}</button>)}
+                {offSeasonCount > 0 && <button className={"chip fk" + (exFilter === "season" ? " on" : "")} onClick={() => setExFilter(exFilter === "season" ? "all" : "season")}>🗓️ Later in the year <i className="cnt">{offSeasonCount}</i></button>}
+                {exLater.length > 0 && <button className={"chip fk" + (showLater ? " on" : "")} onClick={() => setShowLater((v) => !v)}>👦 For older kids <i className="cnt">{exLater.length}</i></button>}
+              </div>
+              <div className="chips">
+                <button className={"chip fc" + (exCat === "all" ? " on" : "")} onClick={() => setExCat("all")}>All types</button>
+                {Object.entries(CAT_META).map(([c, m]) => <button key={c} className={"chip fc" + (exCat === c ? " on" : "")} onClick={() => setExCat(c)}>{m.emoji} {m.label}</button>)}
+              </div>
             </div>
             {exFilter === "season" && <div className="nudge sm"><span>🗓️</span><p>These are out of season today, so they never appear in Swipe. Saving one keeps it on Our List until its months come round.</p></div>}
             {exFilter !== "season" && blockedCount > 0 && <div className="nudge sm"><span>🚫</span><p><b>{blockedCount} ideas hidden</b> because your profile note says {profile.name} avoids {constraints.avoid.join(" and ")}. Pick that category above to see them anyway, or edit the note in the profile.</p></div>}
-            <div className="chips">
-              <button className={"chip" + (exCat === "all" ? " on" : "")} onClick={() => setExCat("all")}>All types</button>
-              {Object.entries(CAT_META).map(([c, m]) => <button key={c} className={"chip" + (exCat === c ? " on" : "")} onClick={() => setExCat(c)}>{m.emoji} {m.label}</button>)}
-            </div>
             {!inFeaturedCity && <div className="nudge sm"><span>🌍</span><p>Named picks are curated for Metro Vancouver so far. Everywhere else, cards search your area by type — works worldwide.</p></div>}
-            {exNow.map(({ a, avail }) => <ActCard key={a.id} a={a} feat={featFor(a)} fit={fit(a)} avail={avail} affs={matched(a)} place={activePlace} onGo={goNow} onSave={saveLater} planned={plans.some((p) => p.ideaId === a.id)} />)}
+            {exNow.map(({ a, avail }) => <ActCard key={a.id} a={a} feat={featFor(a)} fit={fit(a)} avail={avail} affs={matched(a)} place={activePlace} onGo={goNow} onSave={saveLater} planned={plans.some((p) => p.ideaId === a.id)} onRemove={removeCustom} />)}
             {exNow.length === 0 && <div className="card dash"><p className="why">Nothing matches those filters right now. Try “All”, or widen the type.</p></div>}
             {showLater && <>
               <div className="lbl">Coming later — not old enough yet</div>
               {exLater.length > 0
-                ? exLater.map(({ a, avail }) => <ActCard key={a.id} a={a} feat={featFor(a)} fit={fit(a)} avail={avail} affs={matched(a)} place={activePlace} onGo={goNow} onSave={saveLater} planned={plans.some((p) => p.ideaId === a.id)} />)
+                ? exLater.map(({ a, avail }) => <ActCard key={a.id} a={a} feat={featFor(a)} fit={fit(a)} avail={avail} affs={matched(a)} place={activePlace} onGo={goNow} onSave={saveLater} planned={plans.some((p) => p.ideaId === a.id)} onRemove={removeCustom} />)
                 : <div className="card dash"><p className="why">Nothing further ahead in these filters — {profile.name} is already old enough for everything here.</p></div>}
             </>}
           </div>}
 
           {/* ---------------- UP NEXT ---------------- */}
           {tab === "upnext" && <div className="pad">
+            {plans.length > 3 && <div className="searchrow">
+              <input className="inp flat" placeholder="Search Our List — name or place…" value={planSearch} onChange={(e) => setPlanSearch(e.target.value)} />
+              {planSearch && <button className="mini x" onClick={() => setPlanSearch("")}>✕</button>}
+            </div>}
+            {pq && <p className="fine nb">{outRows.length + planRows.length} of {plans.length} match “{planSearch.trim()}”</p>}
             <div className="nudge sm"><span>💡</span><p><b>Our List is your shortlist.</b> Swipe right (or tap Save) to keep an idea here. Tap <b>Let's go</b> and it moves to "Out now" — then one tap logs it into the Story.</p></div>
             {!plans.length && <div className="card dash"><p className="why">Nothing saved yet. Swipe right in <b>Swipe</b>, or tap <b>Save</b> on anything in <b>Browse</b>.</p></div>}
             {outRows.length > 0 && <><div className="lbl">📍 Out now — one tap each, no forms</div>
@@ -1100,56 +1130,39 @@ export default function App() {
               <b>{memOutings.length}</b> adventures together · <b>{memPlaces.size}</b> places ·
               since <b>{memAll.length ? fmtDate(memAll[memAll.length - 1].ts) : "—"}</b>
             </p>
-            {/* FB3-02: these were read-only counters. Tapping one now filters the
-                list below it, and tapping it again clears — same toggle rule as
-                every other chip row on this screen. */}
-            {memCatCounts.length > 0 && <>
-              <div className="lbl">By type {memFilter.slice(0, 2) === "c:" ? "· filtering" : "· tap to filter"}</div>
-              <div className="catstats">
-                {memCatCounts.map(([c, n]) => <button key={c} type="button"
-                  className={"catstat" + (memFilter === "c:" + c ? " on" : "")}
-                  aria-pressed={memFilter === "c:" + c}
-                  onClick={() => setMemFilter(memFilter === "c:" + c ? "all" : "c:" + c)}>
-                  {CAT_META[c] ? CAT_META[c].emoji + " " + CAT_META[c].label : c}<b>{n}</b></button>)}
-              </div>
-            </>}
-            {/* FB16-01. Two adds that read almost identically ("add an outing we
-                did on our own" / "add an activity of your own") are now one. You
-                record what you DID; a tick inside keeps it as something to do
-                again. The distinction was ours, not the caregiver's. */}
-            <div className="btns2">
+
+            {/* FB17-05: the "your own activities" list with + and ✕ lived here and
+                duplicated both the "Ours" filter below and Our List. Removed. */}
+            {memView === "story" && <div className="btns2">
               <button className="wide" onClick={() => setEditMem({ isNew: true })}>📍 We went somewhere — add it</button>
               <button className="wide alt" onClick={() => setJournalOpen(true)}>✍️ Something {profile.name} did today</button>
-            </div>
-            {/* FB15-02. "Yours" was a tab of its own for the outings you invented,
-                while the outings you *did* on your own were a filter in here. Two
-                homes for one idea. Both now live in Memories: the things you added
-                sit above the record of what you actually did with them. The
-                planning surface is still Our List — this section is the list, and
-                every action on it hands off there. */}
-            {customActs.length > 0 && <>
-              <div className="lbl">💜 Your own activities ({customActs.length})</div>
-              <div className="card">
-                {customActs.map((a) => <div className="uarow" key={a.id}>
-                  <span>{a.emoji} {a.name}{a.place ? " · " + a.place : ""}</span>
-                  <span className="uaacts">
-                    <button className="mini" title="Log an outing here" onClick={() => openCheck({ id: Date.now(), ideaId: a.id, name: a.name, cat: a.cat, emoji: a.emoji, place: a.place || null })}>＋</button>
-                    <button className="mini" title="Remove this activity" onClick={() => { setCustomActs((c) => c.filter((x) => x.id !== a.id)); say("Removed."); }}>✕</button>
-                  </span></div>)}
-                <p className="fine">These join your recommendations everywhere, marked “Yours”. Plan them from <b>Our List</b>. New ones are added by ticking “we'd do this again” when you log an outing.</p>
+            </div>}
+
+            {/* FB17-07. One filter block instead of three labelled sections. The
+                three groups answer different questions, so they are tinted rather
+                than separated: what kind of memory · how it went · what type of
+                outing. Colour carries the grouping; the rows stay compact. */}
+            {memView === "story" && <div className="filterbox">
+              <div className="chips">
+                {[["fav", "⭐ Favourites"], ["media", "📷 With photos"], ["own", "📍 Ours"], ["journal", "✍️ Journal"]].map(([k, l]) =>
+                  <button key={k} className={"chip fk" + (memFilter === k ? " on" : "") + (memCounts[k] ? "" : " none")}
+                    onClick={() => setMemFilter(memFilter === k ? "all" : k)}>{l}<i className="cnt">{memCounts[k] || 0}</i></button>)}
               </div>
-            </>}
-            <div className="lbl">Narrow it down</div>
-            {/* FB2-15: one tap toggles a filter on, the same tap again clears it */}
-            <div className="chips">
-              {[["fav", "⭐ Favourites"], ["media", "📷 With photos"], ["own", "📍 We did on our own"]].map(([k, l]) =>
-                <button key={k} className={"chip" + (memFilter === k ? " on" : "") + (memCounts[k] ? "" : " none")} onClick={() => setMemFilter(memFilter === k ? "all" : k)}>{l}<i className="cnt">{memCounts[k] || 0}</i></button>)}
-            </div>
-            <div className="chips">
-              {RATE_ORDER.map((k) => <button key={k} title={RATE[k].l} className={"chip rchip" + (memFilter === "r:" + k ? " on" : "") + (memCounts["r:" + k] ? "" : " none")}
-                onClick={() => setMemFilter(memFilter === "r:" + k ? "all" : "r:" + k)}>{RATE[k].e} {RATE[k].l}<i className="cnt">{memCounts["r:" + k] || 0}</i></button>)}
-            </div>
-            <input className="inp" placeholder={"Search places, notes, who took " + pro.obj + "…"} value={memSearch} onChange={(e) => setMemSearch(e.target.value)} />
+              <div className="chips">
+                {RATE_ORDER.map((k) => <button key={k} title={RATE[k].l} className={"chip fr" + (memFilter === "r:" + k ? " on" : "") + (memCounts["r:" + k] ? "" : " none")}
+                  onClick={() => setMemFilter(memFilter === "r:" + k ? "all" : "r:" + k)}>{RATE[k].e} {RATE[k].l}<i className="cnt">{memCounts["r:" + k] || 0}</i></button>)}
+              </div>
+              {memCatCounts.length > 0 && <div className="chips">
+                {memCatCounts.map(([c, n]) => <button key={c} type="button"
+                  className={"chip fc" + (memFilter === "c:" + c ? " on" : "")}
+                  aria-pressed={memFilter === "c:" + c}
+                  onClick={() => setMemFilter(memFilter === "c:" + c ? "all" : "c:" + c)}>
+                  {CAT_META[c] ? CAT_META[c].emoji + " " + CAT_META[c].label : c}<i className="cnt">{n}</i></button>)}
+              </div>}
+              {memFilter !== "all" && <button className="clearf" onClick={() => setMemFilter("all")}>✕ Clear filter</button>}
+            </div>}
+
+            {memView === "story" && <input className="inp" placeholder={"Search places, notes, who took " + pro.obj + "…"} value={memSearch} onChange={(e) => setMemSearch(e.target.value)} />}
             {memView === "story" ? <>
               {rated.length >= 2 && <div className="ins">
                 {lovedCats.map((c) => <div className="in up" key={c}><span>💛</span><p><b>Working well:</b> {CAT_META[c] ? CAT_META[c].label : c} — {catStats[c].loved} “loved it”.</p></div>)}
@@ -1159,7 +1172,7 @@ export default function App() {
               {!memList.length && <div className="card dash"><p className="why">{memAll.length ? "Nothing matches that filter." : "Nothing here yet — it fills itself from taps you barely notice."}</p></div>}
               {memList.map((v) => <div id={"mem-" + v.id} className={"mem" + (v.kind === "journal" ? " jr" : "") + (v.kind === "custom" ? " cu" : "") + (jumpTo === v.id ? " flash" : "")} key={v.id}>
                 <div className="memhead"><span className="date">{fmtDate(v.ts)}</span><div className="hr">
-                  {v.kind === "journal" ? <span className="pill jrp">✍️ Journal</span> : v.kind === "custom" ? <span className="pill cup">📍 Ours</span> : null}
+                  {v.kind === "journal" ? <span className="pill jrp">✍️ Journal</span> : isOurs(v) ? <span className="pill cup">📍 Ours</span> : null}
                   {rateKey(v.rating) && <span className={"pill " + RATE[rateKey(v.rating)].c}>{RATE[rateKey(v.rating)].e} {RATE[rateKey(v.rating)].l}</span>}
                   <button className={"mini fav" + (v.fav ? " on" : "")} title={v.fav ? "Remove from favourites" : "Mark as a favourite"} onClick={() => toggleFav(v.id)}>{v.fav ? "⭐" : "☆"}</button>
                   <button className="mini" onClick={() => setEditMem(v)}>✏️</button></div></div>
@@ -1181,9 +1194,18 @@ export default function App() {
                 </div>}
               </div>)}
             </> : <>
-              <div className="lbl">Every photo, one place</div>
-              {!gridMedia.length ? <div className="card dash"><p className="why">No media yet — snap a few on your next outing.</p></div> :
-                <div className="grid">{gridMedia.map((m, i) => <button className="gc" key={i} title={m.label} onClick={() => setLightbox({ list: gridMedia, i })}>{m.t === "v" ? <span className="vid">🎥</span> : <img src={m.d} alt="" />}</button>)}</div>}
+              {/* FB17-05b. The gallery used to be the story page with photos
+                  bolted on the bottom — same stats, same filters, same buttons,
+                  scroll past all of it to reach the pictures. It is its own
+                  screen now: nothing above the images except what they are. */}
+              {!gridMedia.length
+                ? <div className="card dash"><p className="why">No photos yet. Snap a few on your next outing — the Snap button on Our List puts them straight in here.</p></div>
+                : <>
+                  <p className="galhead"><b>{gridMedia.length}</b> {gridMedia.length === 1 ? "photo" : "photos"} · {memPlaces.size} places · tap any one to open it</p>
+                  <div className="grid gal">{gridMedia.map((m, i) =>
+                    <button className="gc" key={i} title={m.label} onClick={() => setLightbox({ list: gridMedia, i })}>
+                      {m.t === "v" ? <span className="vid">🎥</span> : <img src={m.d} alt="" loading="lazy" />}</button>)}</div>
+                </>}
             </>}
           </div>}
 
@@ -1463,7 +1485,13 @@ function MineArt() {
 }
 function Art({ a, tall }) {
   const m = CAT_META[a.cat] || CAT_META.nature;
-  const [src, setSrc] = useState(null);
+  /* FB17-01. Resolved DURING the first render, not in an effect. The curated URL
+     is known synchronously from IMG[a.id], so setting it in useEffect meant every
+     card rendered one frame of the generated fallback before the photo arrived —
+     the flash the founder saw each time the deck advanced. Art is keyed by
+     activity id at every call site, so the initialiser runs fresh per activity
+     and nothing leaks between cards. */
+  const [src, setSrc] = useState(() => (!a.userAdded && IMG[a.id] ? unsplash(IMG[a.id]) : null));
   const [failed, setFailed] = useState(false);
   const h = hash(a.id);
   /* FB4-04. Curated first, Commons only as a fallback — this order was inverted.
@@ -1481,10 +1509,9 @@ function Art({ a, tall }) {
        illustrations even though their own photos were fine. Reset first, then
        resolve. */
     setFailed(false);
-    setSrc(null);
     if (a.userAdded) return;                 // FB2-16: never look one up for your own places
+    if (IMG[a.id]) return;                   // already resolved synchronously above
     let live = true;
-    if (IMG[a.id]) { setSrc(unsplash(IMG[a.id])); return; }
     findPhoto(a)
       .then((u) => { if (!live) return; if (u) setSrc(u); else setFailed(true); })
       .catch(() => { if (!live) return; setFailed(true); });
@@ -1498,7 +1525,7 @@ function Art({ a, tall }) {
     <span className="ae">{a.emoji}</span>
   </div>;
 }
-function ActCard({ a, feat, fit, avail, affs, place, onGo, onSave, planned }) {
+function ActCard({ a, feat, fit, avail, affs, place, onGo, onSave, planned, onRemove }) {
   const later = fit.k === "later", closed = avail.st === "closed";
   return <div className={"card" + (later || closed ? " dim" : "")}>
     <Art a={a} />
@@ -1513,6 +1540,11 @@ function ActCard({ a, feat, fit, avail, affs, place, onGo, onSave, planned }) {
       <div className="btns">
         <a className="primary sm" href={feat ? venueQuery(feat.name, feat.area, place) : nearQuery(a.mapsQuery, place)} target="_blank" rel="noreferrer" onClick={() => onGo(a)}>Let's go</a>
         <button className="ghost sm" onClick={() => onSave(a)}>{planned ? "On our list ✓" : "💛 Save"}</button>
+        {/* FB17-05c. Removing the redundant "your own activities" list took the
+            only delete path with it — Settings, then the Yours tab, then that
+            list had each held one. It belongs on the activity itself, which is
+            the one place you are looking at the thing you want gone. */}
+        {a.userAdded && onRemove && <button className="ghost sm" onClick={() => onRemove(a)}>✕ Remove</button>}
       </div>
       <a className="more" href={nearQuery(a.mapsQuery, place)} target="_blank" rel="noreferrer">See every {CAT_META[a.cat].label.toLowerCase()} option nearby →</a>
     </>}
@@ -1742,6 +1774,19 @@ const CSS = `
 .vseg.on{background:#FFF;color:#29382F;box-shadow:0 1px 4px rgba(41,56,47,.16)}
 .vseg i{font-style:normal;font-size:11px;background:rgba(41,56,47,.1);border-radius:99px;padding:2px 7px}
 .vseg.on i{background:#ECEAE0}
+/* FB17-07: filters live in one block, grouped by tint rather than by heading. */
+.filterbox{background:#F1F0E8;border:1px solid #E3E1D6;border-radius:16px;padding:10px 10px 4px;margin:10px 0}
+.filterbox .chips{margin:0 0 6px}
+.chip.fk{background:#FFF;border-color:#DDDACB}
+.chip.fr{background:#FBEAC9;border-color:#EBD09A;color:#7A5316}
+.chip.fc{background:#DEEAEF;border-color:#B7CFD9;color:#2C5666}
+.chip.fk.on,.chip.fr.on,.chip.fc.on{background:#29382F;border-color:#29382F;color:#F6F5EF}
+.clearf{width:100%;margin:2px 0 8px;background:none;border:none;font-family:'Karla';font-size:12px;font-weight:700;color:#8A8875;cursor:pointer;padding:6px}
+/* FB17-05b: a gallery is a wall of pictures, not a page with pictures at the end. */
+.galhead{font-size:12.5px;color:#6E7A6F;margin:6px 2px 10px}
+.galhead b{color:#29382F;font-size:14px}
+.grid.gal{gap:3px}
+.grid.gal .gc{border-radius:4px}
 .statline{font-size:12.5px;color:#6E7A6F;margin:0 2px 10px;line-height:1.6}
 .statline b{color:#29382F;font-size:14px}
 /* FB16-01 */
