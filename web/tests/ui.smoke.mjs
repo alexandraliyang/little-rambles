@@ -138,7 +138,7 @@ ok("FB3-03 only the photo strip uses the .thumb class now",
 const mineTab = findByText("button", "Memories");
 ok("FB3-05 custom activities have a home", !!mineTab);
 if (mineTab) { click(mineTab); await settle(); }
-ok("FB3-05 an add action lives with them", !!findByText("button", "Add an activity of your own"));
+ok("FB3-05 an add action lives with them", !!findByText("button", "We went somewhere"));
 ok("FB3-05 custom activities are not ALSO a tab (one home, not two)",
    ![...root.querySelectorAll("nav.topnav .tl")].some((t) => t.textContent === "Yours"));
 const gear = findByText("button", "⚙️");
@@ -325,25 +325,43 @@ ok("FB15-02 the Yours tab is gone; four remain",
    root.querySelectorAll("nav.topnav .tb").length === 4,
    [...root.querySelectorAll("nav.topnav .tl")].map((t) => t.textContent).join("/"));
 ok("FB15-02 your own activities live inside Memories now",
-   text().includes("Your own activities") || text().includes("Add an activity of your own"));
+   text().includes("Your own activities") || text().includes("We went somewhere"));
 ok("FB14-02 'Photos' no longer means two different things", !!findByText(".chip", "With photos"));
 
-const statBtns = [...root.querySelectorAll(".st.act")];
-ok("FB15-03 two stat tiles are pressable view switches", statBtns.length === 2,
-   statBtns.map((b) => b.textContent).join(" | "));
-ok("FB15-03 the live view is marked on the tile", root.querySelectorAll(".st.act.on").length === 1);
-ok("FB15-03 the separate view-chip row is gone", root.querySelectorAll(".viewtab").length === 0);
-if (statBtns[1]) { click(statBtns[1]); await settle(); }
-ok("FB15-03 tapping the photos tile switches to the gallery",
+/* FB16-02: the switch is a switch; the stats are a readout with nothing pressable */
+const segs = [...root.querySelectorAll(".vseg")];
+ok("FB16-02 the view switch is a segmented control", segs.length === 2, segs.map((b) => b.textContent.trim()).join(" | "));
+ok("FB16-02 exactly one segment is live", root.querySelectorAll(".vseg.on").length === 1);
+ok("FB16-02 the stats readout contains no buttons",
+   !!root.querySelector(".statline") && root.querySelectorAll(".statline button").length === 0);
+ok("FB16-02 pressable and non-pressable no longer share a shape", root.querySelectorAll(".st.act").length === 0);
+if (segs[1]) { click(segs[1]); await settle(); }
+ok("FB16-02 the Gallery segment switches view",
    !!root.querySelector(".grid") || text().includes("No media yet"), "");
-if (statBtns[0]) { click(root.querySelectorAll(".st.act")[0]); await settle(); }
+if (segs[0]) { click(root.querySelectorAll(".vseg")[0]); await settle(); }
+
+/* FB16-03: warmer language */
+ok("FB16-03 'outings' is renamed to something worth looking back on",
+   /adventures together/.test(text()), (text().match(/\d+ adventures together/) || ["missing"])[0]);
+ok("FB16-03 the journal prompt is personal", text().includes("Something Mia did today"));
+
+/* FB16-01: one add flow, not two */
+ok("FB16-01 there is a single way to add what you did",
+   !!findByText("button", "We went somewhere") && !findByText("button", "Add an activity of your own"));
+const addOuting = findByText("button", "We went somewhere");
+if (addOuting) { click(addOuting); await settle(); }
+ok("FB16-01 the outing sheet offers to keep it as an activity",
+   text().includes("We'd do this again"), "");
+ok("FB16-01 and explains what that does", text().includes("keeps it in your recommendations"));
+const cancel16 = findByText("button", "Cancel");
+if (cancel16) { click(cancel16); await settle(); }
 
 /* the numbers must agree with each other and with the list */
-const statVal = (label) => {
-  const el = [...root.querySelectorAll(".st")].find((s2) => (s2.textContent || "").includes(label));
-  return el ? parseInt(el.querySelector("b").textContent, 10) : null;
-};
-const outings = statVal("outings"), places = statVal("places");
+/* FB16-02 moved the stats from tiles into one sentence, so read them from there. */
+const statText = (root.querySelector(".statline") || {}).textContent || "";
+const num = (re) => { const m = statText.match(re); return m ? parseInt(m[1], 10) : null; };
+const outings = num(/(\d+)\s*adventures/), places = num(/(\d+)\s*places/);
+ok("FB15-04 the stats readout exposes both numbers", outings != null && places != null, statText.replace(/\s+/g, " ").trim());
 const catTotal = [...root.querySelectorAll("button.catstat b")].reduce((n, b) => n + parseInt(b.textContent, 10), 0);
 ok("FB15-04 'by type' totals cannot exceed the outings count",
    catTotal <= outings, "by-type " + catTotal + " vs outings " + outings);

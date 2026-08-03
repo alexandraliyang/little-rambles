@@ -160,7 +160,7 @@ await page.waitForTimeout(400);
 const yours = await txt();
 ok("FB3-05 both custom activities are listed in their one home (FB15-02)",
    yours.includes("Nana's back garden") && yours.includes("noodle place"), "");
-ok("FB3-05 an add action lives with them", yours.includes("Add an activity of your own"));
+ok("FB3-05 an add action lives with them", yours.includes("We went somewhere"));
 await shot("04-yours");
 
 /* ---------- 4. Settings no longer duplicates that list ---------- */
@@ -665,7 +665,7 @@ if (await areaChip.count()) {
 await page.getByRole("button", { name: /Memories/ }).click();
 await page.waitForTimeout(700);
 /* FB15-03: the view switch is now the photos stat tile, not a chip. */
-const gal = page.locator(".st.act", { hasText: "photos" });
+const gal = page.locator(".vseg", { hasText: "Gallery" });
 if (await gal.count()) { await gal.click(); await page.waitForTimeout(600); }
 const cells = await page.locator(".grid .gc").count();
 ok("FB14-03 the gallery renders photo cells", cells > 0, cells + " cells");

@@ -650,8 +650,18 @@ export default function App() {
     const v = { id, kind: "custom", ideaId: null, name: form.name || "Our own outing", cat: form.cat || null, emoji: form.cat ? CAT_META[form.cat].emoji : "📍",
       ts: form.date ? new Date(form.date + "T12:00:00").getTime() : id, rating: form.rating || null, note: form.note || "", place: form.place || null, by: form.by || null, mediaCount: media.length, userAdded: true };
     setVisits((vs) => [v, ...vs].sort((a, b) => b.ts - a.ts));
+    /* FB16-01: one form, two possible outcomes — a memory always, and an
+       activity too when the caregiver says they would do it again. */
+    if (form.keep && form.name) {
+      const cid = "u_" + Date.now();
+      setCustomActs((c) => [{ id: cid, name: form.name, cat: form.cat || "nature", emoji: form.cat ? CAT_META[form.cat].emoji : "📍",
+        ageMin: 0, ageMax: 84, aff: (function () { const mm = ACTIVITIES.find((a) => a.cat === form.cat); return mm ? mm.aff : ["peer_faces"]; })(),
+        tags: ["indoor"], why: "You did this and would do it again.", place: form.place || null,
+        mapsQuery: form.place || form.name, hours: { days: [0, 1, 2, 3, 4, 5, 6], open: 8, close: 20, conf: "daily", months: null },
+        userAdded: true }, ...c]);
+    }
     if (media.length) { try { await store.set("lrm:" + id, JSON.stringify(media)); setPhotosBy((m) => ({ ...m, [id]: media })); } catch (e) {} }
-    say("Added to the story.");
+    say(form.keep ? "Added to your story — and kept as one of yours." : "Added to your story.");
   };
 
   /* ---------------- memory views ---------------- */
@@ -1074,16 +1084,22 @@ export default function App() {
 
           {/* ---------------- STORY ---------------- */}
           {tab === "story" && <div className="pad">
-            {/* FB15-03: the two numbers you would tap anyway ARE the view switch,
-                so there is no separate row of view chips restating them. */}
-            <div className="stats">
-              <button className={"st act" + (memView === "story" ? " on" : "")} onClick={() => setMemView("story")}>
-                <b>{memOutings.length}</b><span>📖 outings</span></button>
-              <button className={"st act" + (memView === "grid" ? " on" : "")} onClick={() => setMemView("grid")}>
-                <b>{memPhotos}</b><span>🖼️ photos</span></button>
-              <div className="st"><b>{memPlaces.size}</b><span>places</span></div>
-              <div className="st"><b>{memAll.length ? fmtDate(memAll[memAll.length - 1].ts) : "—"}</b><span>since</span></div>
+            {/* FB16-02. Merging the view switch into the stats made two of four
+                tiles secretly pressable while the others were not — the same
+                shape doing two jobs. The switch is now unmistakably a switch,
+                and the stats are a readout that nobody expects to tap. */}
+            <div className="viewseg" role="tablist">
+              <button role="tab" aria-selected={memView === "story"} className={"vseg" + (memView === "story" ? " on" : "")} onClick={() => setMemView("story")}>
+                📖 Our story</button>
+              <button role="tab" aria-selected={memView === "grid"} className={"vseg" + (memView === "grid" ? " on" : "")} onClick={() => setMemView("grid")}>
+                🖼️ Gallery <i>{memPhotos}</i></button>
             </div>
+            {/* FB16-03: "outings" is a logistics word. These are the days out you
+                will want to look back on, so the label says so. */}
+            <p className="statline">
+              <b>{memOutings.length}</b> adventures together · <b>{memPlaces.size}</b> places ·
+              since <b>{memAll.length ? fmtDate(memAll[memAll.length - 1].ts) : "—"}</b>
+            </p>
             {/* FB3-02: these were read-only counters. Tapping one now filters the
                 list below it, and tapping it again clears — same toggle rule as
                 every other chip row on this screen. */}
@@ -1097,9 +1113,13 @@ export default function App() {
                   {CAT_META[c] ? CAT_META[c].emoji + " " + CAT_META[c].label : c}<b>{n}</b></button>)}
               </div>
             </>}
+            {/* FB16-01. Two adds that read almost identically ("add an outing we
+                did on our own" / "add an activity of your own") are now one. You
+                record what you DID; a tick inside keeps it as something to do
+                again. The distinction was ours, not the caregiver's. */}
             <div className="btns2">
-              <button className="wide" onClick={() => setJournalOpen(true)}>✍️ Write a moment</button>
-              <button className="wide" onClick={() => setEditMem({ isNew: true })}>📍 Add an outing we did on our own</button>
+              <button className="wide" onClick={() => setEditMem({ isNew: true })}>📍 We went somewhere — add it</button>
+              <button className="wide alt" onClick={() => setJournalOpen(true)}>✍️ Something {profile.name} did today</button>
             </div>
             {/* FB15-02. "Yours" was a tab of its own for the outings you invented,
                 while the outings you *did* on your own were a filter in here. Two
@@ -1116,13 +1136,9 @@ export default function App() {
                     <button className="mini" title="Log an outing here" onClick={() => openCheck({ id: Date.now(), ideaId: a.id, name: a.name, cat: a.cat, emoji: a.emoji, place: a.place || null })}>＋</button>
                     <button className="mini" title="Remove this activity" onClick={() => { setCustomActs((c) => c.filter((x) => x.id !== a.id)); say("Removed."); }}>✕</button>
                   </span></div>)}
-                <p className="fine">These join your recommendations everywhere, marked “Yours”. Plan them from <b>Our List</b>.</p>
+                <p className="fine">These join your recommendations everywhere, marked “Yours”. Plan them from <b>Our List</b>. New ones are added by ticking “we'd do this again” when you log an outing.</p>
               </div>
             </>}
-            <div className="btns2">
-              <button className="wide" onClick={() => setAddOpen(true)}>➕ Add an activity of your own</button>
-            </div>
-
             <div className="lbl">Narrow it down</div>
             {/* FB2-15: one tap toggles a filter on, the same tap again clears it */}
             <div className="chips">
@@ -1594,8 +1610,9 @@ function EditMemSheet({ mem, media, caregivers, onClose, onSave, onSaveNew, onDe
   const [cat, setCat] = useState(mem.cat || "nature");
   const [m, setM] = useState(media);
   const [del, setDel] = useState(false);
+  const [keep, setKeep] = useState(false);   // FB16-01: also keep it as an activity
   return <Sheet onClose={onClose}>
-    <div className="eyebrow">{isNew ? "📍 An outing we did on our own" : "✏️ Edit memory"}</div>
+    <div className="eyebrow">{isNew ? "📍 Somewhere we went" : "✏️ Edit memory"}</div>
     {isNew && <><label className="flab">What was it?</label><input className="inp" value={nm} onChange={(e) => setNm(e.target.value)} placeholder="Beach with cousins" />
       <label className="flab">Type</label><select className="inp" value={cat} onChange={(e) => setCat(e.target.value)}>{Object.entries(CAT_META).map(([c, x]) => <option key={c} value={c}>{x.emoji} {x.label}</option>)}</select>
       <label className="flab">When</label><input className="inp" type="date" value={date} onChange={(e) => setDate(e.target.value)} /></>}
@@ -1613,8 +1630,12 @@ function EditMemSheet({ mem, media, caregivers, onClose, onSave, onSaveNew, onDe
       <label className="pick">🎥 Video<input type="file" accept="video/*" hidden onChange={(e) => addMedia(e, setM)} /></label>
     </div>
     {m.length > 0 && <div className="strip">{m.map((x, i) => <button className="thumb del" key={i} onClick={() => setM((p) => p.filter((_, j) => j !== i))}>{x.t === "v" ? <span className="vid">🎥</span> : <img src={x.d} alt="" />}<i>✕</i></button>)}</div>}
-    <button className="primary full" onClick={() => isNew ? onSaveNew({ name: nm || "Our own outing", cat, date, rating, note: note.trim(), place: place.trim(), by }, m) : onSave({ place: place.trim() || null, note: note.trim(), rating, by }, m)}>
-      {isNew ? "Add to the story" : "Save changes"}</button>
+    <button className="primary full" onClick={() => isNew ? onSaveNew({ name: nm || "Our own outing", cat, date, rating, note: note.trim(), place: place.trim(), by, keep }, m) : onSave({ place: place.trim() || null, note: note.trim(), rating, by }, m)}>
+      {isNew ? "Add to our story" : "Save changes"}</button>
+    {/* FB16-01: this tick is what replaced the separate "add an activity of your
+        own" button — same outcome, offered at the moment it makes sense. */}
+    {isNew && <label className="keeprow"><input type="checkbox" checked={keep} onChange={(e) => setKeep(e.target.checked)} />
+      <span><b>We'd do this again</b><small>keeps it in your recommendations, marked “Yours”</small></span></label>}
     {!isNew && <button className="danger" onClick={() => (del ? onDelete() : setDel(true))}>{del ? "⚠️ Tap again to delete forever" : "Delete this memory"}</button>}
     <button className="ghost full mt" onClick={onClose}>Cancel</button>
   </Sheet>;
@@ -1715,6 +1736,18 @@ const CSS = `
 .chipline,.affs{display:flex;gap:5px;flex-wrap:wrap;margin:4px 0 8px}
 .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
 .btns2{display:flex;flex-direction:column;gap:8px;margin:10px 0}
+/* FB16-02: a segmented switch reads as a switch; the stats read as a sentence. */
+.viewseg{display:flex;gap:6px;background:#ECEAE0;border-radius:14px;padding:4px;margin:10px 0 8px}
+.vseg{flex:1;border:none;background:transparent;border-radius:11px;padding:10px 8px;font-family:'Karla';font-size:13.5px;font-weight:700;color:#5A6B60;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+.vseg.on{background:#FFF;color:#29382F;box-shadow:0 1px 4px rgba(41,56,47,.16)}
+.vseg i{font-style:normal;font-size:11px;background:rgba(41,56,47,.1);border-radius:99px;padding:2px 7px}
+.vseg.on i{background:#ECEAE0}
+.statline{font-size:12.5px;color:#6E7A6F;margin:0 2px 10px;line-height:1.6}
+.statline b{color:#29382F;font-size:14px}
+/* FB16-01 */
+.keeprow{display:flex;gap:10px;align-items:flex-start;background:#FBEAC9;border-radius:12px;padding:11px 12px;margin-top:10px;cursor:pointer}
+.keeprow input{margin-top:2px;width:18px;height:18px;flex:none}
+.keeprow small{display:block;font-size:11.5px;font-weight:400;color:#6E5227}
 .primary{background:#29382F;color:#F6F5EF;border:none;border-radius:12px;padding:12px 16px;font-family:'Karla';font-size:14.5px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-block;text-align:center}
 .primary.sm{padding:9px 13px;font-size:13.5px}.primary.full{width:100%;margin-top:10px}
 .primary:disabled{background:#B5B2A0}
