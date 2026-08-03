@@ -26,6 +26,13 @@ Phase 2 (Build) and the assumption set A1 — specifically "logging is used". It
 - Offline still works: the app is usable with no network and reconciles on reconnect.
 - A member who is removed immediately loses access, including to photos.
 
+## Decisions taken (2026-08-03)
+
+- **Account required only to share.** The app keeps working with no account, exactly as today. The first time you invite someone, you create one and your existing journal comes with you. The account appears at the moment its value is obvious, rather than as a wall in front of the first outing (keeps ADR-0002).
+- **Local data uploads on first sign-in**, once, explicitly — "bring my 12 memories with me" — never silently, because photographs leaving the device must not be a surprise.
+- **Sign in with Google, plus a passwordless email link.** Founder asked for social sign-in. Google covers the large majority and removes the password problem for grandparents entirely. Facebook is deliberately excluded for now: a Meta app plus business verification is materially more setup for a shrinking share of users. Apple Sign In needs a paid Apple Developer account ($99/yr) and is only mandatory for native App Store builds, which this is not.
+- **Photos: subjects now, paid stock later** (T1) — close the embarrassing gaps for free, upgrade the highest-traffic cards once there is budget or validation.
+
 ## Explicitly NOT building
 
 - **No public sharing.** No public links, no social feed, no discovery of other families. A baby is private to its invited members, full stop.

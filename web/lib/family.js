@@ -29,6 +29,32 @@ export async function signIn(email, password) {
   return { ok: true, user: data.user };
 }
 
+/* OAuth. PKCE, and the redirect returns to the app's own origin so an installed
+   PWA lands back inside itself rather than stranding the user in Safari.
+   Providers must be enabled in Supabase first; until then this returns a
+   readable error rather than a blank page. */
+export async function signInWith(provider) {
+  if (!enabled) return off();
+  const { error } = await supa().auth.signInWithOAuth({
+    provider,
+    options: { redirectTo: window.location.origin + window.location.pathname, queryParams: { prompt: "select_account" } },
+  });
+  if (error) return fail(error);
+  return { ok: true, redirecting: true };
+}
+
+/* Passwordless. One email, one tap, nothing to remember — the right shape for a
+   grandparent, and it depends on mail actually being delivered (debt T11). */
+export async function sendMagicLink(email) {
+  if (!enabled) return off();
+  const { error } = await supa().auth.signInWithOtp({
+    email: String(email).trim(),
+    options: { emailRedirectTo: window.location.origin + window.location.pathname },
+  });
+  if (error) return fail(error);
+  return { ok: true, sent: true };
+}
+
 export async function signOut() {
   if (!enabled) return off();
   await supa().auth.signOut();

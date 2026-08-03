@@ -22,7 +22,9 @@ export function supa() {
   if (!enabled) return null;
   if (!_client) {
     _client = createClient(SUPA_URL, SUPA_ANON, {
-      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
+      /* detectSessionInUrl MUST be true for OAuth: the provider sends the user
+         back with the session in the URL fragment, and this is what reads it. */
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: "pkce" },
       global: { headers: { "x-application-name": "little-rambles" } },
     });
   }
