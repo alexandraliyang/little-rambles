@@ -10,7 +10,7 @@
     "dist": "npm run build && node pack.mjs",
     "deploy": "npm run dist && node deploy.mjs",
     "serve": "node -e \"const h=require('http'),f=require('fs'),p=require('path');const d=p.join(process.cwd(),'dist');const t={'.html':'text/html','.js':'text/javascript','.json':'application/json','.webmanifest':'application/manifest+json','.png':'image/png'};h.createServer((q,s)=>{let u=q.url.split('?')[0];if(u==='/')u='/index.html';const fp=p.join(d,u);f.readFile(fp,(e,b)=>{if(e){s.writeHead(404);return s.end('not found')}s.writeHead(200,{'content-type':t[p.extname(fp)]||'application/octet-stream','cache-control':'no-cache'});s.end(b)})}).listen(8000,()=>console.log('serving web/dist on http://localhost:8000'))\"",
-    "test:engine": "node tests/engine.test.mjs",
+    "test:engine": "node tests/engine.test.mjs && node tests/roles.test.mjs",
     "test:ui": "npm run build && node tests/ui.smoke.mjs",
     "audit:images": "node tests/images.audit.mjs",
     "verify": "npm run test && npm run test:device && npm run audit:images",
