@@ -22,6 +22,7 @@ Debt is a decision, not an accident. Every row states what is wrong, what it cos
 | T8 | Typical-hours model is asserted, not sourced | GUARDED | medium |
 | T9 | Netlify refuses `--prod` publish | GUARDED | low |
 | T10 | Journal moments are outside the outing stats | OPEN | low |
+| T11 | Supabase built-in email is rate limited; no SMTP | OPEN | high |
 
 ---
 
@@ -145,3 +146,15 @@ This also explains why the 51 survivors survived: nearly all are subjects, not p
 **Cost.** A caregiver who writes ten journal moments and logs two outings sees "2 outings" and may read it as their record being lost.
 
 **Closes when.** Either the stats gain a separate "moments" figure, or the story list makes the distinction visible enough that the number is obviously about outings only. Deliberately deferred: adding a fifth number to a four-tile row to fix a subtle problem risks a louder one.
+
+---
+
+## T11 — Auth email is on Supabase's built-in sender · **OPEN** · high
+
+**What.** The project uses Supabase's built-in email service for signup confirmation. It is rate limited to a handful of messages per hour and is documented as a development convenience, not a mail service. It was hit within minutes of the first connectivity probes.
+
+**Cost.** Two failures, and the second is the dangerous one. It blocks the live test suite, which is visible and annoying. It will also **silently fail to deliver confirmation mail to invited grandparents** — the exact users least likely to work out why nothing arrived, and least likely to report it as a bug rather than concluding the app is broken.
+
+**Closes when.** Either custom SMTP is configured (Resend, Postmark, SES — all have free tiers adequate for a family beta), or email confirmation is switched off for the beta. The second is defensible here: access to a baby requires an **invite code**, so the inbox is not the security boundary. It should not survive into public release.
+
+**Note.** A handful of `lr.test.*@gmail.com` and one `alex.probe.*@gmail.com` account exist in Auth from these probes. They are unconfirmed and hold no memberships, so they are harmless, but they can be deleted from Authentication → Users.

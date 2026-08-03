@@ -21,9 +21,11 @@
     "images:ok": "node tests/images.mark.mjs ok",
     "images:reject": "node tests/images.mark.mjs reject",
     "images:show": "node tests/images.mark.mjs show",
-    "images:todo": "node tests/images.mark.mjs todo"
+    "images:todo": "node tests/images.mark.mjs todo",
+    "test:family": "node tests/family.live.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.112.0",
     "react": "18.3.1",
     "react-dom": "18.3.1"
   },
