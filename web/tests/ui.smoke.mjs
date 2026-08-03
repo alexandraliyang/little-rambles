@@ -307,6 +307,23 @@ ok("FB13-03 empty filters are visibly dimmed",
    [...root.querySelectorAll(".chip.none .cnt")].every((c) => c.textContent === "0"),
    "dimmed: " + root.querySelectorAll(".chip.none").length);
 
+/* --- FB14-01: no stale hand-typed version anywhere --- */
+const gear14 = findByText("button", "⚙️");
+if (gear14) { click(gear14); await settle(); }
+ok("FB14-01 the stale v3.3 footer is gone", !/v3\.3/.test(text()), (text().match(/v3\.\d[^ ]*/g) || []).join(","));
+ok("FB14-01 any version shown in Settings is the real one",
+   !text().includes("Dev-Map v1.2.0") && text().includes(pkgVersion), "expects " + pkgVersion);
+
+/* --- FB14-02: the view switch reads differently from the filters --- */
+const memTab14 = findByText("button", "Memories");
+if (memTab14) { click(memTab14); await settle(); }
+ok("FB14-02 view switch uses its own control, not a filter chip",
+   root.querySelectorAll(".viewtab").length === 2, root.querySelectorAll(".viewtab").length + " view tabs");
+ok("FB14-02 'Photos' no longer means two different things",
+   !!findByText(".viewtab", "Gallery") && !!findByText(".chip", "With photos"),
+   [...root.querySelectorAll(".viewtab b")].map((b) => b.textContent).join(" / "));
+ok("FB14-02 each view explains itself", !!findByText(".viewtab", "every photo at once"));
+
 /* --- FB13-02: gallery photos link back to their memory --- */
 const photosView = [...root.querySelectorAll(".chip")].find((c) => c.textContent.trim() === "Photos" && !/📷/.test(c.textContent));
 if (photosView) { click(photosView); await settle(); }

@@ -21,7 +21,7 @@ const seed = {
              caregivers: ["Mum", "Dad"], cOff: [] },
   signedIn: true,
   visits: [
-    { id: 1, ideaId: "storytime", name: "Library story time", cat: "stories", emoji: "📚", ts: now - D, rating: "loved", note: "sat through the whole thing", place: "Kitsilano Library" },
+    { id: 1, ideaId: "storytime", name: "Library story time", cat: "stories", emoji: "📚", ts: now - D, rating: "loved", note: "sat through the whole thing", place: "Kitsilano Library", mediaCount: 3 },
     { id: 2, ideaId: "splashpad", name: "Splash pad", cat: "water", emoji: "💦", ts: now - 2 * D, rating: "nope", note: "too cold", place: "Granville Island" },
     { id: 3, ideaId: "trainwatch", name: "Watch the SkyTrain", cat: "transit", emoji: "🚈", ts: now - 3 * D, rating: "loved", note: "twenty minutes, no complaints", place: "Olympic Village Station" },
     { id: 4, ideaId: "trainwatch", name: "Watch the SkyTrain", cat: "transit", emoji: "🚈", ts: now - 5 * D, rating: "liked", note: "", place: "Main St Station" },
@@ -40,6 +40,13 @@ const seed = {
   ],
   dropped: [], spot: null,
 };
+
+/* Three 1x1 PNGs in different colours: enough for the gallery to be a reel, and
+   distinct enough that moving between them is observable. */
+const PIX = (hex) => "data:image/png;base64," + Buffer.from(
+  "89504e470d0a1a0a0000000d494844520000000100000001080200000090777d" +
+  "de0000000c4944415408d763" + hex + "0000000300010010e0b1a80000000049454e44ae426082", "hex").toString("base64");
+const PHOTOS = [{ t: "i", d: PIX("f8cf0f00") }, { t: "i", d: PIX("60f80f00") }, { t: "i", d: PIX("0f60f800") }];
 
 const log = [];
 const ok = (name, cond, detail) => {
@@ -77,6 +84,16 @@ await ctx.addInitScript(({ db, store, key, value }) => {
     r.onerror = () => res(false);
   });
 }, { db: "little-rambles", store: "kv", key: "little-rambles-v2", value: JSON.stringify(seed) });
+/* the media blob for visit 1, so the gallery has more than one photo */
+await ctx.addInitScript(({ db, store, key, value }) => {
+  if (!location.origin.startsWith("http")) return;
+  const r = indexedDB.open(db, 1);
+  r.onupgradeneeded = () => { if (!r.result.objectStoreNames.contains(store)) r.result.createObjectStore(store); };
+  r.onsuccess = () => {
+    const rd = r.result.transaction(store, "readonly").objectStore(store).get(key);
+    rd.onsuccess = () => { if (rd.result) return; const tx = r.result.transaction(store, "readwrite"); tx.objectStore(store).put(value, key); };
+  };
+}, { db: "little-rambles", store: "kv", key: "lrm:1", value: JSON.stringify(PHOTOS) });
 
 await ctx.addInitScript(() => { window.__cancels = 0; addEventListener("pointercancel", () => { window.__cancels++; }, true); });
 const page = await ctx.newPage();
@@ -643,6 +660,51 @@ if (await areaChip.count()) {
      !/No matches yet/i.test(st.body), (st.body.split(String.fromCharCode(10)).find((l) => /No matches yet/i.test(l)) || "clean"));
   ok("FB12-01 the results are ranked with distances", /away/.test(st.body));
 }
+
+/* ---------- FB14-03: the lightbox is a reel, and its controls are visible ---------- */
+await page.getByRole("button", { name: /Memories/ }).click();
+await page.waitForTimeout(700);
+const gal = page.locator(".viewtab", { hasText: "Gallery" });
+if (await gal.count()) { await gal.click(); await page.waitForTimeout(600); }
+const cells = await page.locator(".grid .gc").count();
+ok("FB14-03 the gallery renders photo cells", cells > 0, cells + " cells");
+if (cells > 0) {
+  await page.locator(".grid .gc").first().click();
+  await page.waitForTimeout(600);
+  /* contrast: the controls must not be dark-on-dark like the old .ghost */
+  const vis = await page.evaluate(() => {
+    const scrim = getComputedStyle(document.querySelector(".lb")).backgroundColor;
+    const btns = [...document.querySelectorAll(".lbbtn")].map((b) => {
+      const c = getComputedStyle(b);
+      return { text: b.textContent.trim().slice(0, 22), color: c.color, border: c.borderTopColor };
+    });
+    return { scrim, btns };
+  });
+  const lum = (c) => { const m = c.match(/\d+/g) || [0,0,0]; return (0.299*+m[0] + 0.587*+m[1] + 0.114*+m[2]); };
+  ok("FB14-03 lightbox buttons are light text on the dark scrim",
+     vis.btns.length > 0 && vis.btns.every((b) => lum(b.color) > 180),
+     vis.btns.map((b) => b.text + "=" + b.color).join(" | "));
+  ok("FB14-03 the scrim really is dark", lum(vis.scrim) < 90, vis.scrim);
+
+  const shown = () => page.evaluate(() => (document.querySelector(".lbcount") || {}).textContent || "1 / 1");
+  const first = await shown();
+  const box14 = await page.locator(".lbmedia").boundingBox();
+  const cdp14 = await ctx.newCDPSession(page);
+  const t14 = (type, x, y) => cdp14.send("Input.dispatchTouchEvent", {
+    type, touchPoints: type === "touchEnd" ? [] : [{ x, y, radiusX: 12, radiusY: 12, force: 1 }] });
+  const mx = box14.x + box14.width / 2, my = box14.y + box14.height / 2;
+  await t14("touchStart", mx, my);
+  for (let i = 1; i <= 8; i++) { await t14("touchMove", mx - i * 14, my); await page.waitForTimeout(14); }
+  await t14("touchEnd", mx - 112, my);
+  await page.waitForTimeout(500);
+  const after = await shown();
+  ok("FB14-03 swiping the photo moves to the next one", after !== first || cells === 1,
+     first + " -> " + after + "  (" + cells + " photos)");
+  ok("FB14-03 you never have to close and reopen to see the next",
+     await page.locator(".lb").count() === 1, "lightbox stayed open");
+}
+const closeBtn = page.locator(".lbbtn", { hasText: "Close" });
+if (await closeBtn.count()) { await closeBtn.click(); await page.waitForTimeout(300); }
 
 /* ---------- no runtime errors anywhere ---------- */
 const realErrors = errors.filter((e) => !/favicon|photon|nominatim|wikimedia|Failed to load resource/i.test(e));

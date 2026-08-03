@@ -211,7 +211,8 @@ export default function App() {
   const [addOpen, setAddOpen] = useState(false);
   const [editMem, setEditMem] = useState(null);
   const [lightbox, setLightbox] = useState(null);
-  const [jumpTo, setJumpTo] = useState(null);   // FB13-02: memory to scroll to and flash
+  const [jumpTo, setJumpTo] = useState(null);
+  const lbFrom = useRef(null);                 // FB14-03: lightbox swipe origin   // FB13-02: memory to scroll to and flash
   const [exSearch, setExSearch] = useState("");            // FB6-02: find an activity by name
   const [memFilter, setMemFilter] = useState("all");
   const [memSearch, setMemSearch] = useState("");
@@ -1118,12 +1119,16 @@ export default function App() {
               <button className="wide" onClick={() => setJournalOpen(true)}>✍️ Write a moment</button>
               <button className="wide" onClick={() => setEditMem({ isNew: true })}>📍 Add an outing we did on our own</button>
             </div>
-            <div className="chips">
-              {[["story", "Story"], ["grid", "Photos"]].map(([k, l]) => <button key={k} className={"chip" + (memView === k ? " on" : "")} onClick={() => setMemView(k)}>{l}</button>)}
+            <div className="lbl">How to look at them</div>
+            <div className="chips viewtabs">
+              {[["story", "📖 Story", "read them in order"], ["grid", "🖼️ Gallery", "every photo at once"]].map(([k, l, hint]) =>
+                <button key={k} className={"viewtab" + (memView === k ? " on" : "")} onClick={() => setMemView(k)}>
+                  <b>{l}</b><small>{hint}</small></button>)}
             </div>
+            <div className="lbl">Narrow it down</div>
             {/* FB2-15: one tap toggles a filter on, the same tap again clears it */}
             <div className="chips">
-              {[["fav", "⭐ Favourites"], ["media", "📷 Photos"], ["own", "📍 We did on our own"]].map(([k, l]) =>
+              {[["fav", "⭐ Favourites"], ["media", "📷 With photos"], ["own", "📍 We did on our own"]].map(([k, l]) =>
                 <button key={k} className={"chip" + (memFilter === k ? " on" : "") + (memCounts[k] ? "" : " none")} onClick={() => setMemFilter(memFilter === k ? "all" : k)}>{l}<i className="cnt">{memCounts[k] || 0}</i></button>)}
             </div>
             <div className="chips">
@@ -1150,7 +1155,7 @@ export default function App() {
                 {v.pin && <a className="more" href={"https://www.google.com/maps/search/?api=1&query=" + v.pin.lat + "," + v.pin.lng}
                   target="_blank" rel="noreferrer">📍 Open the exact spot on the map ↗</a>}
                 {v.note && <div className={v.kind === "journal" ? "jtext" : "mnote"}>{v.kind === "journal" ? v.note : "“" + v.note + "”"}</div>}
-                {photosBy[v.id] && <div className="strip">{photosBy[v.id].map((m, i) => <button className="thumb" key={i} onClick={() => setLightbox({ ...m, label: (v.place || v.name) + " · " + fmtDate(v.ts) })}>{m.t === "v" ? <span className="vid">🎥</span> : <img src={m.d} alt="" />}</button>)}</div>}
+                {photosBy[v.id] && <div className="strip">{photosBy[v.id].map((m, i) => <button className="thumb" key={i} onClick={() => setLightbox({ list: (photosBy[v.id] || []).map((x) => ({ ...x, memId: v.id, label: (v.place || v.name) + " · " + fmtDate(v.ts) })), i })}>{m.t === "v" ? <span className="vid">🎥</span> : <img src={m.d} alt="" />}</button>)}</div>}
                 {/* FB6-01. A memory is a record of somewhere that worked, so it is
                     the most likely thing you want to do again — but until now it
                     was a dead end and you had to go hunt the activity down in
@@ -1164,7 +1169,7 @@ export default function App() {
             </> : <>
               <div className="lbl">Every photo, one place</div>
               {!gridMedia.length ? <div className="card dash"><p className="why">No media yet — snap a few on your next outing.</p></div> :
-                <div className="grid">{gridMedia.map((m, i) => <button className="gc" key={i} title={m.label} onClick={() => setLightbox(m)}>{m.t === "v" ? <span className="vid">🎥</span> : <img src={m.d} alt="" />}</button>)}</div>}
+                <div className="grid">{gridMedia.map((m, i) => <button className="gc" key={i} title={m.label} onClick={() => setLightbox({ list: gridMedia, i })}>{m.t === "v" ? <span className="vid">🎥</span> : <img src={m.d} alt="" />}</button>)}</div>}
             </>}
           </div>}
 
@@ -1229,7 +1234,9 @@ export default function App() {
               <p className="why">Tap any photo → <b>Save</b> to copy it to your device. Use <b>Export</b> for a full backup file of memories and notes. Cloud accounts with real backup arrive in the next build.</p>
               <div className="btns"><button className="primary sm" onClick={exportData}>Export my data</button></div>
             </div>
-            <p className="fine center">Rambles v3.3-beta · 155 activities · Dev-Map v1.2.0</p>
+            {/* FB14-01: a hand-typed version footer that had drifted to v3.3 while
+                the app was on 3.5, contradicting the header two screens up. The
+                "This build" card above is generated and correct; this was not. */}
           </div>}
         </main>
 
@@ -1281,17 +1288,39 @@ export default function App() {
           }}
           onDelete={async () => { setVisits((vs) => vs.filter((v) => v.id !== editMem.id)); try { await store.del("lrm:" + editMem.id); } catch (e) {} setEditMem(null); say("Deleted."); }} />}
 
-        {lightbox && <div className="lb" onClick={() => setLightbox(null)}>
-          <div className="lbin" onClick={(e) => e.stopPropagation()}>
-            {lightbox.t === "v" ? <video src={lightbox.d} controls playsInline /> : <img src={lightbox.d} alt="" />}
-            <p className="lbl2">{lightbox.label}</p>
-            <a className="primary full" href={lightbox.d} download={"little-rambles-" + Date.now() + (lightbox.t === "v" ? ".mp4" : ".jpg")}>Save to my device</a>
-            {/* FB13-02: a photo without its story is just a file. */}
-            {lightbox.memId && <button className="ghost full mt" onClick={() => {
-              setLightbox(null); setMemView("story"); setMemFilter("all"); setMemSearch(""); setJumpTo(lightbox.memId);
-            }}>📖 Open this memory</button>}
-            <button className="ghost full mt" onClick={() => setLightbox(null)}>Close</button>
-          </div></div>}
+        {/* FB14-03. Was: one photo, and a dark-on-dark "Close" that disappeared
+            into the overlay. Now it is a reel — swipe or tap through the set you
+            opened it from — and the controls are legible against the scrim. */}
+        {lightbox && (() => {
+          const list = lightbox.list || [];
+          const i = Math.max(0, Math.min(lightbox.i || 0, list.length - 1));
+          const cur = list[i];
+          if (!cur) return null;
+          const go = (d) => setLightbox({ list, i: (i + d + list.length) % list.length });
+          return <div className="lb" onClick={() => setLightbox(null)}>
+            <div className="lbin" onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => { lbFrom.current = e.clientX; }}
+              onPointerUp={(e) => {
+                const dx = lbFrom.current == null ? 0 : e.clientX - lbFrom.current;
+                lbFrom.current = null;
+                if (list.length > 1 && Math.abs(dx) > 45) go(dx < 0 ? 1 : -1);
+              }}>
+              <div className="lbmedia">
+                {cur.t === "v" ? <video src={cur.d} controls playsInline /> : <img src={cur.d} alt="" draggable={false} />}
+                {list.length > 1 && <>
+                  <button className="lbnav prev" onClick={() => go(-1)} aria-label="Previous photo">‹</button>
+                  <button className="lbnav next" onClick={() => go(1)} aria-label="Next photo">›</button>
+                </>}
+              </div>
+              <p className="lbl2">{cur.label}{list.length > 1 ? <span className="lbcount">{i + 1} / {list.length}</span> : null}</p>
+              {list.length > 1 && <p className="lbhint">Swipe to see the rest</p>}
+              <a className="primary full" href={cur.d} download={"little-rambles-" + Date.now() + (cur.t === "v" ? ".mp4" : ".jpg")}>Save to my device</a>
+              {cur.memId && <button className="lbbtn" onClick={() => {
+                setLightbox(null); setMemView("story"); setMemFilter("all"); setMemSearch(""); setJumpTo(cur.memId);
+              }}>📖 Open this memory</button>}
+              <button className="lbbtn" onClick={() => setLightbox(null)}>Close</button>
+            </div></div>;
+        })()}
 
         {toast && <div className="toast">{toast}</div>}
       </div>
@@ -1876,6 +1905,21 @@ const CSS = `
 .lb{position:absolute;inset:0;background:rgba(41,56,47,.9);display:flex;align-items:center;justify-content:center;z-index:40;padding:18px}
 .lbin{width:100%}.lbin img,.lbin video{width:100%;border-radius:14px;display:block}
 .lbl2{color:#F6F5EF;text-align:center;font-size:12.5px;font-weight:700;margin:10px 0}
+/* FB14-03: the old controls used .ghost — dark text on a dark scrim, effectively
+   invisible. These are explicitly styled for a dark ground. */
+.lbmedia{position:relative;touch-action:none}
+.lbnav{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:99px;border:none;background:rgba(246,245,239,.92);color:#29382F;font-size:26px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 10px rgba(0,0,0,.35)}
+.lbnav.prev{left:8px}.lbnav.next{right:8px}
+.lbcount{display:inline-block;margin-left:8px;background:rgba(246,245,239,.18);border-radius:99px;padding:2px 8px;font-size:11px}
+.lbhint{color:rgba(246,245,239,.7);text-align:center;font-size:11.5px;margin:0 0 10px}
+.lbbtn{width:100%;margin-top:8px;background:rgba(246,245,239,.12);border:1.5px solid rgba(246,245,239,.55);border-radius:12px;padding:12px 16px;font-family:'Karla';font-size:14.5px;font-weight:700;color:#F6F5EF;cursor:pointer}
+.lbbtn:active{background:rgba(246,245,239,.22)}
+/* FB14-02: a VIEW switch is not a filter, so it must not look like one. */
+.viewtabs{gap:8px}
+.viewtab{flex:1;display:flex;flex-direction:column;align-items:flex-start;gap:2px;background:#FFF;border:1.5px solid #DDDACB;border-radius:14px;padding:10px 12px;font-family:'Karla';color:#4A554D;cursor:pointer;text-align:left}
+.viewtab b{font-size:13.5px}
+.viewtab small{font-size:10.5px;opacity:.75;font-weight:400}
+.viewtab.on{background:#29382F;border-color:#29382F;color:#F6F5EF}
 .ob{padding-top:34px}
 .oblogo{font-size:34px;text-align:center;margin:0}
 .obt{font-family:'Fraunces',Georgia,serif;font-size:27px;font-weight:600;text-align:center;margin:5px 0 6px}
