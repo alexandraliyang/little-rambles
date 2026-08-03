@@ -377,6 +377,8 @@ export default function App() {
   const dragY0 = useRef(0);          // FB8-04: direction lock origin
   const axis = useRef(null);         // "x" once the gesture commits to a swipe
   const vTrack = useRef({ x: 0, t: 0, v: 0 });  // instantaneous velocity sample
+  const lastY = useRef(0);                     // FB11: incremental dy for manual scrolling
+  const vY = useRef({ v: 0, t: 0 });           // FB11: vertical velocity, for release inertia
   const say = (m) => { setToast(m); setTimeout(() => setToast(null), 3600); };
 
   /* ---------------- load / persist ---------------- */
@@ -985,6 +987,7 @@ export default function App() {
                     transition: dragFrom.current == null ? "transform .32s cubic-bezier(.18,.9,.28,1), opacity .3s" : "none" }}
                   onPointerDown={(e) => {
                     dragFrom.current = e.clientX; dragY0.current = e.clientY;
+                    lastY.current = e.clientY; vY.current = { v: 0, t: Date.now() };
                     dragT.current = Date.now(); axis.current = null;
                     vTrack.current = { x: e.clientX, t: Date.now(), v: 0 };
                     setHintShown(true); e.currentTarget.setPointerCapture(e.pointerId);
@@ -1004,7 +1007,20 @@ export default function App() {
                       if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
                       axis.current = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
                     }
-                    if (axis.current === "y") return;
+                    /* FB11. touch-action:none means the browser will not scroll for
+                       us, and the card is nearly full-screen — so with no
+                       fallback the page became unscrollable wherever a thumb
+                       naturally lands. Once the gesture locks vertical, we scroll
+                       the container ourselves. Horizontal stays ours; vertical
+                       behaves exactly as it did before. */
+                    if (axis.current === "y") {
+                      const dy = e.clientY - lastY.current;
+                      const nt = Date.now(), dtY = Math.max(1, nt - vY.current.t);
+                      vY.current = { v: dy / dtY, t: nt };
+                      lastY.current = e.clientY;
+                      if (scrollRef.current) scrollRef.current.scrollTop -= dy;
+                      return;
+                    }
                     /* FB8-04b. Velocity from the LAST sample, not the whole gesture.
                        The old code divided total distance by total duration, so a
                        pause before a flick averaged the flick away and the release
@@ -1019,7 +1035,24 @@ export default function App() {
                     try { e.currentTarget.releasePointerCapture(e.pointerId); } catch (err) {}
                     const x = dragX, v = vTrack.current.v;
                     const el = e.currentTarget, w = el ? el.offsetWidth : 340;
+                    const wasY = axis.current === "y";
                     dragFrom.current = null; axis.current = null;
+                    /* FB11: a flick that scrolls should coast, or the manual path
+                       feels stiff next to native scrolling elsewhere in the app. */
+                    if (wasY) {
+                      let vv = vY.current.v;
+                      if (Math.abs(vv) > 0.15 && scrollRef.current) {
+                        const box = scrollRef.current;
+                        const glide = () => {
+                          vv *= 0.94;
+                          box.scrollTop -= vv * 16;
+                          if (Math.abs(vv) > 0.02) requestAnimationFrame(glide);
+                        };
+                        requestAnimationFrame(glide);
+                      }
+                      setDragX(0);
+                      return;
+                    }
                     /* FB8-04c. Commit on EITHER a short flick or a long drag, the
                        pair of thresholds a dating-app deck uses: 25% of the card
                        width, or 0.25px/ms of real flick velocity with enough travel
