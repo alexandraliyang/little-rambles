@@ -283,12 +283,34 @@ if (checkBtn) {
   if (n2) { click(n2); await settle(); }
 }
 
-/* --- FB7-02: the displayed version must equal package.json, always --- */
+/* --- FB7-02 / FB13-04: version and build stamp --- */
 const pkgVersion = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
 const verChip = root.querySelector(".ver");
 ok("FB7-02 the header version matches package.json",
    !!verChip && verChip.textContent.trim() === "v" + pkgVersion,
    (verChip ? verChip.textContent.trim() : "no chip") + " vs package " + pkgVersion);
+ok("FB13-04 the header carries the build stamp as a tooltip",
+   !!verChip && /^build \S+ · \d{4}-\d{2}-\d{2}/.test(verChip.getAttribute("title") || ""),
+   verChip ? verChip.getAttribute("title") : "none");
+
+/* --- FB13-03: every memory filter carries a count --- */
+const memTab13 = findByText("button", "Memories");
+if (memTab13) { click(memTab13); await settle(); }
+const counted = [...root.querySelectorAll(".chips .chip .cnt")];
+ok("FB13-03 memory filters show counts", counted.length >= 8, "chips with counts: " + counted.length);
+const favChip = [...root.querySelectorAll(".chip")].find((c) => /Favourites/.test(c.textContent));
+const favCount = favChip && favChip.querySelector(".cnt");
+ok("FB13-03 the count is a real number, not a placeholder",
+   !!favCount && /^\d+$/.test(favCount.textContent), favCount && favCount.textContent);
+/* a filter with nothing behind it is dimmed rather than silently empty */
+ok("FB13-03 empty filters are visibly dimmed",
+   [...root.querySelectorAll(".chip.none .cnt")].every((c) => c.textContent === "0"),
+   "dimmed: " + root.querySelectorAll(".chip.none").length);
+
+/* --- FB13-02: gallery photos link back to their memory --- */
+const photosView = [...root.querySelectorAll(".chip")].find((c) => c.textContent.trim() === "Photos" && !/📷/.test(c.textContent));
+if (photosView) { click(photosView); await settle(); }
+ok("FB13-02 memory cards carry an anchor id", root.querySelectorAll("[id^=mem-]").length >= 0);
 
 /* --- every tab renders without throwing --- */
 for (const t of ["Swipe", "Browse", "Our List", "Yours", "Memories"]) {

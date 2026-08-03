@@ -17,3 +17,4 @@ web/dist/
 .netlify
 tests/shots/
 web/tests/cand/
+build-info.js

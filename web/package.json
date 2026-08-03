@@ -1,10 +1,10 @@
 {
   "name": "rambles-web",
-  "version": "3.4.0-beta",
+  "version": "3.5.0-beta",
   "private": true,
   "description": "Rambles PWA — deployable static build. Edit main.jsx / app.jsx / data.js, then npm run build to regenerate app.js.",
   "scripts": {
-    "build": "esbuild main.jsx --bundle --minify --target=es2017 --loader:.jsx=jsx --outfile=app.js --legal-comments=eof",
+    "build": "node stamp.mjs && esbuild main.jsx --bundle --minify --target=es2017 --loader:.jsx=jsx --outfile=app.js --legal-comments=eof",
     "check": "esbuild main.jsx --bundle --target=es2017 --loader:.jsx=jsx --outfile=node_modules/.cache/check.js",
     "test": "npm run test:engine && npm run test:ui",
     "dist": "npm run build && node pack.mjs",
@@ -15,7 +15,13 @@
     "audit:images": "node tests/images.audit.mjs",
     "verify": "npm run test && npm run test:device && npm run audit:images",
     "test:device": "node tests/device.drive.mjs",
-    "images:candidates": "node tests/candidates.mjs"
+    "images:candidates": "node tests/candidates.mjs",
+    "release:patch": "npm version patch --no-git-tag-version && npm run dist",
+    "release:minor": "npm version minor --no-git-tag-version && npm run dist",
+    "images:ok": "node tests/images.mark.mjs ok",
+    "images:reject": "node tests/images.mark.mjs reject",
+    "images:show": "node tests/images.mark.mjs show",
+    "images:todo": "node tests/images.mark.mjs todo"
   },
   "dependencies": {
     "react": "18.3.1",
