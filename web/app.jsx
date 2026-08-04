@@ -200,6 +200,7 @@ export default function App() {
   const [deviceLoc, setDeviceLoc] = useState(null);   // FB3-01: silent GPS fix, only for ranking
   const [wx, setWx] = useState(null);                 // FB10: current conditions, keyless (Open-Meteo)
   const [nowSkip, setNowSkip] = useState(0);          // FB10: "show me another" for the single pick
+  const [updateReady, setUpdateReady] = useState(false);   // FB19: a newer build is waiting
   const locTimer = useRef(null);
   const askedGps = useRef(false);
   const [checkIn, setCheckIn] = useState(null);
@@ -596,6 +597,16 @@ export default function App() {
     }, 80);
     return () => clearTimeout(t);
   }, [jumpTo]);
+
+  /* FB19. An installed PWA resumes from a snapshot instead of reloading, so a
+     new build can sit unused behind the one already on screen. index.html asks
+     the service worker to check on launch and on every return to foreground,
+     and raises this when a newer worker takes control. */
+  useEffect(() => {
+    const on = () => setUpdateReady(true);
+    window.addEventListener("lr-update-ready", on);
+    return () => window.removeEventListener("lr-update-ready", on);
+  }, []);
 
   /* ---------------- location ---------------- */
   /* FB12-01. The search watches locText rather than living in the input's
@@ -1360,6 +1371,14 @@ export default function App() {
             </div></div>;
         })()}
 
+        {/* FB19: an update the user can see and take, rather than one that
+            silently waits for a reload they have no reason to perform. */}
+        {updateReady && <div className="updatebar">
+          <span>A newer version of Rambles is ready.</span>
+          <button onClick={() => window.location.reload()}>Refresh</button>
+          <button className="x" aria-label="Dismiss" onClick={() => setUpdateReady(false)}>✕</button>
+        </div>}
+
         {toast && <div className="toast">{toast}</div>}
       </div>
     </div>
@@ -1876,6 +1895,11 @@ const CSS = `
   @keyframes flash{0%{background:#FBEAC9;box-shadow:0 0 0 3px #E9A23B}70%{background:#FBEAC9}100%{background:transparent;box-shadow:none}}
 }
 /* FB18 family sharing */
+/* FB19 */
+.updatebar{position:fixed;left:0;right:0;bottom:0;z-index:60;display:flex;align-items:center;gap:10px;background:#29382F;color:#F6F5EF;padding:12px 14px calc(12px + env(safe-area-inset-bottom));font-size:13px;font-weight:700;box-shadow:0 -6px 20px -8px rgba(0,0,0,.5)}
+.updatebar span{flex:1}
+.updatebar button{background:#E9A23B;color:#29382F;border:none;border-radius:99px;padding:8px 14px;font-family:'Karla';font-weight:700;font-size:13px;cursor:pointer}
+.updatebar button.x{background:transparent;color:#F6F5EF;padding:8px 4px;font-size:15px}
 .orline{display:flex;align-items:center;gap:10px;margin:14px 0;color:#8A8875;font-size:12px;font-weight:700}
 .orline::before,.orline::after{content:"";flex:1;height:1px;background:#DDDACB}
 .okbox{background:#DDE8DC;color:#2F5138;border-radius:12px;padding:10px 12px;font-size:12.5px;line-height:1.5;margin:8px 0}

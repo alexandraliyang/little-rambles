@@ -732,6 +732,38 @@ if (cells > 0) {
 const closeBtn = page.locator(".lbbtn", { hasText: "Close" });
 if (await closeBtn.count()) { await closeBtn.click(); await page.waitForTimeout(300); }
 
+/* ---------- FB19: a new build must be able to reach an installed app ---------- */
+const sw = await page.evaluate(async () => {
+  const reg = await navigator.serviceWorker.getRegistration();
+  const res = await fetch("sw.js?cb=" + Date.now());
+  const text = await res.text();
+  return { registered: !!reg, cache: (text.match(/const CACHE="([^"]+)"/) || [])[1],
+           cc: res.headers.get("cache-control") };
+});
+ok("FB19 the service worker is registered", sw.registered);
+ok("FB19 the cache name carries the build, so each deploy is a real update",
+   /^lr-\d+\.\d+\.\d+/.test(sw.cache || ""), sw.cache);
+/* The _headers file is applied by the host, so the local static server used for
+   most of this suite cannot show it. Assert it only where it is meaningful,
+   and say so rather than passing silently on a check that never ran. */
+if (/localhost|127\.0\.0\.1/.test(APP)) {
+  console.log("  ----  FB19 sw.js cache-control not checked (local server does not apply _headers)");
+} else {
+  ok("FB19 sw.js is not itself cached, or updates could never be noticed",
+     /no-cache|no-store|must-revalidate/.test(sw.cc || ""), sw.cc);
+}
+
+/* the banner must appear when the app is told a newer worker took over */
+await page.evaluate(() => window.dispatchEvent(new CustomEvent("lr-update-ready")));
+await page.waitForTimeout(300);
+const bar = await page.evaluate(() => {
+  const b = document.querySelector(".updatebar");
+  return b ? { text: b.innerText.replace(/\s+/g, " ").trim(), buttons: [...b.querySelectorAll("button")].map((x) => x.textContent) } : null;
+});
+ok("FB19 an update offers itself instead of waiting to be guessed", !!bar, bar && bar.text);
+ok("FB19 and it can be taken or dismissed",
+   !!bar && bar.buttons.some((b) => /Refresh/.test(b)) && bar.buttons.length >= 2, bar && bar.buttons.join("/"));
+
 /* ---------- no runtime errors anywhere ---------- */
 const realErrors = errors.filter((e) => !/favicon|photon|nominatim|wikimedia|Failed to load resource/i.test(e));
 ok("no uncaught runtime errors across the whole walk", realErrors.length === 0, realErrors.slice(0, 2).join(" ; ") || "clean");

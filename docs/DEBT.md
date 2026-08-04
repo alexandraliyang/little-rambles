@@ -24,6 +24,7 @@ Debt is a decision, not an accident. Every row states what is wrong, what it cos
 | T10 | Journal moments are outside the outing stats | OPEN | low |
 | T11 | Supabase built-in email is rate limited; no SMTP | **GUARDED** | medium |
 | T12 | Bundle grew 306KB → 550KB for a feature most users never open | OPEN | medium |
+| T13 | Installed PWAs could silently keep running an old build | **CLOSED** | — |
 
 ---
 
@@ -177,3 +178,18 @@ Two consequences follow from confirmation being off, and both should be stated r
 **Fix.** Code-split: load the SDK only when the Family screen is opened, via a dynamic import. esbuild needs `--splitting --format=esm --outdir`, which means `index.html` moves to `<script type="module">` and `sw.js` must cache the extra chunk. Not difficult, but it changes the shape of the build and the shell caching, so it is not a change to make in the same sitting as a feature.
 
 **Deliberately deferred** so that founder device testing of sharing is not blocked behind a build refactor. Do it before inviting anyone outside the family.
+
+---
+
+## T13 — Installed PWAs could silently keep running an old build · **CLOSED 2026-08-04**
+
+**What it was.** The founder deployed repeatedly and the phone kept showing an old version, with no way to tell and no way to force it. Two independent causes, either sufficient on its own:
+
+1. **The service worker file never changed between deploys.** Browsers compare it byte-for-byte; identical means no new worker installs, so the shell already held keeps being served. The cache name had been bumped by hand once, weeks earlier, and never again.
+2. **An installed PWA resumes from a snapshot rather than reloading.** Opening from the home-screen icon may fetch nothing at all, so even a correct network-first strategy is never consulted.
+
+**Why it was worse than it looked.** Nothing appeared broken. The app worked — it was simply the wrong version, indefinitely, while the founder tested features that were not there and reported them missing.
+
+**Fixed by.** The build stamp is now written into the service worker's cache name, so every deploy is a genuine byte-difference and therefore a real update. The page asks for an update on launch **and on every return to the foreground**, which is the moment that matters for an app that is rarely closed. When a new worker takes control, a bar offers "A newer version of Rambles is ready · Refresh", which can be taken or dismissed.
+
+**Evidence.** Five checks in the device suite, verified against production: worker registered, cache name carries the build, the worker file is served no-cache, the bar appears, and it offers both refresh and dismiss. 101 checks pass.

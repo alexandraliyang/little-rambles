@@ -21,8 +21,37 @@
 <div id="root"><div class="boot">〰️<br/>Rambles is starting…</div></div>
 <script src="app.js"></script>
 <script>
+/* Update handling. An installed PWA resumes from a snapshot rather than
+   reloading, so without this the app can keep showing an old build for days —
+   which is exactly what happened during founder testing. Three parts:
+   ask for an update on every launch, ask again when the app is brought back to
+   the foreground, and tell the app when a new worker has taken control so it
+   can offer a refresh instead of silently waiting. */
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function(){}); });
+  window.addEventListener("load", function () {
+    navigator.serviceWorker.register("sw.js").then(function (reg) {
+      reg.update();
+      document.addEventListener("visibilitychange", function () {
+        if (document.visibilityState === "visible") reg.update();
+      });
+      reg.addEventListener("updatefound", function () {
+        var w = reg.installing;
+        if (!w) return;
+        w.addEventListener("statechange", function () {
+          /* controller present means this is an UPDATE, not a first install */
+          if (w.state === "installed" && navigator.serviceWorker.controller) {
+            window.dispatchEvent(new CustomEvent("lr-update-ready"));
+          }
+        });
+      });
+    }).catch(function () {});
+    var reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", function () {
+      if (reloaded) return;       // guard: controllerchange can fire twice
+      reloaded = true;
+      window.dispatchEvent(new CustomEvent("lr-update-ready"));
+    });
+  });
 }
 </script>
 </body>
