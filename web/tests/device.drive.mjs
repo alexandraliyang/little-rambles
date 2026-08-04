@@ -782,13 +782,31 @@ ok("FB20 family offers a passwordless link", fam.link);
 ok("FB20 it says plainly that an account is optional", fam.optional);
 await shot("21-family-signed-out");
 
-/* the invite link must land somewhere useful even before signing in */
-await page.goto(APP + "?join=ABC123", { waitUntil: "networkidle" });
-await page.waitForTimeout(1200);
-await page.locator("button.kidchip").click();
-await page.waitForTimeout(700);
-ok("FB20 an invite link does not dead-end for a signed-out visitor",
-   /account|sign in/i.test(await txt()), "shows the sign-in surface");
+/* FB21-01: an invite link must never show onboarding. Tested on a VIRGIN
+   browser, because that is what an invited grandparent actually has. */
+const fresh = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+const fp = await fresh.newPage();
+await fp.goto(APP + "?join=ABC123", { waitUntil: "networkidle" });
+await fp.waitForTimeout(1500);
+const joinView = await fp.evaluate(() => document.body.innerText);
+ok("FB21 an invite link shows a JOIN screen, not onboarding",
+   /You've been invited/.test(joinView) && !/Child's name/.test(joinView),
+   joinView.split(String.fromCharCode(10)).filter(Boolean).slice(0, 2).join(" | "));
+ok("FB21 it says plainly they are not setting up their own child",
+   /won't be asked to set up a child of your own/i.test(joinView));
+ok("FB21 it offers a way in", /Continue with Google/.test(joinView));
+ok("FB21 and an escape hatch for someone who is not joining",
+   /set up my own child/i.test(joinView));
+await fp.close(); await fresh.close();
+
+/* the code from the link should not have to be retyped */
+const fresh2 = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+const fp2 = await fresh2.newPage();
+await fp2.goto(APP + "?join=ABC123", { waitUntil: "networkidle" });
+await fp2.waitForTimeout(1200);
+ok("FB21 a link carrying a valid code does not ask for it again",
+   !/Invite code/i.test(await fp2.evaluate(() => document.body.innerText)), "code taken from the link");
+await fp2.close(); await fresh2.close();
 
 /* ---------- no runtime errors anywhere ---------- */
 const realErrors = errors.filter((e) => !/favicon|photon|nominatim|wikimedia|Failed to load resource/i.test(e));

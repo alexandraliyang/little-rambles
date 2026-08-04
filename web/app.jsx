@@ -9,6 +9,7 @@ import { shrink } from "./lib/media.js";
 import { availability } from "./engine/availability.js";
 import { CMAP, parseConstraints, cmapFor } from "./engine/constraints.js";
 import Family from "./components/Family.jsx";
+import Join from "./components/Join.jsx";
 import { AGE_BANDS, bandFor, AFF, CAT_META, ACTIVITIES, FEATURED, FEATURED_CITY, AREA_SUGGESTIONS, IMG, KIDQ } from "./data.js";
 
 /* ==================================================================
@@ -201,6 +202,14 @@ export default function App() {
   const [wx, setWx] = useState(null);                 // FB10: current conditions, keyless (Open-Meteo)
   const [nowSkip, setNowSkip] = useState(0);          // FB10: "show me another" for the single pick
   const [updateReady, setUpdateReady] = useState(false);   // FB19: a newer build is waiting
+  /* FB21: an invite code from the URL, captured once at mount. Read here rather
+     than inside the Join component so it survives the redirect back from
+     Google, which replaces the query string. */
+  const [joinCode, setJoinCode] = useState(() => {
+    try { return (new URLSearchParams(window.location.search).get("join") || "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6); }
+    catch (e) { return ""; }
+  });
+  const [declinedJoin, setDeclinedJoin] = useState(false);
   const locTimer = useRef(null);
   const askedGps = useRef(false);
   const [checkIn, setCheckIn] = useState(null);
@@ -758,6 +767,24 @@ export default function App() {
   /* ============================ RENDER ============================ */
   if (!loaded) return <div className="root"><style>{CSS}</style><div className="phone mid"><p className="big">〰️</p></div></div>;
   if (profile && !profile.name) { try { console.warn("profile missing name", profile); } catch (e) {} }
+
+  /* FB21. Someone arriving on an invite link or QR must NOT be shown onboarding.
+     They are joining an existing child's page; asking them to invent a child of
+     their own is how the founder's husband ended up on a "tell us about your
+     baby" form after scanning the QR. This gate comes FIRST, because having no
+     local profile is exactly the state an invited person is in — the very
+     condition the onboarding check below treats as "new user, set yourself up". */
+  if (joinCode && !declinedJoin)
+    return <div className="root"><style>{CSS}</style><div className="phone">
+      <Join code={joinCode} onCancel={() => { setDeclinedJoin(true); setJoinCode(""); }}
+        onJoined={(p) => {
+          setProfile((prev) => ({ ...(prev || {}), ...p }));
+          setSignedIn(true); setJoinCode(""); setTab("story");
+          say("You're in — this is their page.");
+        }} />
+      {toast && <div className="toast">{toast}</div>}
+    </div></div>;
+
   if (!profileComplete || !signedIn || editProfile)
     return <div className="root"><style>{CSS}</style><div className="phone">
       <Profile near={deviceLoc} profile={profile} signedIn={signedIn} editing={editProfile}
@@ -817,8 +844,12 @@ export default function App() {
         <header className="hdr">
           <div className="brand"><Logo /><b>Rambles</b><span className="ver" title={"build " + BUILD.sha + " · " + BUILD.built}>v{BUILD.version}</span></div>
           <div className="hdrright">
-            <button className="kidchip" onClick={() => setTab("profile")}>{profile.name} · {fmtAge(months)}</button>
-            <button className="chip tiny" onClick={() => setTab("settings")}>⚙️</button>
+            {/* FB21-03. Two entry points that looked the same and went to different
+                screens: the founder assumed Settings WAS the profile. Now the
+                child chip and the gear both open one screen, and the gear says
+                what it is rather than relying on an icon. */}
+            <button className="kidchip" onClick={() => setTab("settings")} title="Profile & settings">{profile.name} · {fmtAge(months)}</button>
+            <button className="chip tiny gear" onClick={() => setTab("settings")} aria-label="Profile and settings">⚙️ You</button>
           </div>
         </header>
 
@@ -1222,7 +1253,8 @@ export default function App() {
           </div>}
 
           {/* ---------------- PROFILE (its own place, not buried in settings) ---------------- */}
-          {tab === "profile" && <div className="pad">
+          {/* ---------------- PROFILE & SETTINGS (one screen, FB21-03) ------- */}
+          {tab === "settings" && <div className="pad">
             <div className="lbl">Child profile</div>
             <div className="card hl">
               <h2 className="dtitle">{profile.name}</h2>
@@ -1230,6 +1262,7 @@ export default function App() {
               <p className="why">{band.theme}</p>
               <div className="pills"><button className="pillbtn dark" onClick={() => setEditProfile(true)}>Edit name, age & preferences</button></div>
             </div>
+
             <div className="lbl">What we avoid & what {profile.name} loves</div>
             <div className="card">
               {(constraints.avoid.length || constraints.love.length)
@@ -1237,24 +1270,16 @@ export default function App() {
                 : <p className="why">Nothing set yet. Edit the profile and write a line like “hates water, loves trains, naps at 12:30”.</p>}
               <p className="fine">These come from the free-text line in the profile and change rankings immediately.</p>
             </div>
-            <div className="lbl">Home & caregivers</div>
+
+            <div className="lbl">Home</div>
             <div className="card">
-              <p className="why">🏠 Home: <b>{profile.home ? profile.home.label : "not set"}</b>{spot ? <> · 📍 Today: <b>{spot.label}</b></> : null}</p>
-              <p className="why">Caregivers: {profile.caregivers && profile.caregivers.length ? profile.caregivers.join(", ") : "just you so far"}</p>
-              <div className="pills"><button className="pillbtn" onClick={() => { setLocText(""); setLocOpen(true); setTab("discover"); }}>Change home address</button>
-                <button className="pillbtn" onClick={() => setEditProfile(true)}>Edit caregivers</button></div>
+              <p className="why">🏠 <b>{profile.home ? profile.home.label : "not set"}</b>{spot ? <> · 📍 Today: <b>{spot.label}</b></> : null}</p>
+              <div className="pills"><button className="pillbtn" onClick={() => { setLocText(""); setLocOpen(true); setTab("discover"); }}>Change home address</button></div>
             </div>
-            {/* FB18: family sharing. Self-contained (ADR-0014) — it holds its own
-                state and needs none of App's, so it lives in its own file. */}
+
             <div className="lbl">Family</div>
             <Family profile={profile} visits={visits} plans={plans} say={say} />
-            <div className="card">
-              <div className="pills"><button className="pillbtn" onClick={() => setTab("settings")}>Data, backup & feedback →</button></div>
-            </div>
-          </div>}
 
-          {/* ---------------- SETTINGS ---------------- */}
-          {tab === "settings" && <div className="pad">
 
             <div className="lbl">Help build this</div>
             <div className="card hl">
@@ -1826,6 +1851,7 @@ const CSS = `
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 10px}
 .chip{background:#FFF;border:1.5px solid #DDDACB;border-radius:99px;padding:7px 12px;font-family:'Karla';font-size:12.5px;font-weight:700;color:#4A554D;cursor:pointer}
 .chip.on{background:#29382F;color:#F6F5EF;border-color:#29382F}.chip.tiny{padding:6px 9px}
+.chip.tiny.gear{font-size:12px;white-space:nowrap}
 .inp{width:100%;border:1.5px solid #DDDACB;border-radius:12px;padding:11px 13px;font-family:'Karla';font-size:14px;background:#FFF;margin-bottom:10px;color:#29382F}
 .inp::placeholder{color:#A5A28E}.ta{min-height:70px;resize:vertical}.tall2{min-height:110px}
 .flab{display:block;font-size:12.5px;font-weight:700;margin:10px 0 5px}.opt{font-weight:400;color:#8A8875}
@@ -1901,7 +1927,7 @@ const CSS = `
 .updatebar button{background:#E9A23B;color:#29382F;border:none;border-radius:99px;padding:8px 14px;font-family:'Karla';font-weight:700;font-size:13px;cursor:pointer}
 .updatebar button.x{background:transparent;color:#F6F5EF;padding:8px 4px;font-size:15px}
 /* FB20 invite */
-.invitecode{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:38px;letter-spacing:9px;text-align:center;font-weight:700;background:#29382F;color:#F6F5EF;border-radius:16px;padding:16px 8px;margin:10px 0 6px}
+.invitecode{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:30px;letter-spacing:7px;text-align:center;font-weight:700;background:#29382F;color:#F6F5EF;border-radius:16px;padding:16px 8px;margin:10px 0 6px}
 .qrwrap{display:flex;justify-content:center;margin:12px 0 16px}
 .qr{border:8px solid #FFF;border-radius:12px;box-shadow:0 4px 16px -8px rgba(41,56,47,.5)}
 .levelcard{display:block;width:100%;text-align:left;background:#FFF;border:1.5px solid #DDDACB;border-radius:16px;padding:13px 14px;margin-bottom:9px;font-family:'Karla';cursor:pointer}

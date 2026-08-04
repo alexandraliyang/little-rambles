@@ -107,18 +107,29 @@ export default function InviteSheet({ babyName, onCreate, onClose, say, existing
       <div className="eyebrow">Invite ready{who ? " · " + who : ""}</div>
       <h3 className="ctitle">Send this to {who || "them"}</h3>
 
-      <div className="invitecode">{made.code}</div>
-      <p className="fine center">They can type this, or scan the code below.</p>
+      {/* FB21-01. Order matters. The founder asked "what is the code even for,
+          we have a QR and a link?" — because the code was the biggest thing on
+          screen and looked like the main event. Sending is first; the code is
+          the fallback for the case the other two cannot cover: reading it out
+          to someone who is not near a device you can send to. */}
+      <button className="primary full" onClick={share}>📤 Send the invite</button>
+      <p className="fine center">Opens your messages — WhatsApp, text, email, whatever you use.</p>
 
       <div className="qrwrap"><QR text={inviteUrl(made.code)} /></div>
+      <p className="fine center">Or hold their phone camera over this.</p>
 
-      <button className="primary full" onClick={share}>📤 Send invite</button>
       <div className="btns">
-        <button className="ghost sm" onClick={copyCode}>Copy code</button>
         <button className="ghost sm" onClick={async () => {
           try { await navigator.clipboard.writeText(inviteUrl(made.code)); say("Link copied."); }
           catch { setErr("Couldn't copy the link."); }
         }}>Copy link</button>
+        <button className="ghost sm" onClick={copyCode}>Copy code</button>
+      </div>
+
+      <div className="lbl">If you'd rather read it out</div>
+      <div className="card">
+        <div className="invitecode">{made.code}</div>
+        <p className="fine center">They open <b>little-rambles.netlify.app</b> and type this. Useful over the phone, when you can't send them a link.</p>
       </div>
 
       <div className="nudge sm"><span>ℹ️</span><p>They'll need to sign in first — with Google, or an email and password. The code works <b>once</b> and expires in two weeks.</p></div>
