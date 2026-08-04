@@ -22,7 +22,7 @@ Debt is a decision, not an accident. Every row states what is wrong, what it cos
 | T8 | Typical-hours model is asserted, not sourced | GUARDED | medium |
 | T9 | Netlify refuses `--prod` publish | GUARDED | low |
 | T10 | Journal moments are outside the outing stats | OPEN | low |
-| T11 | Supabase built-in email is rate limited; no SMTP | OPEN | high |
+| T11 | Supabase built-in email is rate limited; no SMTP | **GUARDED** | medium |
 
 ---
 
@@ -149,12 +149,16 @@ This also explains why the 51 survivors survived: nearly all are subjects, not p
 
 ---
 
-## T11 — Auth email is on Supabase's built-in sender · **OPEN** · high
+## T11 — Auth email is on Supabase's built-in sender · **GUARDED** · medium
 
 **What.** The project uses Supabase's built-in email service for signup confirmation. It is rate limited to a handful of messages per hour and is documented as a development convenience, not a mail service. It was hit within minutes of the first connectivity probes.
 
 **Cost.** Two failures, and the second is the dangerous one. It blocks the live test suite, which is visible and annoying. It will also **silently fail to deliver confirmation mail to invited grandparents** — the exact users least likely to work out why nothing arrived, and least likely to report it as a bug rather than concluding the app is broken.
 
-**Closes when.** Either custom SMTP is configured (Resend, Postmark, SES — all have free tiers adequate for a family beta), or email confirmation is switched off for the beta. The second is defensible here: access to a baby requires an **invite code**, so the inbox is not the security boundary. It should not survive into public release.
+**Mitigated 2026-08-03 two ways.** Email confirmation is switched off (defensible for beta: access to a baby requires an **invite code**, so the inbox is not the security boundary), and **Google sign-in is live**, which routes around email entirely for anyone with a Google account — most grandparents, already signed in on their phone.
+
+**Still open** because the magic-link fallback and any future password reset both depend on delivery, and the built-in sender will fail them silently.
+
+**Closes when.** Custom SMTP is configured (Resend, Postmark, SES — free tiers are ample for a family beta). Email confirmation should also be switched back ON before public release.
 
 **Note.** A handful of `lr.test.*@gmail.com` and one `alex.probe.*@gmail.com` account exist in Auth from these probes. They are unconfirmed and hold no memberships, so they are harmless, but they can be deleted from Authentication → Users.

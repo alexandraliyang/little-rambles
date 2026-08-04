@@ -149,7 +149,11 @@ alter table invites         enable row level security;
 
 -- babies: members read; admins edit; anyone signed in may create their own.
 drop policy if exists babies_read on babies;
-create policy babies_read on babies for select using (public.is_member(id));
+-- "or created_by" is load-bearing, not belt-and-braces: membership is granted by
+-- an AFTER INSERT trigger, which fires at the END of the statement, so a creator
+-- asking for their new row back is not yet a member of it. See 003.
+create policy babies_read on babies for select
+  using (public.is_member(id) or created_by = auth.uid());
 drop policy if exists babies_insert on babies;
 create policy babies_insert on babies for insert with check (created_by = auth.uid());
 drop policy if exists babies_update on babies;
