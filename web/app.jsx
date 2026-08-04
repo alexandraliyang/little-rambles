@@ -1900,6 +1900,25 @@ const CSS = `
 .updatebar span{flex:1}
 .updatebar button{background:#E9A23B;color:#29382F;border:none;border-radius:99px;padding:8px 14px;font-family:'Karla';font-weight:700;font-size:13px;cursor:pointer}
 .updatebar button.x{background:transparent;color:#F6F5EF;padding:8px 4px;font-size:15px}
+/* FB20 invite */
+.invitecode{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:38px;letter-spacing:9px;text-align:center;font-weight:700;background:#29382F;color:#F6F5EF;border-radius:16px;padding:16px 8px;margin:10px 0 6px}
+.qrwrap{display:flex;justify-content:center;margin:12px 0 16px}
+.qr{border:8px solid #FFF;border-radius:12px;box-shadow:0 4px 16px -8px rgba(41,56,47,.5)}
+.levelcard{display:block;width:100%;text-align:left;background:#FFF;border:1.5px solid #DDDACB;border-radius:16px;padding:13px 14px;margin-bottom:9px;font-family:'Karla';cursor:pointer}
+.levelcard.on{border-color:#29382F;background:#F1F0E8;box-shadow:0 0 0 2px #29382F inset}
+.lvhead{display:flex;align-items:center;gap:9px;font-size:15px;color:#29382F}
+.lvicon{font-size:19px}
+.lvhead b{flex:1}
+.lvradio{width:19px;height:19px;border-radius:99px;border:2px solid #C9C6B4;flex:none}
+.lvradio.on{border-color:#29382F;background:#29382F;box-shadow:inset 0 0 0 3.5px #FFF}
+.lvlist{list-style:none;margin:8px 0 0;padding:0}
+.lvlist li{font-size:12.5px;line-height:1.55;padding-left:19px;position:relative;color:#4A554D}
+.lvlist li.yes::before{content:"✓";position:absolute;left:0;color:#2F5138;font-weight:700}
+.lvlist li.no::before{content:"—";position:absolute;left:0;color:#A14E33;font-weight:700}
+.lvnote{font-size:11.5px;color:#8A8875;margin:7px 0 0;font-style:italic}
+.memberrow .mwho,.uarow .mwho{display:flex;flex-direction:column;gap:1px;min-width:0}
+.memberrow .msub,.uarow .mwho .msub{font-weight:400}
+.mini.danger-mini{color:#A14E33}
 .orline{display:flex;align-items:center;gap:10px;margin:14px 0;color:#8A8875;font-size:12px;font-weight:700}
 .orline::before,.orline::after{content:"";flex:1;height:1px;background:#DDDACB}
 .okbox{background:#DDE8DC;color:#2F5138;border-radius:12px;padding:10px 12px;font-size:12.5px;line-height:1.5;margin:8px 0}

@@ -15,8 +15,11 @@ import {
 } from "../lib/family.js";
 import { enabled } from "../lib/supa.js";
 import { can, canRemoveMember, canChangeMember, ROLES, ROLE_LABEL } from "../engine/roles.js";
+import InviteSheet from "./Invite.jsx";
+import Sheet from "./Sheet.jsx";
 
-const roleWord = { admin: "Admin", caregiver: "Can add outings", viewer: "Can see & comment" };
+/* The same words as the invite sheet, so one thing is never called two names. */
+const roleWord = { admin: "Full access", caregiver: "Can look and add", viewer: "Can look, like and comment" };
 
 export default function Family({ profile, visits, plans, say }) {
   const [user, setUser] = useState(null);
@@ -32,11 +35,24 @@ export default function Family({ profile, visits, plans, say }) {
   const [note, setNote] = useState("");
   const [joinCode, setJoinCode] = useState("");
   const [showJoin, setShowJoin] = useState(false);
+  const [inviting, setInviting] = useState(false);
+  const [reshow, setReshow] = useState(null);
 
   useEffect(() => {
     if (!enabled) return;
     currentUser().then(setUser);
     return onAuthChange(setUser);
+  }, []);
+
+  /* FB20: an invite LINK lands here as ?join=CODE. Prefill and open the join
+     panel — asking someone to retype a code that was inside the link they just
+     tapped is the kind of thing that makes people give up. */
+  useEffect(() => {
+    const c = new URLSearchParams(window.location.search).get("join");
+    if (!c) return;
+    setJoinCode(c.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6));
+    setShowJoin(true);
+    window.history.replaceState({}, "", window.location.pathname);
   }, []);
 
   const load = async () => {
@@ -172,8 +188,10 @@ export default function Family({ profile, visits, plans, say }) {
         {people.map((p) => {
           const isMe = p.userId === user.id;
           return <div className="uarow" key={p.userId}>
-            <span>{p.name || (isMe ? "You" : "Family member")}{isMe ? " (you)" : ""}
-              <small className="msub"> {roleWord[p.role]}</small></span>
+            {/* Relationship first, permission second: "Grandma · can look and
+                comment" reads like a family; "viewer" reads like an ACL. */}
+            <span className="mwho"><b>{p.name || (isMe ? "You" : "Family member")}</b>{isMe ? " (you)" : ""}
+              <small className="msub">{roleWord[p.role]}</small></span>
             {isAdmin && !isMe && <span className="uaacts">
               <select className="rolesel" value={p.role} onChange={(e) => {
                 const check = canChangeMember(me, p, people, e.target.value);
@@ -194,32 +212,38 @@ export default function Family({ profile, visits, plans, say }) {
       </div>
 
       {isAdmin && <>
-        <div className="lbl">Invite someone</div>
+        <div className="lbl">Invite family</div>
         <div className="card">
-          <p className="why">Make a code, then send it however you like — text, WhatsApp, read it down the phone.</p>
-          <div className="pills">
-            {[["viewer", "👀 Can see & comment"], ["caregiver", "✍️ Can add outings"]].map(([r, l]) =>
-              <button key={r} className="pillbtn" disabled={busy}
-                onClick={() => run(() => createInvite(baby.id, r, null), load)}>{l}</button>)}
-          </div>
-          <p className="fine">Grandparents usually only want to look — “can see &amp; comment” is the common choice.</p>
+          <p className="why">Who they are and exactly what they can do, chosen together on one screen — then send a link, a QR code, or six characters you can read down the phone.</p>
+          <button className="primary full" onClick={() => { setErr(""); setInviting(true); }}>➕ Invite someone</button>
         </div>
 
-        {codes.length > 0 && <div className="card">
-          {codes.map((c) => <div className="uarow" key={c.code}>
-            <span><b className="codeval">{c.code}</b><small className="msub"> {roleWord[c.role]} · expires {new Date(c.expires_at).toLocaleDateString()}</small></span>
-            <span className="uaacts">
-              <button className="mini" title="Copy" onClick={() => {
-                const msg = `Come and see ${baby.name}'s page on Rambles: https://little-rambles.netlify.app — sign in, then enter code ${c.code}`;
-                if (navigator.share) navigator.share({ text: msg }).catch(() => {});
-                else if (navigator.clipboard) navigator.clipboard.writeText(msg).then(() => say("Invite copied.")).catch(() => {});
-              }}>📤</button>
-              <button className="mini" title="Cancel this code" onClick={() => run(() => revokeInvite(c.code), load)}>✕</button>
-            </span>
-          </div>)}
-          <p className="fine">Each code works once and expires after two weeks.</p>
-        </div>}
+        {codes.length > 0 && <>
+          <div className="lbl">Codes waiting to be used ({codes.length})</div>
+          <div className="card">
+            {codes.map((c) => <div className="uarow" key={c.code}>
+              <span className="mwho"><b className="codeval">{c.code}</b>
+                <small className="msub">{c.label ? c.label + " · " : ""}{roleWord[c.role]} · expires {new Date(c.expires_at).toLocaleDateString()}</small></span>
+              <span className="uaacts">
+                <button className="mini" title="Show this invite again" onClick={() => setReshow(c)}>👁</button>
+                {/* FB20: destructive, so it asks. The old version put this ✕ directly
+                    beside the share button, both tiny — a mistap silently destroyed
+                    the code you were trying to send. */}
+                <button className="mini" title="Cancel this code" onClick={() => {
+                  if (window.confirm("Cancel code " + c.code + "?\n\nAnyone still holding it won't be able to join.")) run(() => revokeInvite(c.code), load);
+                }}>✕</button>
+              </span>
+            </div>)}
+            <p className="fine">Each code works once and expires after two weeks.</p>
+          </div>
+        </>}
       </>}
+
+      {(inviting || reshow) && <Sheet onClose={() => { setInviting(false); setReshow(null); }}>
+        <InviteSheet babyName={baby.name} say={say} existing={reshow}
+          onCreate={(role, label) => createInvite(baby.id, role, label)}
+          onClose={async () => { setInviting(false); setReshow(null); await load(); }} />
+      </Sheet>}
 
       {err && <p className="warnbox">{err}</p>}
       <button className="ghost full mt" onClick={() => run(() => signOut(), () => say("Signed out. Your journal is still on this phone."))}>Sign out</button>
