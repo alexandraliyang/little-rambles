@@ -287,8 +287,17 @@ export default function App() {
   const constraints = useMemo(() => {
     const auto = parseConstraints(profile && profile.notes);
     const off = (profile && profile.cOff) || [];
-    return { avoid: auto.avoid.filter((a) => !off.includes(a)), love: auto.love.filter((a) => !off.includes(a)) };
-  }, [profile]);
+    /* FB23: `unknown` must survive this rebuild. It was being dropped here, so
+       the "I couldn't place that" message could never appear no matter what was
+       written — the exact silence it exists to end. Keyed on notes and cOff
+       rather than the whole profile object, so it recomputes when the text
+       changes and not merely when some unrelated field does. */
+    return {
+      avoid: auto.avoid.filter((a) => !off.includes(a)),
+      love: auto.love.filter((a) => !off.includes(a)),
+      unknown: auto.unknown || [],
+    };
+  }, [profile && profile.notes, profile && profile.cOff]);
 
   /* place used for all Maps queries + whether Vancouver featured data applies */
   const activePlace = spot || (profile && profile.home) || null;

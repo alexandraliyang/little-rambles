@@ -403,6 +403,29 @@ const photosView = [...root.querySelectorAll(".chip")].find((c) => c.textContent
 if (photosView) { click(photosView); await settle(); }
 ok("FB13-02 memory cards carry an anchor id", root.querySelectorAll("[id^=mem-]").length >= 0);
 
+/* --- FB23: editing the notes line must actually change what is displayed --- */
+const kid = root.querySelector("button.kidchip");
+if (kid) { click(kid); await settle(); }
+ok("FB23 profile and settings are one screen", text().includes("Child profile") && text().includes("Export my data"));
+
+const editBtn = findByText("button", "Edit name, age & preferences");
+if (editBtn) { click(editBtn); await settle(); }
+const ta = [...root.querySelectorAll("textarea")].find((t) => /Hates water|know/i.test(t.placeholder || ""));
+ok("FB23 the notes field is reachable from the profile", !!ta, ta ? ta.placeholder.slice(0, 30) : "not found");
+if (ta) {
+  const setV = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
+  setV.call(ta, "loves cheese, hates knitting");
+  ta.dispatchEvent(new window.Event("input", { bubbles: true }));
+  await settle();
+  const save = findByText("button", "Save");
+  if (save) { click(save); await settle(); await settle(); }
+}
+ok("FB23 saving stays on the profile screen", text().includes("Child profile"), "");
+ok("FB23 a newly understood preference appears immediately",
+   /likes food outings/i.test(text()), (text().match(/likes [a-z &]+/i) || ["not shown"])[0]);
+ok("FB23 and one we cannot model is reported rather than dropped",
+   /couldn't place/i.test(text()), (text().match(/couldn't place[^.]*/i) || ["not reported"])[0]);
+
 /* --- every tab renders without throwing --- */
 for (const t of ["Swipe", "Browse", "Our List", "Yours", "Memories"]) {
   const b = findByText("button", t);
