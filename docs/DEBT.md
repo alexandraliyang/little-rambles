@@ -23,6 +23,7 @@ Debt is a decision, not an accident. Every row states what is wrong, what it cos
 | T9 | Netlify refuses `--prod` publish | GUARDED | low |
 | T10 | Journal moments are outside the outing stats | OPEN | low |
 | T11 | Supabase built-in email is rate limited; no SMTP | **GUARDED** | medium |
+| T12 | Bundle grew 306KB → 550KB for a feature most users never open | OPEN | medium |
 
 ---
 
@@ -164,3 +165,15 @@ Two consequences follow from confirmation being off, and both should be stated r
 **Closes when.** Custom SMTP is configured (Resend, Postmark, SES — free tiers are ample for a family beta). Email confirmation should also be switched back ON before public release.
 
 **Note.** A handful of `lr.test.*@gmail.com` and one `alex.probe.*@gmail.com` account exist in Auth from these probes. They are unconfirmed and hold no memberships, so they are harmless, but they can be deleted from Authentication → Users.
+
+---
+
+## T12 — The Supabase SDK is in the critical path for everyone · **OPEN** · medium
+
+**What.** Adding family sharing took the bundle from **306KB to 550KB** — an 80% increase, almost entirely `@supabase/supabase-js`. It is downloaded by every visitor on first load, including the majority who will never sign in.
+
+**Cost.** First load on a phone gets meaningfully slower, and that first load is exactly when a new tester decides whether this is worth their time. It is a one-time cost (the service worker caches it), but it lands on the worst possible moment.
+
+**Fix.** Code-split: load the SDK only when the Family screen is opened, via a dynamic import. esbuild needs `--splitting --format=esm --outdir`, which means `index.html` moves to `<script type="module">` and `sw.js` must cache the extra chunk. Not difficult, but it changes the shape of the build and the shell caching, so it is not a change to make in the same sitting as a feature.
+
+**Deliberately deferred** so that founder device testing of sharing is not blocked behind a build refactor. Do it before inviting anyone outside the family.

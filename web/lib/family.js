@@ -193,6 +193,46 @@ export async function redeemInvite(code, displayName) {
   return { ok: true, babyId: data };
 }
 
+/* ------------------------------------------------------- first upload ----- */
+
+/* The one-time "bring my journal with me" step. Explicit, never silent: this is
+   the moment a device's private photographs become a family's shared record,
+   and a caregiver should have pressed something to make it happen.
+   Photos are NOT uploaded here — that is a separate, larger step, and pretending
+   otherwise would leave someone thinking their pictures were backed up. */
+export async function uploadLocal(babyId, userId, visits, plans) {
+  if (!enabled) return off();
+  const memRows = (visits || []).map((v) => ({
+    baby_id: babyId, author_id: userId,
+    kind: v.kind === "journal" ? "journal" : v.kind === "custom" ? "custom" : "visit",
+    idea_id: v.ideaId || null, name: v.name || null, place: v.place || null,
+    cat: v.cat || null, emoji: v.emoji || null, rating: v.rating || null,
+    note: v.note || null, with_who: v.by || null,
+    pin_lat: v.pin ? v.pin.lat : null, pin_lng: v.pin ? v.pin.lng : null,
+    happened_at: new Date(v.ts || Date.now()).toISOString(),
+  }));
+  const planRows = (plans || []).map((p) => ({
+    baby_id: babyId, added_by: userId, idea_id: p.ideaId || null, name: p.name,
+    place: p.place || null, area: p.area || null, cat: p.cat || null, emoji: p.emoji || null,
+    status: p.status === "out" ? "out" : "planned",
+    pin_lat: p.pin ? p.pin.lat : null, pin_lng: p.pin ? p.pin.lng : null,
+  }));
+
+  /* Chunked: a long journal in one request is the kind of thing that works on
+     wifi and fails on a train. */
+  const chunk = async (table, rows) => {
+    for (let i = 0; i < rows.length; i += 50) {
+      const { error } = await supa().from(table).insert(rows.slice(i, i + 50));
+      if (error) throw error;
+    }
+  };
+  try {
+    if (memRows.length) await chunk("memories", memRows);
+    if (planRows.length) await chunk("plans", planRows);
+  } catch (e) { return fail(e); }
+  return { ok: true, memories: memRows.length, plans: planRows.length };
+}
+
 /* -------------------------------------------------- likes and comments ---- */
 
 export async function likesFor(babyId, memoryIds) {

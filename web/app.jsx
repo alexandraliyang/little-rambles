@@ -8,6 +8,7 @@ import { haversine, fmtKm, geoSearch, nearQuery, venueQuery, directionsTo } from
 import { shrink } from "./lib/media.js";
 import { availability } from "./engine/availability.js";
 import { CMAP, parseConstraints, cmapFor } from "./engine/constraints.js";
+import Family from "./components/Family.jsx";
 import { AGE_BANDS, bandFor, AFF, CAT_META, ACTIVITIES, FEATURED, FEATURED_CITY, AREA_SUGGESTIONS, IMG, KIDQ } from "./data.js";
 
 /* ==================================================================
@@ -1232,11 +1233,12 @@ export default function App() {
               <div className="pills"><button className="pillbtn" onClick={() => { setLocText(""); setLocOpen(true); setTab("discover"); }}>Change home address</button>
                 <button className="pillbtn" onClick={() => setEditProfile(true)}>Edit caregivers</button></div>
             </div>
-            <div className="lbl">Account</div>
+            {/* FB18: family sharing. Self-contained (ADR-0014) — it holds its own
+                state and needs none of App's, so it lives in its own file. */}
+            <div className="lbl">Family</div>
+            <Family profile={profile} visits={visits} plans={plans} say={say} />
             <div className="card">
-              <p className="why">Free while in beta. Plans and family sharing will live here later.</p>
-              <div className="pills"><button className="pillbtn" onClick={() => { setSignedIn(false); say("Signed out."); }}>Sign out</button>
-                <button className="pillbtn" onClick={() => setTab("settings")}>Data, backup & feedback →</button></div>
+              <div className="pills"><button className="pillbtn" onClick={() => setTab("settings")}>Data, backup & feedback →</button></div>
             </div>
           </div>}
 
@@ -1873,6 +1875,13 @@ const CSS = `
   .mem.flash{animation:flash 1.6s ease-out}
   @keyframes flash{0%{background:#FBEAC9;box-shadow:0 0 0 3px #E9A23B}70%{background:#FBEAC9}100%{background:transparent;box-shadow:none}}
 }
+/* FB18 family sharing */
+.orline{display:flex;align-items:center;gap:10px;margin:14px 0;color:#8A8875;font-size:12px;font-weight:700}
+.orline::before,.orline::after{content:"";flex:1;height:1px;background:#DDDACB}
+.okbox{background:#DDE8DC;color:#2F5138;border-radius:12px;padding:10px 12px;font-size:12.5px;line-height:1.5;margin:8px 0}
+.rolesel{font-family:'Karla';font-size:11.5px;font-weight:700;border:1.5px solid #DDDACB;border-radius:9px;padding:5px 6px;background:#FFF;color:#29382F;max-width:132px}
+.inp.code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:22px;letter-spacing:5px;text-align:center;text-transform:uppercase}
+.codeval{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:16px;letter-spacing:2px}
 .searchrow{display:flex;gap:8px;align-items:center;margin:6px 0 2px}
 .searchrow .inp{flex:1;margin-bottom:0}
 .memacts{margin-top:10px;padding-top:10px;border-top:1px dashed #E3E1D6}

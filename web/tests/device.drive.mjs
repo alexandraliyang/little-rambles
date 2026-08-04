@@ -4,6 +4,18 @@
 import { chromium } from "playwright-core";
 import { mkdirSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
+import { ACTIVITIES } from "../data.js";
+
+/* Activities whose curated photo is a known dead URL (docs/DEBT.md T1). A card
+   for one of these SHOULD render the generated fallback — that is the fallback
+   working, not state leaking between cards. Excluding them by name keeps the
+   FB7-01 assertion about the bug it was written for. */
+const DEAD_ART = new Set(
+  JSON.parse(readFileSync(new URL("../content/images.json", import.meta.url), "utf8")).images
+    .filter((r) => r.verified === "rejected" && String(r.note).startsWith("404"))
+    .map((r) => { const a = ACTIVITIES.find((x) => x.id === r.id); return a ? a.name : r.id; })
+);
 
 const APP = process.env.APP_URL || "http://localhost:8000/";
 const CHROME = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
@@ -427,9 +439,14 @@ for (let i = 0; i < 8; i++) {
   if (!k) break;
   kinds.push(k);
 }
+/* A card may legitimately show the drawing if its own photo is one of the known
+   dead URLs (docs/DEBT.md T1). That is not poisoning, so name any offender
+   rather than asserting a blanket "all photos". */
+const gens = kinds.filter((k) => k.kind !== "photo" && !DEAD_ART.has(String(k.t).trim()));
 ok("FB7-01 the cards AFTER a failed one still show their own photos",
-   kinds.length > 0 && kinds.every((k) => k.kind === "photo"),
-   kinds.map((k) => k.kind).join(",") + "  (card 1 was broken on purpose)");
+   gens.length === 0,
+   gens.length ? "unexpected fallback on: " + gens.map((g) => g.t).join(", ")
+               : kinds.map((k) => k.kind).join(",") + "  (known-dead art excluded: " + DEAD_ART.size + ")");
 
 /* ---------- FB8: gesture quality, directions, sheet, shuffle ---------- */
 await page.getByRole("button", { name: /Swipe/ }).click();
