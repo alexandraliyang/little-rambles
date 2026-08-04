@@ -1297,7 +1297,10 @@ export default function App() {
 
             <div className="lbl">Home</div>
             <div className="card">
-              <p className="why">🏠 <b>{profile.home ? profile.home.label : "not set"}</b>{spot ? <> · 📍 Today: <b>{spot.label}</b></> : null}</p>
+              {/* FB24-01: "Today" was noise here. It is a transient choice made
+                  from the location bar, shown there already, and repeating it in
+                  a settings card implied it was a setting. */}
+              <p className="why">🏠 <b>{profile.home ? profile.home.label : "not set"}</b></p>
               <div className="pills"><button className="pillbtn" onClick={() => { setLocText(""); setLocOpen(true); setTab("discover"); }}>Change home address</button></div>
             </div>
 

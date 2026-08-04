@@ -25,6 +25,7 @@ Debt is a decision, not an accident. Every row states what is wrong, what it cos
 | T11 | Supabase built-in email is rate limited; no SMTP | **GUARDED** | medium |
 | T12 | Bundle grew 306KB → 550KB for a feature most users never open | OPEN | medium |
 | T13 | Installed PWAs could silently keep running an old build | **CLOSED** | — |
+| T14 | 155 activities is prototype scale, not product scale | OPEN | high |
 
 ---
 
@@ -193,3 +194,21 @@ Two consequences follow from confirmation being off, and both should be stated r
 **Fixed by.** The build stamp is now written into the service worker's cache name, so every deploy is a genuine byte-difference and therefore a real update. The page asks for an update on launch **and on every return to the foreground**, which is the moment that matters for an app that is rarely closed. When a new worker takes control, a bar offers "A newer version of Rambles is ready · Refresh", which can be taken or dismissed.
 
 **Evidence.** Five checks in the device suite, verified against production: worker registered, cache name carries the build, the worker file is served no-cache, the bar appears, and it offers both refresh and dismiss. 101 checks pass.
+
+---
+
+## T14 — 155 activities is prototype scale · **OPEN** · high
+
+**What.** The library holds 155 activities across 16 categories, curated by hand for one city. The founder's framing is the right one: *"treat it as an app that will be used by a million users."* At that size the library is the product, and 155 rows is a demo.
+
+**What just got fixed, and what did not.** The *vocabulary* problem is solved: preferences now map onto the 16 categories and 23 affordances the ranker already uses, via 533 words across 26 concepts (`engine/lexicon.js`), rather than 11 invented labels. So the app can now *understand* far more than it can *act on* — and that asymmetry is the debt. Understanding "loves pretend play" is worthless if there are four pretend-play activities.
+
+**Why this is not simply "add more rows".** Every activity carries age range, affordances, tags, typical hours, a seasonal window and a photo. Bad rows are worse than missing ones: a wrong age range sends a family somewhere unsuitable, a wrong closing time sends them to a shut door (T8), and a wrong photo is T1. Volume without verification multiplies existing debts rather than adding value.
+
+**The shape of the work, in order.**
+1. **Coverage audit first.** For each of the 23 affordances × 10 age bands, count activities. Publish the holes. Expanding blindly grows the categories that are already fat.
+2. **Generate against the gaps**, not the average — each new row justified by a hole in that grid.
+3. **Verification gate before shipping**, mirroring `images.audit`: age range plausible, affordances match the description, hours labelled as asserted rather than sourced (T8), photo verified (T1).
+4. **Then** the same structural question ADR-0013 already flagged: this scales by curation, not code, until the Places API arrives. Beyond a few hundred rows per city, the answer is a data pipeline and a review queue, not a bigger hand-written file.
+
+**Closes when.** Coverage has no empty cells for the core age bands, and the verification gate passes on the whole library.

@@ -122,9 +122,11 @@ export default function Family({ profile, visits, plans, say }) {
       {err && <p className="warnbox">{err}</p>}
       {note && <p className="okbox">{note}</p>}
 
-      <div className="lbl">Been invited?</div>
+      {/* FB24-02: there was nowhere to enter a code unless you arrived on a
+          link. Someone read a code down the phone had no way in at all. */}
+      <div className="lbl">Been given a code?</div>
       <div className="card">
-        <p className="why">If someone sent you a code, sign in first — then enter it here.</p>
+        <p className="why">Sign in above first — the code box appears straight after.</p>
       </div>
     </>
   );
@@ -210,6 +212,20 @@ export default function Family({ profile, visits, plans, say }) {
         })}
         {!isAdmin && <p className="fine">Only an admin can invite or remove people.</p>}
       </div>
+
+      {/* FB24-02: joining a SECOND family, or a first one after already making
+          your own, was impossible — the code box only existed in the no-baby
+          state. */}
+      {!showJoin
+        ? <button className="ghost full mt" onClick={() => setShowJoin(true)}>I've been given an invite code</button>
+        : <div className="card">
+            <div className="lbl tight">Enter an invite code</div>
+            <input className="inp code" placeholder="ABC123" maxLength={7} value={joinCode}
+              onChange={(e) => setJoinCode(e.target.value.toUpperCase())} />
+            <button className="primary full" disabled={busy || joinCode.replace(/[^A-Z0-9]/g, "").length !== 6}
+              onClick={() => run(() => redeemInvite(joinCode, null), async () => { say("You're in."); setJoinCode(""); setShowJoin(false); await load(); })}>Join</button>
+            <button className="ghost full mt" onClick={() => { setShowJoin(false); setJoinCode(""); }}>Cancel</button>
+          </div>}
 
       {isAdmin && <>
         <div className="lbl">Invite family</div>

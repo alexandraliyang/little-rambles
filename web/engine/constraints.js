@@ -1,48 +1,38 @@
-/* constraints — read the free-text profile line ("hates water, loves trains")
-   into things to avoid and things to favour. Pure.
+/* constraints — read the free-text profile line into things to avoid and things
+   to favour. Pure.
+
+   FB24. This used to carry its own eleven hand-picked concepts, invented apart
+   from the science layer, so it understood "loves trains" and shrugged at
+   "loves cheese" or "loves slides". The vocabulary now lives in lexicon.js and
+   maps onto the SAME 16 categories and 23 affordances the ranking engine runs
+   on — nothing invented for the purpose, and a gap here is a gap in the
+   developmental map rather than a missing keyword.
+
    The avoid list must be applied as a HARD exclusion by the caller, not a
    ranking penalty: it was -14 against a -50 cutoff, so swimming still surfaced
    for a child who is frightened of water (FB4-03). */
-/* -------- constraints parsed from the free-text profile note ---- */
-export const CMAP = [
-  { k: ["water", "pool", "swim", "swimming", "wet", "splash", "paddling", "bath", "beach", "sea", "ocean", "lake", "river", "puddle", "puddles"], cats: ["water"], affs: ["water_play"], label: "water" },
-  { k: ["animal", "animals", "dog", "dogs", "puppy", "cat", "cats", "zoo", "farm", "horse", "pony", "duck", "ducks", "bird", "birds", "fish", "aquarium", "bug", "bugs", "insect"], cats: ["animals"], affs: ["animal_watch", "animal_touch"], label: "animals" },
-  { k: ["loud", "noise", "noisy", "crowd", "crowds", "busy", "chaos"], cats: [], affs: ["peer_faces", "music_rhythm", "group_program"], label: "loud/busy places" },
-  { k: ["snow", "cold", "winter"], cats: ["winter"], affs: ["snow_play"], label: "snow & cold" },
-  { k: ["sand", "mess", "messy", "paint"], cats: [], affs: ["sensory_textures", "art_materials"], label: "messy play" },
-  { k: ["climb", "climbing", "height", "heights"], cats: [], affs: ["climb_run", "big_kid_challenge"], label: "climbing" },
-  { k: ["car", "driving", "drive"], cats: [], affs: [], label: "long drives" },
-  { k: ["music", "singing", "sing", "songs", "dancing", "dance", "drum", "drums", "piano", "instrument"], cats: ["music"], affs: ["music_rhythm"], label: "music" },
-  { k: ["book", "books", "story", "stories", "reading"], cats: ["stories"], affs: ["story_language"], label: "books & stories" },
-  { k: ["food", "eating", "restaurant", "snack", "cheese", "bread", "bakery", "cake", "ice cream", "icecream", "fruit", "noodles", "dumpling", "pizza", "treat", "cafe", "café", "bubble tea", "dim sum"], cats: ["food"], affs: ["food_ritual"], label: "food outings" },
-  { k: ["train", "trains", "bus", "plane", "planes", "truck", "trucks", "digger", "boat"], cats: ["transit"], affs: ["vehicle_watch"], label: "machines & rides" },
-];
-const NEG = ["hate", "hates", "dislike", "dislikes", "avoid", "avoids", "scared", "afraid", "fear", "not ", "no ", "won't", "doesn't like", "does not like"];
-const POS = ["love", "loves", "like", "likes", "obsessed", "adore", "enjoys", "favourite", "favorite"];
-export /* FB22. Returns `unknown` as well: clauses that clearly express a preference
-   ("loves cheese") but match nothing we model. Silence was the bug — the
-   founder wrote "love cheese", nothing happened, and there was no way to tell
-   whether it had been understood, ignored, or misread. No keyword list will
-   ever be complete, so the honest fix is to say what did not land. */
-function parseConstraints(notes) {
+import { LEXICON, NEG_WORDS, POS_WORDS, conceptsIn, conceptByLabel, CONCEPT_LABELS } from "./lexicon.js";
+
+/* Kept for callers that still ask for cats/affs by label. */
+export const CMAP = LEXICON;
+export const UNDERSTOOD = CONCEPT_LABELS;
+export const cmapFor = (label) => conceptByLabel(label);
+
+export function parseConstraints(notes) {
   const out = { avoid: [], love: [], unknown: [] };
   if (!notes) return out;
-  String(notes).toLowerCase().split(/[,;.\n·]+/).forEach((cl) => {
-    const c = cl.trim(); if (!c) return;
-    const neg = NEG.some((w) => c.includes(w)), pos = POS.some((w) => c.includes(w));
+  String(notes).toLowerCase().split(/[,;.\n·]+|\band\b/).forEach((cl) => {
+    const c = cl.trim();
+    if (!c) return;
+    const neg = NEG_WORDS.some((w) => c.includes(w));
+    const pos = !neg && POS_WORDS.some((w) => c.includes(w));
     if (!neg && !pos) return;
-    let matched = false;
-    CMAP.forEach((m) => {
-      if (m.k.some((w) => new RegExp("\\b" + w).test(c))) { (neg ? out.avoid : out.love).push(m.label); matched = true; }
-    });
-    /* A clause that clearly expresses a preference but matches nothing we model.
-       Reporting it is the point: silence was the bug. */
-    if (!matched) out.unknown.push(cl.trim());
+    const hits = conceptsIn(c);
+    if (!hits.length) { out.unknown.push(c); return; }
+    hits.forEach((h) => (neg ? out.avoid : out.love).push(h.label));
   });
-  out.avoid = [...new Set(out.avoid)]; out.love = [...new Set(out.love.filter((l) => !out.avoid.includes(l)))];
+  out.avoid = [...new Set(out.avoid)];
+  out.love = [...new Set(out.love.filter((l) => !out.avoid.includes(l)))];
   out.unknown = [...new Set(out.unknown)];
   return out;
 }
-export const UNDERSTOOD = CMAP.map((m) => m.label);
-export const cmapFor = (label) => CMAP.find((m) => m.label === label) || { cats: [], affs: [] };
-

@@ -44,16 +44,16 @@ eq("out-of-season label names the months",
 
 /* ---------- constraints: avoid must be usable as a HARD gate (FB4-03) ---------- */
 const c1 = parseConstraints("hates water, loves trains");
-ok("'hates water' is parsed as an avoidance", c1.avoid.includes("water"), JSON.stringify(c1.avoid));
-ok("'loves trains' is parsed as a preference", c1.love.includes("machines & rides"), JSON.stringify(c1.love));
-ok("water maps to both a category and an affordance",
-   cmapFor("water").cats.includes("water") && cmapFor("water").affs.includes("water_play"),
-   JSON.stringify(cmapFor("water")));
+ok("'hates water' is parsed as an avoidance", c1.avoid.includes("water play"), JSON.stringify(c1.avoid));
+ok("'loves trains' is parsed as a preference", c1.love.includes("machines and rides"), JSON.stringify(c1.love));
+ok("a concept maps onto the SAME categories and affordances the ranker uses",
+   cmapFor("water play").cats.includes("water") && cmapFor("water play").affs.includes("water_play"),
+   JSON.stringify(cmapFor("water play")));
 const c2 = parseConstraints("scared of dogs");
 ok("'scared of' counts as avoidance, not preference", c2.avoid.includes("animals"), JSON.stringify(c2));
 const c3 = parseConstraints("loves water but hates water");
 ok("a conflict resolves to avoid — the cautious reading wins",
-   c3.avoid.includes("water") && !c3.love.includes("water"), JSON.stringify(c3));
+   c3.avoid.includes("water play") && !c3.love.includes("water play"), JSON.stringify(c3));
 const c4 = parseConstraints("");
 ok("an empty note produces no constraints", c4.avoid.length === 0 && c4.love.length === 0);
 const c5 = parseConstraints("naps at 12:30");
@@ -64,16 +64,47 @@ ok("an unrelated note produces no constraints", c5.avoid.length === 0 && c5.love
    a wider vocabulary, and reporting whatever still does not land. */
 ok("'loves cheese' is now understood as food",
    parseConstraints("loves cheese").love.includes("food outings"), JSON.stringify(parseConstraints("loves cheese")));
+
+/* FB24. The vocabulary is no longer a hand-picked list beside the science
+   layer — it maps onto the same 16 categories and 23 affordances the ranker
+   runs on. These are phrases a caregiver would plausibly write, and the old
+   eleven-concept version understood none of them. */
+[
+  ["loves slides and swings", "climbing and running"],
+  ["loves other kids", "other children"],
+  ["obsessed with diggers", "machines and rides"],
+  ["loves painting", "messy art"],
+  ["she loves the library", "books and stories"],
+  ["loves ice cream", "food outings"],
+  ["loves music class", "music and rhythm"],
+  ["loves the aquarium", "animals"],
+  ["enjoys pretend play", "pretend play"],
+].forEach(([phrase, concept]) =>
+  ok("understands: " + phrase, parseConstraints(phrase).love.includes(concept),
+     JSON.stringify(parseConstraints(phrase).love)));
+[
+  ["hates sand", "textures"],
+  ["scared of dogs", "animals"],
+  ["hates loud places", "loud or busy places"],
+  ["not keen on climbing", "climbing and running"],
+].forEach(([phrase, concept]) =>
+  ok("understands: " + phrase, parseConstraints(phrase).avoid.includes(concept),
+     JSON.stringify(parseConstraints(phrase).avoid)));
+
+/* A phrase must not be claimed by a word hiding inside it. */
+ok("'ice cream' is food, not snow", parseConstraints("loves ice cream").love.includes("food outings")
+   && !parseConstraints("loves ice cream").love.includes("snow and cold"),
+   JSON.stringify(parseConstraints("loves ice cream").love));
 ok("'loves the aquarium' is understood as animals",
    parseConstraints("loves the aquarium").love.includes("animals"));
 ok("'hates puddles' is understood as water",
-   parseConstraints("hates puddles").avoid.includes("water"));
+   parseConstraints("hates puddles").avoid.includes("water play"));
 const unk = parseConstraints("loves quantum physics");
 ok("a preference we cannot model is REPORTED, not silently dropped",
    unk.unknown.length === 1 && /quantum/.test(unk.unknown[0]), JSON.stringify(unk.unknown));
 const mixed = parseConstraints("hates water, loves knitting");
 ok("the understood half still works when the other half does not",
-   mixed.avoid.includes("water") && mixed.unknown.length === 1, JSON.stringify(mixed));
+   mixed.avoid.includes("water play") && mixed.unknown.length === 1, JSON.stringify(mixed));
 ok("a note with no preference at all is not reported as misunderstood",
    parseConstraints("naps at 12:30").unknown.length === 0);
 ok("the app can say what it does understand", UNDERSTOOD.length >= 10, UNDERSTOOD.length + " concepts");
