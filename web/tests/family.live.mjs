@@ -55,6 +55,23 @@ if (!mum.user || !gran.user) {
 }
 ok("two accounts exist and can sign in", true, "mum + gran");
 
+/* --- the email+password path, in its own right: not everyone wants Google --- */
+{
+  const em = `lr.test.pw.${stamp}@gmail.com`;
+  const a = client();
+  const su = await a.auth.signUp({ email: em, password: "Grandma-2026!" });
+  ok("someone can register with email and password", !su.error && !!su.data.session, su.error && su.error.message);
+  const b = client();
+  const si = await b.auth.signInWithPassword({ email: em, password: "Grandma-2026!" });
+  ok("and sign in again later on another device", !si.error, si.error && si.error.message);
+  const bad = await b.auth.signInWithPassword({ email: em, password: "not-the-password" });
+  ok("a wrong password is refused", !!bad.error, bad.error && bad.error.message);
+  const weak = await client().auth.signUp({ email: `lr.test.weak.${stamp}@gmail.com`, password: "123" });
+  ok("a too-short password is refused", !!weak.error, weak.error && weak.error.message);
+  const dup = await client().auth.signUp({ email: em, password: "Different-1234!" });
+  ok("registering an email twice is refused", !!dup.error, dup.error && dup.error.message);
+}
+
 /* --- mum creates a baby and is made admin by the trigger --- */
 const { data: baby, error: be } = await mum.c.from("babies")
   .insert({ name: "Test Baby " + stamp, created_by: mum.user.id }).select().single();

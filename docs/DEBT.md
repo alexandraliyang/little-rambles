@@ -157,7 +157,9 @@ This also explains why the 51 survivors survived: nearly all are subjects, not p
 
 **Mitigated 2026-08-03 two ways.** Email confirmation is switched off (defensible for beta: access to a baby requires an **invite code**, so the inbox is not the security boundary), and **Google sign-in is live**, which routes around email entirely for anyone with a Google account — most grandparents, already signed in on their phone.
 
-**Still open** because the magic-link fallback and any future password reset both depend on delivery, and the built-in sender will fail them silently.
+**Still open, and here is the sharp edge.** Sign-up no longer needs email (confirmation is off) and Google users never touch it — but **a forgotten password can only be recovered through an inbox**. On the built-in sender that mail frequently will not arrive, and it fails silently: the app says "check your email" and nothing comes. A caregiver in that position has no route back to their account and no way to know why.
+
+Two consequences follow from confirmation being off, and both should be stated rather than discovered: someone can register with an email they do not own, and if they mistype it at signup there is no recovery path at all.
 
 **Closes when.** Custom SMTP is configured (Resend, Postmark, SES — free tiers are ample for a family beta). Email confirmation should also be switched back ON before public release.
 

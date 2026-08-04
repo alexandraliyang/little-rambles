@@ -55,6 +55,28 @@ export async function sendMagicLink(email) {
   return { ok: true, sent: true };
 }
 
+/* Password reset. The one part of the email path that CANNOT be routed around:
+   Google users never need it, and signup works without mail because confirmation
+   is off, but a forgotten password can only be recovered through an inbox. On
+   Supabase's built-in sender that mail will often not arrive, and it fails
+   silently (debt T11) — so the UI must say "if it doesn't arrive" rather than
+   promising delivery. */
+export async function resetPassword(email) {
+  if (!enabled) return off();
+  const { error } = await supa().auth.resetPasswordForEmail(String(email).trim(), {
+    redirectTo: window.location.origin + window.location.pathname,
+  });
+  if (error) return fail(error);
+  return { ok: true, sent: true };
+}
+
+/* Used after arriving back from a reset link, and from "change my password". */
+export async function updatePassword(password) {
+  if (!enabled) return off();
+  const { error } = await supa().auth.updateUser({ password });
+  return error ? fail(error) : { ok: true };
+}
+
 export async function signOut() {
   if (!enabled) return off();
   await supa().auth.signOut();
