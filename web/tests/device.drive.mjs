@@ -108,6 +108,24 @@ await ctx.addInitScript(({ db, store, key, value }) => {
 }, { db: "little-rambles", store: "kv", key: "lrm:1", value: JSON.stringify(PHOTOS) });
 
 await ctx.addInitScript(() => { window.__cancels = 0; addEventListener("pointercancel", () => { window.__cancels++; }, true); });
+/* GUARD. This suite once reported "all checks passed" against a bundle from
+   before a failed build — the tests were green about code that no longer
+   existed. Verify the served app.js is byte-identical to the local one before
+   asserting anything about it. */
+{
+  const local = readFileSync(fileURLToPath(new URL("../dist/app.js", import.meta.url)));
+  const res = await fetch(APP.replace(/\/$/, "") + "/app.js?cb=" + Date.now());
+  const served = Buffer.from(await res.arrayBuffer());
+  if (served.length !== local.length) {
+    const NL = String.fromCharCode(10);
+    console.error(NL + "  STALE BUILD - the server is not serving what was just built." + NL +
+      "  served " + served.length + " bytes, local dist " + local.length + " bytes." + NL +
+      "  Run: npm run dist   and check it succeeded before trusting anything below." + NL);
+    process.exit(1);
+  }
+  console.log("  ----  bundle check: server matches local dist (" + local.length + " bytes)");
+}
+
 const page = await ctx.newPage();
 const errors = [];
 page.on("pageerror", (e) => errors.push(String(e)));

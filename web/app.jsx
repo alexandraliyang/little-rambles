@@ -1985,7 +1985,10 @@ const CSS = `
 .lvlist li.yes::before{content:"✓";position:absolute;left:0;color:#2F5138;font-weight:700}
 .lvlist li.no::before{content:"—";position:absolute;left:0;color:#A14E33;font-weight:700}
 .lvnote{font-size:11.5px;color:#8A8875;margin:7px 0 0;font-style:italic}
-.memberrow .mwho,.uarow .mwho{display:flex;flex-direction:column;gap:1px;min-width:0}
+.memberrow .mwho,.uarow .mwho{display:flex;flex-direction:column;gap:2px;min-width:0}
+.mline{display:flex;align-items:center;gap:8px;min-width:0}
+.mavatar{width:28px;height:28px;border-radius:99px;object-fit:cover;flex:none;border:1.5px solid #E3E1D6}
+.mavatar.ph{display:flex;align-items:center;justify-content:center;background:#29382F;color:#F6F5EF;font-size:12px;font-weight:700}
 .memberrow .msub,.uarow .mwho .msub{font-weight:400}
 .mini.danger-mini{color:#A14E33}
 .orline{display:flex;align-items:center;gap:10px;margin:14px 0;color:#8A8875;font-size:12px;font-weight:700}

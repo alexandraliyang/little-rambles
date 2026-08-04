@@ -72,6 +72,21 @@ export function canChangeMember(member, target, members, nextRole) {
   return { ok: true };
 }
 
+/* Leaving is not removing. Anyone may leave their own family page; the single
+   exception is the only admin, because a baby with no admin can never be
+   invited into again and no support desk exists to recover it. Mirrored by
+   leave_baby() in SQL — this exists so the button can explain itself rather
+   than failing. */
+export function canLeave(member, members) {
+  if (!member || !member.role) return { ok: false, why: "You're not part of this family." };
+  if (member.role !== "admin") return { ok: true };
+  const admins = (members || []).filter((m) => m.role === "admin");
+  if (admins.length <= 1) {
+    return { ok: false, why: "You're the only admin. Make someone else an admin first, then you can leave." };
+  }
+  return { ok: true };
+}
+
 export function canRemoveMember(member, target, members) {
   if (!can(member, "removeMember")) return { ok: false, why: "Only an admin can remove someone." };
   if (!target) return { ok: false, why: "That person is not part of this family." };

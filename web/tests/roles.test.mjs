@@ -2,7 +2,7 @@
    These are the rules a family would recognise, stated as assertions. The
    database's RLS must encode the same ones independently; this suite only
    guarantees the client never OFFERS what the server would refuse. */
-import { can, canRemoveMember, canChangeMember, canDeleteComment, atLeast, makeInviteCode, isValidCode, ROLES } from "../engine/roles.js";
+import { can, canRemoveMember, canChangeMember, canDeleteComment, canLeave, atLeast, makeInviteCode, isValidCode, ROLES } from "../engine/roles.js";
 
 const fails = [];
 const ok = (n, c, d) => { if (c) console.log("  PASS  " + n + (d ? "  [" + d + "]" : "")); else { console.log("  FAIL  " + n + (d ? " — " + d : "")); fails.push(n); } };
@@ -54,6 +54,15 @@ ok("with a second admin, demotion is allowed",
 ok("an admin can remove a caregiver", canRemoveMember(mum, dad, members).ok);
 ok("a caregiver cannot remove anyone", !canRemoveMember(dad, grandma, members).ok);
 ok("removing someone who isn't a member is refused", !canRemoveMember(mum, null, members).ok);
+
+/* --- leaving: anyone may, except the last admin --- */
+ok("a viewer can leave", canLeave(grandma, members).ok);
+ok("a caregiver can leave", canLeave(dad, members).ok);
+ok("the ONLY admin cannot leave", !canLeave(mum, members).ok, canLeave(mum, members).why);
+ok("and is told how to make it possible",
+   /make someone else an admin/i.test(canLeave(mum, members).why));
+ok("an admin can leave once there is a second one", canLeave(mum, twoAdmins).ok);
+ok("someone who isn't a member cannot leave", !canLeave(null, members).ok);
 
 /* --- deny by default --- */
 ok("an unknown action is denied even for an admin", !can(mum, "launchMissiles"));

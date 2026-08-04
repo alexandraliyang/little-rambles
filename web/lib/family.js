@@ -124,9 +124,9 @@ export async function myBabies() {
 export async function members(babyId) {
   if (!enabled) return { ok: true, members: [] };
   const { data, error } = await supa().from("baby_members")
-    .select("user_id, role, display_name, joined_at").eq("baby_id", babyId).order("joined_at");
+    .select("user_id, role, display_name, avatar_path, joined_at").eq("baby_id", babyId).order("joined_at");
   if (error) return fail(error);
-  return { ok: true, members: (data || []).map((m) => ({ userId: m.user_id, role: m.role, name: m.display_name, joinedAt: m.joined_at })) };
+  return { ok: true, members: (data || []).map((m) => ({ userId: m.user_id, role: m.role, name: m.display_name, avatar: m.avatar_path, joinedAt: m.joined_at })) };
 }
 
 export async function setRole(babyId, userId, role) {
@@ -191,6 +191,43 @@ export async function redeemInvite(code, displayName) {
   });
   if (error) return fail(error);
   return { ok: true, babyId: data };
+}
+
+/* Leaving. Goes through the function so the last-admin rule is enforced by the
+   database, not merely by the button being hidden. */
+export async function leaveFamily(babyId) {
+  if (!enabled) return off();
+  const { error } = await supa().rpc("leave_baby", { p_baby: babyId });
+  return error ? fail(error) : { ok: true };
+}
+
+/* A member's own name and photo. Separate from role: "Grandma" is who you are,
+   "can look and comment" is what you may do. */
+export async function updateMyProfile(babyId, { name, avatarPath }) {
+  if (!enabled) return off();
+  const u = await currentUser(); if (!u) return off();
+  const patch = {};
+  if (name !== undefined) patch.display_name = name;
+  if (avatarPath !== undefined) patch.avatar_path = avatarPath;
+  const { error } = await supa().from("baby_members").update(patch).eq("baby_id", babyId).eq("user_id", u.id);
+  return error ? fail(error) : { ok: true };
+}
+
+/* Avatars live under the baby's folder so the same storage policies apply:
+   leave the family and you lose the pictures, including everyone's faces. */
+export async function uploadAvatar(babyId, file) {
+  if (!enabled) return off();
+  const u = await currentUser(); if (!u) return off();
+  const path = babyId + "/avatars/" + u.id + "-" + Date.now() + ".jpg";
+  const { error } = await supa().storage.from("memories").upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" });
+  if (error) return fail(error);
+  return { ok: true, path };
+}
+
+export async function avatarUrl(path) {
+  if (!enabled || !path) return null;
+  const { data } = await supa().storage.from("memories").createSignedUrl(path, 3600);
+  return data ? data.signedUrl : null;
 }
 
 /* ------------------------------------------------------- first upload ----- */
@@ -258,18 +295,19 @@ export async function toggleLike(babyId, memoryId, liked) {
 export async function commentsFor(babyId, memoryId) {
   if (!enabled) return { ok: true, comments: [] };
   const { data, error } = await supa().from("memory_comments")
-    .select("id, author_id, body, created_at").eq("baby_id", babyId).eq("memory_id", memoryId).order("created_at");
+    .select("id, author_id, author_name, body, created_at").eq("baby_id", babyId).eq("memory_id", memoryId).order("created_at");
   if (error) return fail(error);
-  return { ok: true, comments: (data || []).map((c) => ({ id: c.id, authorId: c.author_id, body: c.body, at: c.created_at })) };
+  return { ok: true, comments: (data || []).map((c) => ({ id: c.id, authorId: c.author_id, author: c.author_name, body: c.body, at: c.created_at })) };
 }
 
-export async function addComment(babyId, memoryId, body) {
+export async function addComment(babyId, memoryId, body, authorName) {
   if (!enabled) return off();
   const u = await currentUser(); if (!u) return off();
   const text = String(body || "").trim();
   if (!text) return { ok: false, error: "Write something first." };
   const { data, error } = await supa().from("memory_comments")
-    .insert({ memory_id: memoryId, baby_id: babyId, author_id: u.id, body: text }).select().single();
+    .insert({ memory_id: memoryId, baby_id: babyId, author_id: u.id, body: text, author_name: authorName || null })
+    .select().single();
   return error ? fail(error) : { ok: true, comment: data };
 }
 

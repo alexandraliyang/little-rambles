@@ -12,9 +12,10 @@ import {
   signIn, signUp, signInWith, sendMagicLink, resetPassword, signOut,
   currentUser, onAuthChange, createBaby, myBabies, members, setRole,
   removeMember, createInvite, listInvites, revokeInvite, redeemInvite, uploadLocal,
+  leaveFamily, updateMyProfile, uploadAvatar, avatarUrl,
 } from "../lib/family.js";
 import { enabled } from "../lib/supa.js";
-import { can, canRemoveMember, canChangeMember, ROLES, ROLE_LABEL } from "../engine/roles.js";
+import { can, canRemoveMember, canChangeMember, canLeave, ROLES, ROLE_LABEL } from "../engine/roles.js";
 import InviteSheet from "./Invite.jsx";
 import Sheet from "./Sheet.jsx";
 
@@ -37,6 +38,10 @@ export default function Family({ profile, visits, plans, say }) {
   const [showJoin, setShowJoin] = useState(false);
   const [inviting, setInviting] = useState(false);
   const [reshow, setReshow] = useState(null);
+  const [avatars, setAvatars] = useState({});      // signed URLs, per member
+  const [newFolk, setNewFolk] = useState([]);      // FB26: joined since you last looked
+  const [editingMe, setEditingMe] = useState(false);
+  const [myName, setMyName] = useState("");
 
   useEffect(() => {
     if (!enabled) return;
@@ -62,7 +67,27 @@ export default function Family({ profile, visits, plans, say }) {
     setBaby(b);
     if (!b) return;
     setMe({ userId: user.id, role: b.role });
-    const m = await members(b.id); if (m.ok) setPeople(m.members);
+    const m = await members(b.id);
+    if (m.ok) {
+      setPeople(m.members);
+      const mine = m.members.find((x) => x.userId === user.id);
+      if (mine) setMyName(mine.name || "");
+      /* FB26: in-app notice, no server needed. Anyone whose membership is newer
+         than the last time this screen was opened on this device is "new". Push
+         comes later (T7); this is the half that works today. */
+      const key = "lr:seen-members:" + b.id;
+      let seen = [];
+      try { seen = JSON.parse(localStorage.getItem(key) || "[]"); } catch (e) {}
+      if (seen.length) {
+        const fresh = m.members.filter((x) => !seen.includes(x.userId) && x.userId !== user.id);
+        if (fresh.length) setNewFolk(fresh);
+      }
+      try { localStorage.setItem(key, JSON.stringify(m.members.map((x) => x.userId))); } catch (e) {}
+      /* Signed URLs expire, so they are fetched per load rather than stored. */
+      const urls = {};
+      await Promise.all(m.members.filter((x) => x.avatar).map(async (x) => { urls[x.userId] = await avatarUrl(x.avatar); }));
+      setAvatars(urls);
+    }
     if (b.role === "admin") { const i = await listInvites(b.id); if (i.ok) setCodes(i.invites.filter((x) => !x.used_by)); }
   };
   useEffect(() => { if (user) load(); else { setBaby(null); setPeople([]); setCodes([]); } }, [user]);
@@ -185,6 +210,11 @@ export default function Family({ profile, visits, plans, say }) {
         <p className="why">You're signed in as <b>{user.email}</b> · {roleWord[me ? me.role : "viewer"]}</p>
       </div>
 
+      {/* FB26: "Grandma joined" is the notification that works with no server. */}
+      {newFolk.length > 0 && <div className="nudge away"><span>👋</span>
+        <p><b>{newFolk.map((f) => f.name || "Someone").join(", ")} {newFolk.length === 1 ? "has" : "have"} joined {baby.name}'s page.</b> They can see the outings and photos from now on.</p>
+        <button className="mini x" onClick={() => setNewFolk([])}>✕</button></div>}
+
       <div className="lbl">Who can see {baby.name} ({people.length})</div>
       <div className="card">
         {people.map((p) => {
@@ -192,7 +222,13 @@ export default function Family({ profile, visits, plans, say }) {
           return <div className="uarow" key={p.userId}>
             {/* Relationship first, permission second: "Grandma · can look and
                 comment" reads like a family; "viewer" reads like an ACL. */}
-            <span className="mwho"><b>{p.name || (isMe ? "You" : "Family member")}</b>{isMe ? " (you)" : ""}
+            <span className="mwho">
+              <span className="mline">
+                {avatars[p.userId]
+                  ? <img className="mavatar" src={avatars[p.userId]} alt="" />
+                  : <span className="mavatar ph">{(p.name || "?").trim().charAt(0).toUpperCase()}</span>}
+                <b>{p.name || (isMe ? "You" : "Family member")}</b>{isMe ? " (you)" : ""}
+              </span>
               <small className="msub">{roleWord[p.role]}</small></span>
             {isAdmin && !isMe && <span className="uaacts">
               <select className="rolesel" value={p.role} onChange={(e) => {
@@ -261,7 +297,49 @@ export default function Family({ profile, visits, plans, say }) {
           onClose={async () => { setInviting(false); setReshow(null); await load(); }} />
       </Sheet>}
 
+      <div className="lbl">You on this page</div>
+      <div className="card">
+        {!editingMe
+          ? <>
+            <p className="why">You appear as <b>{myName || "Family member"}</b>. This is the name on your comments and on outings you log.</p>
+            <div className="pills"><button className="pillbtn" onClick={() => setEditingMe(true)}>Change name or photo</button></div>
+          </>
+          : <>
+            <label className="flab">What should people call you?</label>
+            <input className="inp" placeholder="Mum, Dad, Grandma…" value={myName} onChange={(e) => setMyName(e.target.value)} />
+            <div className="btns">
+              <label className="pick main">🖼️ Choose a photo
+                <input type="file" accept="image/*" hidden onChange={async (e) => {
+                  const f = e.target.files && e.target.files[0]; e.target.value = "";
+                  if (!f) return;
+                  await run(async () => {
+                    const up = await uploadAvatar(baby.id, f);
+                    if (!up.ok) return up;
+                    return updateMyProfile(baby.id, { avatarPath: up.path });
+                  }, async () => { say("Photo updated."); await load(); });
+                }} /></label>
+            </div>
+            <button className="primary full" onClick={() => run(() => updateMyProfile(baby.id, { name: myName.trim() || null }),
+              async () => { say("Saved."); setEditingMe(false); await load(); })}>Save</button>
+            <button className="ghost full mt" onClick={() => setEditingMe(false)}>Cancel</button>
+          </>}
+      </div>
+
       {err && <p className="warnbox">{err}</p>}
+
+      {/* FB26: leaving is not removing. Anything you wrote stays, attributed —
+          the founder's decision, and the reason comment authorship is stored on
+          the comment rather than looked up from a membership that may be gone. */}
+      <button className="ghost full mt" onClick={() => {
+        const check = canLeave(me, people);
+        if (!check.ok) { setErr(check.why); return; }
+        const msg = "Leave " + baby.name + "'s page?" + String.fromCharCode(10, 10) +
+          "You'll stop seeing new outings and photos. Anything you've written stays, with your name on it.";
+        if (!window.confirm(msg)) return;
+
+        run(() => leaveFamily(baby.id), async () => { say("You've left " + baby.name + "'s page."); await load(); });
+      }}>Leave this family</button>
+
       <button className="ghost full mt" onClick={() => run(() => signOut(), () => say("Signed out. Your journal is still on this phone."))}>Sign out</button>
     </>
   );
