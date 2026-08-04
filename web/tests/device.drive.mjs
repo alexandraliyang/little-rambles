@@ -764,6 +764,32 @@ ok("FB19 an update offers itself instead of waiting to be guessed", !!bar, bar &
 ok("FB19 and it can be taken or dismissed",
    !!bar && bar.buttons.some((b) => /Refresh/.test(b)) && bar.buttons.length >= 2, bar && bar.buttons.join("/"));
 
+/* ---------- FB20: the family surface renders, signed out ---------- */
+await page.locator("button.kidchip").click();
+await page.waitForTimeout(800);
+const fam = await page.evaluate(() => {
+  const t = document.body.innerText;
+  return {
+    google: /Continue with Google/.test(t),
+    password: /I have an account|Create an account/.test(t),
+    link: /Email me a link/.test(t),
+    optional: /works without an account/i.test(t),
+  };
+});
+ok("FB20 family offers Google sign-in", fam.google);
+ok("FB20 family offers email + password for people who don't want Google", fam.password);
+ok("FB20 family offers a passwordless link", fam.link);
+ok("FB20 it says plainly that an account is optional", fam.optional);
+await shot("21-family-signed-out");
+
+/* the invite link must land somewhere useful even before signing in */
+await page.goto(APP + "?join=ABC123", { waitUntil: "networkidle" });
+await page.waitForTimeout(1200);
+await page.locator("button.kidchip").click();
+await page.waitForTimeout(700);
+ok("FB20 an invite link does not dead-end for a signed-out visitor",
+   /account|sign in/i.test(await txt()), "shows the sign-in surface");
+
 /* ---------- no runtime errors anywhere ---------- */
 const realErrors = errors.filter((e) => !/favicon|photon|nominatim|wikimedia|Failed to load resource/i.test(e));
 ok("no uncaught runtime errors across the whole walk", realErrors.length === 0, realErrors.slice(0, 2).join(" ; ") || "clean");
