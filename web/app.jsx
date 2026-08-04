@@ -7,7 +7,8 @@ import { MON, DAY, monthsOld, fmtAge, fmtDate, fmtHour } from "./lib/format.js";
 import { haversine, fmtKm, geoSearch, nearQuery, venueQuery, directionsTo } from "./lib/geo.js";
 import { shrink } from "./lib/media.js";
 import { availability } from "./engine/availability.js";
-import { CMAP, UNDERSTOOD, parseConstraints, cmapFor } from "./engine/constraints.js";
+import { CMAP, UNDERSTOOD, parseConstraints, cmapFor, cmapForIn } from "./engine/constraints.js";
+import { buildCorpus } from "./engine/match.js";
 import Family from "./components/Family.jsx";
 import Join from "./components/Join.jsx";
 import { AGE_BANDS, bandFor, AFF, CAT_META, ACTIVITIES, FEATURED, FEATURED_CITY, AREA_SUGGESTIONS, IMG, KIDQ } from "./data.js";
@@ -177,6 +178,11 @@ function parseNap(notes) {
   return h + min / 60;
 }
 
+/* FB25. The activity library doubles as a vocabulary: a word the lexicon does
+   not know is looked up here before we admit defeat. Built once at module load,
+   because it is derived from static data and never changes at runtime. */
+buildCorpus(ACTIVITIES, KIDQ);
+
 /* ============================== APP ============================= */
 export default function App() {
   const [loaded, setLoaded] = useState(false);
@@ -296,6 +302,8 @@ export default function App() {
       avoid: auto.avoid.filter((a) => !off.includes(a)),
       love: auto.love.filter((a) => !off.includes(a)),
       unknown: auto.unknown || [],
+      inferred: auto.inferred || [],
+      extra: auto.extra || {},
     };
   }, [profile && profile.notes, profile && profile.cOff]);
 
@@ -330,7 +338,7 @@ export default function App() {
   function blocked(a) {
     if (a.userAdded) return false;               // your own additions are never second-guessed
     return constraints.avoid.some((l) => {
-      const m = cmapFor(l);
+      const m = cmapForIn(l, constraints);
       return m.cats.includes(a.cat) || a.aff.some((f) => m.affs.includes(f));
     });
   }
@@ -351,8 +359,8 @@ export default function App() {
     if (swipes[a.id] === "yes") s += 2;
     if (swipes[a.id] === "no") s -= 3;
     if (retryIds.includes(a.id)) s += 2;
-    constraints.avoid.forEach((l) => { const m = cmapFor(l); if (m.cats.includes(a.cat)) s -= 14; a.aff.forEach((f) => { if (m.affs.includes(f)) s -= 6; }); });
-    constraints.love.forEach((l) => { const m = cmapFor(l); if (m.cats.includes(a.cat)) s += 5; a.aff.forEach((f) => { if (m.affs.includes(f)) s += 2; }); });
+    constraints.avoid.forEach((l) => { const m = cmapForIn(l, constraints); if (m.cats.includes(a.cat)) s -= 14; a.aff.forEach((f) => { if (m.affs.includes(f)) s -= 6; }); });
+    constraints.love.forEach((l) => { const m = cmapForIn(l, constraints); if (m.cats.includes(a.cat)) s += 5; a.aff.forEach((f) => { if (m.affs.includes(f)) s += 2; }); });
     if (a.userAdded) s += 3;
     s += avail.st === "open" ? 5 : avail.st === "closing" || avail.st === "soon" ? 2 : 0;
     return s;
@@ -370,7 +378,7 @@ export default function App() {
     if (months < a.ageMin) return { k: "later", l: a.ageMin >= 60 ? "Best around 5+" : a.ageMin >= 42 ? "Best around 3½+" : a.ageMin >= 28 ? "Best around 2½" : `From ${fmtAge(a.ageMin)}` };
     if (a.userAdded) return { k: "yours", l: "Yours" };
     if (retryIds.includes(a.id)) return { k: "retry", l: "Worth a retry" };
-    if (constraints.avoid.some((l) => cmapFor(l).cats.includes(a.cat))) return { k: "paused", l: "You're avoiding this" };
+    if (constraints.avoid.some((l) => cmapForIn(l, constraints).cats.includes(a.cat))) return { k: "paused", l: "You're avoiding this" };
     if (pausedCats.includes(a.cat)) return { k: "paused", l: "Resting this type" };
     if (lovedCats.includes(a.cat)) return { k: "loves", l: `${profile.name} loves this` };
     return { k: "great", l: `Great at ${fmtAge(months)}` };
@@ -1289,6 +1297,13 @@ export default function App() {
               {/* FB22-03: the note used to be read in silence. Writing "loves
                   cheese" and seeing nothing gave no way to tell whether it had
                   been understood, ignored, or misread. */}
+              {/* FB25: a guess is shown as a guess. "I took X to mean Y" invites a
+                  correction; presenting it as fact does not. */}
+              {constraints.inferred && constraints.inferred.length > 0 && <div className="nudge sm"><span>💡</span><p>
+                {constraints.inferred.map((i) => i.how === "typo"
+                  ? `I read “${i.clause}” as “${i.corrected}”.`
+                  : `I took “${i.clause}” to mean ${i.as.join(" and ")}.`).join(" ")} Reword it if that's not right.
+              </p></div>}
               {constraints.unknown && constraints.unknown.length > 0 && <div className="nudge sm"><span>🤔</span><p>
                 I couldn't place <b>{constraints.unknown.map((u) => "“" + u + "”").join(", ")}</b>. I can act on: {UNDERSTOOD.join(", ")}.
               </p></div>}

@@ -6,6 +6,9 @@
    Run: npm run test:engine */
 import { availability } from "../engine/availability.js";
 import { parseConstraints, cmapFor, UNDERSTOOD } from "../engine/constraints.js";
+import { buildCorpus, variants, withinOneEdit } from "../engine/match.js";
+import { ACTIVITIES, KIDQ } from "../data.js";
+buildCorpus(ACTIVITIES, KIDQ);
 import { haversine, fmtKm, directionsTo, venueQuery } from "../lib/geo.js";
 import { fmtHour, fmtAge, monthsOld } from "../lib/format.js";
 
@@ -90,6 +93,42 @@ ok("'loves cheese' is now understood as food",
 ].forEach(([phrase, concept]) =>
   ok("understands: " + phrase, parseConstraints(phrase).avoid.includes(concept),
      JSON.stringify(parseConstraints(phrase).avoid)));
+
+/* FB25. A fixed list can never be finished, so unknown words fall through a
+   ladder before we give up. Each rung is asserted separately, because a silent
+   fallback that "works" is impossible to reason about later. */
+ok("morphology: 'sliding' resolves without being listed",
+   parseConstraints("loves sliding").love.includes("climbing and running"));
+ok("morphology: 'gardening' resolves to nature",
+   parseConstraints("loves gardening").love.includes("nature and outdoors"));
+/* "swiming" is caught one rung earlier, by morphology — worth asserting, since
+   the ladder is meant to resolve as early and as cheaply as it can. */
+const near = parseConstraints("loves swiming");
+ok("a near-miss is caught by morphology before the typo rung",
+   near.love.includes("water play") && near.inferred[0].how === "variant", JSON.stringify(near.inferred));
+const typo = parseConstraints("loves anmals");
+ok("a genuine typo is corrected", typo.love.includes("animals"), JSON.stringify(typo.love));
+ok("and the correction is disclosed, not applied silently",
+   typo.inferred.length === 1 && typo.inferred[0].how === "typo" && typo.inferred[0].corrected === "animals",
+   JSON.stringify(typo.inferred));
+const corpus = parseConstraints("loves bubbles");
+ok("a word absent from the lexicon is answered from the activity library",
+   corpus.love.length === 1 && corpus.inferred[0].how === "corpus", JSON.stringify(corpus.love));
+ok("a corpus answer still carries real categories/affordances",
+   Object.values(corpus.extra)[0].cats.length > 0 || Object.values(corpus.extra)[0].affs.length > 0,
+   JSON.stringify(corpus.extra));
+
+/* The ladder must not invent meaning. A passing mention in one description is
+   not evidence, or "quantum physics" becomes a toddler activity. */
+ok("a word with no real support is still reported as not understood",
+   parseConstraints("loves quantum physics").unknown.length === 1,
+   JSON.stringify(parseConstraints("loves quantum physics")));
+ok("an unrelated everyday word is not force-fitted",
+   parseConstraints("hates the dentist").unknown.length === 1);
+
+ok("typo distance is bounded", withinOneEdit("swim", "swin") && !withinOneEdit("swim", "walk"));
+ok("doubled consonants are undone: swimming -> swim", variants("swimming").includes("swim"), variants("swimming").join(","));
+ok("variants stay conservative on short words", !variants("is").includes(""), variants("is").join(","));
 
 /* A phrase must not be claimed by a word hiding inside it. */
 ok("'ice cream' is food, not snow", parseConstraints("loves ice cream").love.includes("food outings")
