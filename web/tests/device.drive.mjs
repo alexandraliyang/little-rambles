@@ -183,7 +183,7 @@ ok("FB17-05c your own activities can still be removed, from their own card",
 await shot("04-yours");
 
 /* ---------- 4. Settings no longer duplicates that list ---------- */
-await page.locator("button.chip.tiny").click();
+await page.locator("button.kidchip").click();
 await page.waitForTimeout(400);
 const settings = await txt();
 ok("FB3-04 Settings has no Your-activities list", !/Your activities \(/.test(settings));

@@ -7,7 +7,7 @@ import { MON, DAY, monthsOld, fmtAge, fmtDate, fmtHour } from "./lib/format.js";
 import { haversine, fmtKm, geoSearch, nearQuery, venueQuery, directionsTo } from "./lib/geo.js";
 import { shrink } from "./lib/media.js";
 import { availability } from "./engine/availability.js";
-import { CMAP, parseConstraints, cmapFor } from "./engine/constraints.js";
+import { CMAP, UNDERSTOOD, parseConstraints, cmapFor } from "./engine/constraints.js";
 import Family from "./components/Family.jsx";
 import Join from "./components/Join.jsx";
 import { AGE_BANDS, bandFor, AFF, CAT_META, ACTIVITIES, FEATURED, FEATURED_CITY, AREA_SUGGESTIONS, IMG, KIDQ } from "./data.js";
@@ -788,7 +788,14 @@ export default function App() {
   if (!profileComplete || !signedIn || editProfile)
     return <div className="root"><style>{CSS}</style><div className="phone">
       <Profile near={deviceLoc} profile={profile} signedIn={signedIn} editing={editProfile}
-        onDone={(p) => { setProfile(p); setSignedIn(true); setEditProfile(false); setTab("discover"); }}
+        onDone={(p) => {
+          const wasEditing = editProfile;
+          setProfile(p); setSignedIn(true); setEditProfile(false);
+          /* FB22-03: only a first-run setup should land you on the deck. Editing
+             preferences and being thrown to the main screen loses your place and
+             gives no sign the change took. */
+          if (wasEditing) { setTab("settings"); say("Saved."); } else setTab("discover");
+        }}
         onCancel={editProfile ? () => setEditProfile(false) : null} constraints={constraints} />
     </div></div>;
 
@@ -848,8 +855,10 @@ export default function App() {
                 screens: the founder assumed Settings WAS the profile. Now the
                 child chip and the gear both open one screen, and the gear says
                 what it is rather than relying on an icon. */}
-            <button className="kidchip" onClick={() => setTab("settings")} title="Profile & settings">{profile.name} · {fmtAge(months)}</button>
-            <button className="chip tiny gear" onClick={() => setTab("settings")} aria-label="Profile and settings">⚙️ You</button>
+            <button className="kidchip" onClick={() => setTab("settings")} title="Profile & settings">{profile.name} · {fmtAge(months)} <span className="kidgear">⚙️</span></button>
+{/* FB22-01: one button. The chip already carries the child's name and age
+                and opens the same screen, so a second control beside it was pure
+                duplication. */}
           </div>
         </header>
 
@@ -1268,6 +1277,12 @@ export default function App() {
               {(constraints.avoid.length || constraints.love.length)
                 ? <div className="chipline">{constraints.avoid.map((c) => <span className="badge b-paused" key={c}>avoiding {c}</span>)}{constraints.love.map((c) => <span className="badge b-loves" key={c}>likes {c}</span>)}</div>
                 : <p className="why">Nothing set yet. Edit the profile and write a line like “hates water, loves trains, naps at 12:30”.</p>}
+              {/* FB22-03: the note used to be read in silence. Writing "loves
+                  cheese" and seeing nothing gave no way to tell whether it had
+                  been understood, ignored, or misread. */}
+              {constraints.unknown && constraints.unknown.length > 0 && <div className="nudge sm"><span>🤔</span><p>
+                I couldn't place <b>{constraints.unknown.map((u) => "“" + u + "”").join(", ")}</b>. I can act on: {UNDERSTOOD.join(", ")}.
+              </p></div>}
               <p className="fine">These come from the free-text line in the profile and change rankings immediately.</p>
             </div>
 
@@ -1734,6 +1749,7 @@ const CSS = `
 .brand .logo{color:#29382F;flex:none}
 /* Section labels were quieter than the body text beneath them, so long screens
    had no scannable structure. */
+.lbl.tight{margin:2px 0 8px}
 .lbl{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1.1px;color:#6E7A6F;margin:20px 0 9px}
 /* Cards lift off the page instead of sitting flat on it. */
 .card{box-shadow:0 2px 0 rgba(41,56,47,.04),0 6px 18px -10px rgba(41,56,47,.28)}
@@ -1851,7 +1867,7 @@ const CSS = `
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 10px}
 .chip{background:#FFF;border:1.5px solid #DDDACB;border-radius:99px;padding:7px 12px;font-family:'Karla';font-size:12.5px;font-weight:700;color:#4A554D;cursor:pointer}
 .chip.on{background:#29382F;color:#F6F5EF;border-color:#29382F}.chip.tiny{padding:6px 9px}
-.chip.tiny.gear{font-size:12px;white-space:nowrap}
+.kidgear{opacity:.7;font-size:11px;margin-left:2px}
 .inp{width:100%;border:1.5px solid #DDDACB;border-radius:12px;padding:11px 13px;font-family:'Karla';font-size:14px;background:#FFF;margin-bottom:10px;color:#29382F}
 .inp::placeholder{color:#A5A28E}.ta{min-height:70px;resize:vertical}.tall2{min-height:110px}
 .flab{display:block;font-size:12.5px;font-weight:700;margin:10px 0 5px}.opt{font-weight:400;color:#8A8875}

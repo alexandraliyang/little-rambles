@@ -146,7 +146,8 @@ if (mineTab) { click(mineTab); await settle(); }
 ok("FB3-05 an add action lives with them", !!findByText("button", "We went somewhere"));
 ok("FB3-05 custom activities are not ALSO a tab (one home, not two)",
    ![...root.querySelectorAll("nav.topnav .tl")].some((t) => t.textContent === "Yours"));
-const gear = findByText("button", "⚙️");
+/* FB22-01: one entry point now — the child chip opens profile AND settings. */
+const gear = root.querySelector("button.kidchip");
 if (gear) { click(gear); await settle(); }
 ok("FB3-04 Settings no longer carries a Your-activities list", !text().includes("Your activities ("));
 ok("FB3-04 Settings still carries the data section", text().includes("Export my data"));
@@ -317,7 +318,7 @@ ok("FB13-03 empty filters are visibly dimmed",
    "dimmed: " + root.querySelectorAll(".chip.none").length);
 
 /* --- FB14-01: no stale hand-typed version anywhere --- */
-const gear14 = findByText("button", "⚙️");
+const gear14 = root.querySelector("button.kidchip");
 if (gear14) { click(gear14); await settle(); }
 ok("FB14-01 the stale v3.3 footer is gone", !/v3\.3/.test(text()), (text().match(/v3\.\d[^ ]*/g) || []).join(","));
 ok("FB14-01 any version shown in Settings is the real one",

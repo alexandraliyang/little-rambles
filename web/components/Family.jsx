@@ -218,9 +218,10 @@ export default function Family({ profile, visits, plans, say }) {
           <button className="primary full" onClick={() => { setErr(""); setInviting(true); }}>➕ Invite someone</button>
         </div>
 
-        {codes.length > 0 && <>
-          <div className="lbl">Codes waiting to be used ({codes.length})</div>
-          <div className="card">
+        {/* FB22-02: pending codes belong to the invite card, not a section of
+            their own — they are part of managing invites, not a separate topic. */}
+        {codes.length > 0 && <div className="card">
+          <div className="lbl tight">Waiting to be used ({codes.length})</div>
             {codes.map((c) => <div className="uarow" key={c.code}>
               <span className="mwho"><b className="codeval">{c.code}</b>
                 <small className="msub">{c.label ? c.label + " · " : ""}{roleWord[c.role]} · expires {new Date(c.expires_at).toLocaleDateString()}</small></span>
@@ -234,9 +235,8 @@ export default function Family({ profile, visits, plans, say }) {
                 }}>✕</button>
               </span>
             </div>)}
-            <p className="fine">Each code works once and expires after two weeks.</p>
-          </div>
-        </>}
+          <p className="fine">Each code works once and expires after two weeks.</p>
+        </div>}
       </>}
 
       {(inviting || reshow) && <Sheet onClose={() => { setInviting(false); setReshow(null); }}>

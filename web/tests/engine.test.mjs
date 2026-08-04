@@ -5,7 +5,7 @@
 
    Run: npm run test:engine */
 import { availability } from "../engine/availability.js";
-import { parseConstraints, cmapFor } from "../engine/constraints.js";
+import { parseConstraints, cmapFor, UNDERSTOOD } from "../engine/constraints.js";
 import { haversine, fmtKm, directionsTo, venueQuery } from "../lib/geo.js";
 import { fmtHour, fmtAge, monthsOld } from "../lib/format.js";
 
@@ -58,6 +58,25 @@ const c4 = parseConstraints("");
 ok("an empty note produces no constraints", c4.avoid.length === 0 && c4.love.length === 0);
 const c5 = parseConstraints("naps at 12:30");
 ok("an unrelated note produces no constraints", c5.avoid.length === 0 && c5.love.length === 0, JSON.stringify(c5));
+
+/* FB22-03. The founder wrote "love cheese" and nothing happened: the word was
+   not in the vocabulary, and the app said so in no way at all. Two fixes —
+   a wider vocabulary, and reporting whatever still does not land. */
+ok("'loves cheese' is now understood as food",
+   parseConstraints("loves cheese").love.includes("food outings"), JSON.stringify(parseConstraints("loves cheese")));
+ok("'loves the aquarium' is understood as animals",
+   parseConstraints("loves the aquarium").love.includes("animals"));
+ok("'hates puddles' is understood as water",
+   parseConstraints("hates puddles").avoid.includes("water"));
+const unk = parseConstraints("loves quantum physics");
+ok("a preference we cannot model is REPORTED, not silently dropped",
+   unk.unknown.length === 1 && /quantum/.test(unk.unknown[0]), JSON.stringify(unk.unknown));
+const mixed = parseConstraints("hates water, loves knitting");
+ok("the understood half still works when the other half does not",
+   mixed.avoid.includes("water") && mixed.unknown.length === 1, JSON.stringify(mixed));
+ok("a note with no preference at all is not reported as misunderstood",
+   parseConstraints("naps at 12:30").unknown.length === 0);
+ok("the app can say what it does understand", UNDERSTOOD.length >= 10, UNDERSTOOD.length + " concepts");
 
 /* ---------- geo: nearest-first, and real distances (FB3-01) ---------- */
 const van = { lat: 49.2827, lng: -123.1207 }, bby = { lat: 49.2488, lng: -122.9805 };
