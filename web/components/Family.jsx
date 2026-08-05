@@ -34,7 +34,7 @@ import Sheet from "./Sheet.jsx";
 const roleWord = { admin: "Full access", caregiver: "Can look and add", viewer: "Can look, like and comment" };
 const ACTIVE_KEY = "lr:active-baby";
 
-export default function Family({ profile, visits, plans, say, onSwitchChild }) {
+export default function Family({ profile, visits, plans, say, onSwitchChild, onCloudContext }) {
   const [user, setUser] = useState(null);
   const [babies, setBabies] = useState([]);
   const [activeId, setActiveId] = useState(() => { try { return localStorage.getItem(ACTIVE_KEY) || ""; } catch (e) { return ""; } });
@@ -101,12 +101,18 @@ export default function Family({ profile, visits, plans, say, onSwitchChild }) {
       const urls = {};
       await Promise.all(m.members.filter((x) => x.avatar).map(async (x) => { urls[x.userId] = await avatarUrl(x.avatar); }));
       setAvatars(urls);
+      /* Tell the app which family it is syncing with, and who it is posting as.
+         One owner of that fact, handed up, rather than two copies drifting. */
+      if (onCloudContext) onCloudContext({ babyId: b.id, userId: user.id, myName: (mine && mine.name) || null, role: b.role });
     }
     if (b.role === "admin") { const i = await listInvites(b.id); if (i.ok) setCodes(i.invites.filter((x) => !x.used_by)); }
     else setCodes([]);
   };
 
-  useEffect(() => { if (user) loadBabies(); else { setBabies([]); setPeople([]); setCodes([]); } }, [user]);
+  useEffect(() => {
+    if (user) loadBabies();
+    else { setBabies([]); setPeople([]); setCodes([]); if (onCloudContext) onCloudContext(null); }
+  }, [user]);
   useEffect(() => { loadMembers(baby); }, [baby && baby.id, user]);
 
   const run = async (fn, after) => {

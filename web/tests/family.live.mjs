@@ -140,6 +140,52 @@ const { data: afterRemoval } = await gran.c.from("babies").select("*").eq("id", 
 ok("a removed member loses access immediately", (afterRemoval || []).length === 0,
    "rows visible after removal: " + (afterRemoval || []).length);
 
+/* --- FB28: SYNC. The point of all of this — mum logs an outing, gran sees it,
+       gran comments, mum sees the comment. Asserted through the same client
+       code the app uses, not raw SQL, so a broken mapping fails here. --- */
+{
+  /* gran is a caregiver on mum's baby again for this section */
+  await mum.c.from("baby_members").update({ role: "caregiver" }).eq("baby_id", baby.id).eq("user_id", gran.user.id);
+  await mum.c.from("baby_members").insert({ baby_id: baby.id, user_id: gran.user.id, role: "caregiver", display_name: "Grandma" })
+    .then(() => {}, () => {});
+
+  const { data: outing } = await mum.c.from("memories").insert({
+    baby_id: baby.id, author_id: mum.user.id, author_name: "Mum",
+    kind: "visit", name: "Duck pond", place: "Trout Lake", rating: "loved",
+    note: "twenty minutes of pure joy", happened_at: new Date().toISOString(),
+  }).select().single();
+  ok("FB28 a caregiver logs an outing", !!outing, outing && outing.id);
+
+  const { data: granSeesIt } = await gran.c.from("memories").select("*").eq("id", outing.id);
+  ok("FB28 the other phone can see it", (granSeesIt || []).length === 1,
+     (granSeesIt || [])[0] && granSeesIt[0].name);
+  ok("FB28 and knows who logged it", (granSeesIt || [])[0] && granSeesIt[0].author_name === "Mum",
+     (granSeesIt || [])[0] && granSeesIt[0].author_name);
+
+  const { error: likeErr } = await gran.c.from("memory_likes")
+    .insert({ memory_id: outing.id, baby_id: baby.id, user_id: gran.user.id });
+  ok("FB28 the other phone can like it", !likeErr, likeErr && likeErr.message);
+
+  const { data: cmt, error: cErr } = await gran.c.from("memory_comments")
+    .insert({ memory_id: outing.id, baby_id: baby.id, author_id: gran.user.id,
+              author_name: "Grandma", body: "She looks so happy!" }).select().single();
+  ok("FB28 and comment on it", !cErr, cErr && cErr.message);
+
+  const { data: mumSees } = await mum.c.from("memory_comments").select("author_name, body").eq("memory_id", outing.id);
+  ok("FB28 the comment comes back to the person who logged it", (mumSees || []).length === 1,
+     (mumSees || [])[0] && (mumSees[0].author_name + ": " + mumSees[0].body));
+
+  /* The founder's decision: leaving keeps what you wrote, WITH your name. */
+  await gran.c.rpc("leave_baby", { p_baby: baby.id });
+  const { data: afterLeaving } = await mum.c.from("memory_comments").select("author_name, body").eq("memory_id", outing.id);
+  ok("FB28 the comment survives its author leaving, still attributed",
+     (afterLeaving || []).length === 1 && afterLeaving[0].author_name === "Grandma",
+     (afterLeaving || [])[0] ? afterLeaving[0].author_name : "gone");
+  const { data: granAfter } = await gran.c.from("memories").select("id").eq("id", outing.id);
+  ok("FB28 but they can no longer see the outing itself", (granAfter || []).length === 0,
+     (granAfter || []).length + " rows visible");
+}
+
 /* --- FB27: one person, two families. The model always allowed it; the UI
        assumed babies[0]. These assert the data half so the switcher has
        something real to switch between. --- */

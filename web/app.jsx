@@ -11,6 +11,9 @@ import { CMAP, UNDERSTOOD, parseConstraints, cmapFor, cmapForIn } from "./engine
 import { buildCorpus } from "./engine/match.js";
 import Family from "./components/Family.jsx";
 import Join from "./components/Join.jsx";
+import { pullMemories, pushMemory, mergeMemories, pullSocial } from "./lib/sync.js";
+import { toggleLike, addComment, deleteComment, currentUser as cloudUser } from "./lib/family.js";
+import { enabled as cloudOn } from "./lib/supa.js";
 import { AGE_BANDS, bandFor, AFF, CAT_META, ACTIVITIES, FEATURED, FEATURED_CITY, AREA_SUGGESTIONS, IMG, KIDQ } from "./data.js";
 
 /* ==================================================================
@@ -216,6 +219,14 @@ export default function App() {
     catch (e) { return ""; }
   });
   const [declinedJoin, setDeclinedJoin] = useState(false);
+  /* FB28: the cloud half. `cloud` is the active family context — null when
+     signed out, which is the normal state and must stay fully usable. */
+  const [cloud, setCloud] = useState(null);        // { babyId, userId, myName }
+  const [likes, setLikes] = useState({});          // rid -> [userId]
+  const [comments, setComments] = useState({});    // rid -> [{...}]
+  const [openComments, setOpenComments] = useState(null);
+  const [draft, setDraft] = useState("");
+  const [syncing, setSyncing] = useState(false);
   const locTimer = useRef(null);
   const askedGps = useRef(false);
   const [checkIn, setCheckIn] = useState(null);
@@ -477,6 +488,13 @@ export default function App() {
       rating: ciRating, note: ciNote.trim(), place: ciPlace.trim() || null, by: ciBy || null, locLabel: checkIn.locLabel,
       pin: checkIn.pin || null, mediaCount: ciMedia.length };   // FB3-07: the pin follows the outing into the story
     setVisits((vs) => [v, ...vs]);
+    /* FB28: push after the local write, never before. A failed request must
+       not cost someone the outing they just logged. */
+    if (cloud && cloud.babyId) {
+      pushMemory(cloud.babyId, v, cloud.myName).then((r) => {
+        if (r.ok) setVisits((vs) => vs.map((x) => (x.id === v.id ? { ...x, rid: r.rid } : x)));
+      });
+    }
     if (ciMedia.length) { try { await store.set("lrm:" + id, JSON.stringify(ciMedia)); setPhotosBy((m) => ({ ...m, [id]: ciMedia })); } catch (e) { say("Media couldn't save, but the memory did."); } }
     removePlan(checkIn.id); setCheckIn(null);
     say(ciRating === "loved" ? `Saved to ${profile.name}'s story — more like this.` : ciRating === "nope" ? "Saved. Resting this type for a while." : `Saved to ${profile.name}'s story.`);
@@ -633,6 +651,23 @@ export default function App() {
     window.addEventListener("lr-update-ready", on);
     return () => window.removeEventListener("lr-update-ready", on);
   }, []);
+
+  /* FB28. Pull on open and whenever the family changes. Additive merge: the
+     device keeps what it has (its photos live there) and gains whatever the
+     server holds that it has not seen. */
+  const pullAll = async (babyId) => {
+    if (!cloudOn || !babyId) return;
+    setSyncing(true);
+    const r = await pullMemories(babyId);
+    if (r.ok) {
+      setVisits((prev) => mergeMemories(prev, r.memories));
+      const rids = r.memories.map((m) => m.rid).filter(Boolean);
+      const s = await pullSocial(babyId, rids);
+      if (s.ok) { setLikes(s.likes); setComments(s.comments); }
+    }
+    setSyncing(false);
+  };
+  useEffect(() => { if (cloud && cloud.babyId) pullAll(cloud.babyId); }, [cloud && cloud.babyId]);
 
   /* ---------------- location ---------------- */
   /* FB12-01. The search watches locText rather than living in the input's
@@ -1239,7 +1274,19 @@ export default function App() {
               </div>}
               <div className="lbl">{profile.name}'s memories</div>
               {!memList.length && <div className="card dash"><p className="why">{memAll.length ? "Nothing matches that filter." : "Nothing here yet — it fills itself from taps you barely notice."}</p></div>}
-              {memList.map((v) => <div id={"mem-" + v.id} className={"mem" + (v.kind === "journal" ? " jr" : "") + (v.kind === "custom" ? " cu" : "") + (jumpTo === v.id ? " flash" : "")} key={v.id}>
+              {/* FB28. Month headings. A journal read months later is browsed by
+                  "when", not scrolled — and this is the first structure that
+                  makes the story feel like a record rather than a feed. The
+                  fuller journal design still needs the founder's brief. */}
+              {memList.map((v, mi) => <React.Fragment key={"g" + v.id}>
+                {(mi === 0 || new Date(memList[mi - 1].ts).getMonth() !== new Date(v.ts).getMonth()
+                  || new Date(memList[mi - 1].ts).getFullYear() !== new Date(v.ts).getFullYear()) &&
+                  <div className="monthhead">
+                    <b>{new Date(v.ts).toLocaleDateString(undefined, { month: "long", year: "numeric" })}</b>
+                    <span>{memList.filter((x) => new Date(x.ts).getMonth() === new Date(v.ts).getMonth()
+                      && new Date(x.ts).getFullYear() === new Date(v.ts).getFullYear()).length} this month</span>
+                  </div>}
+                <div id={"mem-" + v.id} className={"mem" + (v.kind === "journal" ? " jr" : "") + (v.kind === "custom" ? " cu" : "") + (jumpTo === v.id ? " flash" : "")} key={v.id}>
                 <div className="memhead"><span className="date">{fmtDate(v.ts)}</span><div className="hr">
                   {v.kind === "journal" ? <span className="pill jrp">✍️ Journal</span> : isOurs(v) ? <span className="pill cup">📍 Ours</span> : null}
                   {rateKey(v.rating) && <span className={"pill " + RATE[rateKey(v.rating)].c}>{RATE[rateKey(v.rating)].e} {RATE[rateKey(v.rating)].l}</span>}
@@ -1252,16 +1299,63 @@ export default function App() {
                   target="_blank" rel="noreferrer">📍 Open the exact spot on the map ↗</a>}
                 {v.note && <div className={v.kind === "journal" ? "jtext" : "mnote"}>{v.kind === "journal" ? v.note : "“" + v.note + "”"}</div>}
                 {photosBy[v.id] && <div className="strip">{photosBy[v.id].map((m, i) => <button className="thumb" key={i} onClick={() => setLightbox({ list: (photosBy[v.id] || []).map((x) => ({ ...x, memId: v.id, label: (v.place || v.name) + " · " + fmtDate(v.ts) })), i })}>{m.t === "v" ? <span className="vid">🎥</span> : <img src={m.d} alt="" />}</button>)}</div>}
+                {v.remote && !photosBy[v.id] && v.mediaCount === 0 && <p className="fine">Synced from the family — photos stay on the phone that took them for now.</p>}
                 {/* FB6-01. A memory is a record of somewhere that worked, so it is
                     the most likely thing you want to do again — but until now it
                     was a dead end and you had to go hunt the activity down in
                     Browse. Log it straight from here, or put it back on the list. */}
+                {/* FB28. Only a SYNCED memory can carry these: a comment needs
+                    something both phones agree exists. Offering them on a
+                    local-only entry would be a button that goes nowhere. */}
+                {cloud && v.rid && <div className="social">
+                  <button className={"likebtn" + ((likes[v.rid] || []).includes(cloud.userId) ? " on" : "")}
+                    onClick={async () => {
+                      const mine = (likes[v.rid] || []).includes(cloud.userId);
+                      setLikes((L) => ({ ...L, [v.rid]: mine
+                        ? (L[v.rid] || []).filter((u) => u !== cloud.userId)
+                        : [...(L[v.rid] || []), cloud.userId] }));
+                      const r = await toggleLike(cloud.babyId, v.rid, mine);
+                      if (!r.ok) { say(r.error); pullAll(cloud.babyId); }
+                    }}>
+                    {(likes[v.rid] || []).includes(cloud.userId) ? "💛" : "🤍"}
+                    {(likes[v.rid] || []).length ? " " + (likes[v.rid] || []).length : ""}
+                  </button>
+                  <button className="cmtbtn" onClick={() => { setOpenComments(openComments === v.rid ? null : v.rid); setDraft(""); }}>
+                    💬 {(comments[v.rid] || []).length || ""} {(comments[v.rid] || []).length ? "" : "Comment"}
+                  </button>
+                  {v.author && <span className="byline">logged by {v.author}</span>}
+                </div>}
+
+                {cloud && v.rid && openComments === v.rid && <div className="cmtbox">
+                  {(comments[v.rid] || []).map((c) => <div className="cmt" key={c.id}>
+                    <b>{c.author || "Family"}</b> <span>{c.body}</span>
+                    {c.authorId === cloud.userId && <button className="mini" title="Delete" onClick={async () => {
+                      setComments((C) => ({ ...C, [v.rid]: (C[v.rid] || []).filter((x) => x.id !== c.id) }));
+                      const r = await deleteComment(c.id);
+                      if (!r.ok) { say(r.error); pullAll(cloud.babyId); }
+                    }}>✕</button>}
+                  </div>)}
+                  {!(comments[v.rid] || []).length && <p className="fine">Nothing said yet.</p>}
+                  <div className="searchrow">
+                    <input className="inp flat" placeholder="Say something…" value={draft}
+                      onChange={(e) => setDraft(e.target.value)} />
+                    <button className="mini" disabled={!draft.trim()} onClick={async () => {
+                      const body = draft.trim(); if (!body) return;
+                      setDraft("");
+                      const r = await addComment(cloud.babyId, v.rid, body, cloud.myName);
+                      if (!r.ok) { say(r.error); return; }
+                      setComments((C) => ({ ...C, [v.rid]: [...(C[v.rid] || []),
+                        { id: r.comment.id, authorId: cloud.userId, author: cloud.myName, body, at: r.comment.created_at }] }));
+                    }}>Post</button>
+                  </div>
+                </div>}
+
                 {v.kind !== "journal" && <div className="pills memacts">
                   <button className="pillbtn dark" onClick={() => goAgain(v)}>🔁 We went again</button>
                   <button className="pillbtn" onClick={() => planAgain(v)}>💛 Add to Our List</button>
                   <a className="pillbtn" href={directionsTo(v.place, v.pin) || venueQuery(v.name, null, activePlace)} target="_blank" rel="noreferrer">🗺️ Directions</a>
                 </div>}
-              </div>)}
+              </div></React.Fragment>)}
             </> : <>
               {/* FB17-05b. The gallery used to be the story page with photos
                   bolted on the bottom — same stats, same filters, same buttons,
@@ -1321,6 +1415,7 @@ export default function App() {
 
             <div className="lbl">Family</div>
             <Family profile={profile} visits={visits} plans={plans} say={say}
+              onCloudContext={(ctx) => setCloud(ctx)}
               onSwitchChild={(p) => {
                 /* FB27: switching family swaps the child the whole app ranks for,
                    not merely the page you are looking at. Keeping the local
@@ -1996,6 +2091,19 @@ const CSS = `
 .memberrow .mwho,.uarow .mwho{display:flex;flex-direction:column;gap:2px;min-width:0}
 .mline{display:flex;align-items:center;gap:8px;min-width:0}
 .mavatar{width:28px;height:28px;border-radius:99px;object-fit:cover;flex:none;border:1.5px solid #E3E1D6}
+/* FB28 social */
+.monthhead{display:flex;align-items:baseline;justify-content:space-between;margin:22px 2px 10px;padding-bottom:6px;border-bottom:1.5px solid #E3E1D6}
+.monthhead b{font-family:'Fraunces',Georgia,serif;font-size:17px;color:#29382F}
+.monthhead span{font-size:11.5px;color:#8A8875;font-weight:700}
+.social{display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:9px;border-top:1px dashed #E3E1D6}
+.likebtn,.cmtbtn{background:#FFF;border:1.5px solid #DDDACB;border-radius:99px;padding:6px 12px;font-family:'Karla';font-size:12.5px;font-weight:700;color:#4A554D;cursor:pointer}
+.likebtn.on{background:#FBEAC9;border-color:#E9A23B;color:#9A6410}
+.byline{margin-left:auto;font-size:11px;color:#8A8875}
+.cmtbox{margin-top:9px;background:#F1F0E8;border-radius:12px;padding:10px}
+.cmt{font-size:12.5px;line-height:1.5;padding:5px 0;border-bottom:1px dashed #E3E1D6;display:flex;gap:6px;align-items:flex-start}
+.cmt:last-of-type{border-bottom:none}
+.cmt b{flex:none;color:#29382F}
+.cmt span{flex:1}
 .familyrow{display:block;width:100%;text-align:left;background:none;border:none;border-bottom:1px dashed #E3E1D6;padding:11px 0;font-family:'Karla';cursor:pointer}
 .familyrow:last-of-type{border-bottom:none}
 .familyrow.on b{color:#29382F}
