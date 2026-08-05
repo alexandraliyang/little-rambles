@@ -71,7 +71,7 @@ const click = (el) => { el.dispatchEvent(new window.MouseEvent("click", { bubble
 const openSetting = async (title) => {
   const kid = root.querySelector("button.kidchip");
   if (kid) { click(kid); await settle(); }
-  const back = findByText("button", "Back");
+  const back = root.querySelector("button.backrow");
   if (back) { click(back); await settle(); }
   const row = [...root.querySelectorAll("button.setrow")].find((b) => (b.textContent || "").includes(title));
   if (row) { click(row); await settle(); }
@@ -437,6 +437,31 @@ ok("FB23 a newly understood preference appears immediately",
    /likes food outings/i.test(text()), (text().match(/likes [a-z &]+/i) || ["not shown"])[0]);
 ok("FB23 and one we cannot model is reported rather than dropped",
    /couldn't place/i.test(text()), (text().match(/couldn't place[^.]*/i) || ["not reported"])[0]);
+
+/* --- FB31: the settings menu after the founder's second pass --- */
+await openSetting("Child profile");
+ok("FB31-03 home lives with the child it belongs to",
+   /Home area/.test(text()) && /Change home address/.test(text()),
+   (text().match(/Home area[\s\S]{0,60}/) || ["not on the child page"])[0].replace(/\s+/g, " "));
+
+const backTo = async () => { const b = root.querySelector("button.backrow"); if (b) { click(b); await settle(); } };
+await backTo();
+const rows = [...root.querySelectorAll("button.setrow")].map((b) => (b.textContent || ""));
+ok("FB31-03 and no longer has a settings page of its own",
+   !rows.some((r) => /^\W*Home/.test(r.trim())), rows.length + " rows");
+ok("FB31-02 the build stamp folded into feedback rather than owning a page",
+   !rows.some((r) => /This build/.test(r)) && rows.some((r) => /Help build this/.test(r) && /v\d/.test(r)),
+   (rows.find((r) => /Help build/.test(r)) || "").replace(/\s+/g, " "));
+ok("FB31-02 and is still readable there — a tester has to be able to quote it",
+   (await openSetting("Help build this")) && /build/.test(text()) && /Take the 5-min survey/.test(text()));
+
+/* Every row has to carry its three parts, or the menu is a wall of text. The
+   founder's screenshot was exactly this failing. */
+await backTo();
+const shaped = [...root.querySelectorAll("button.setrow")].every((b) =>
+  b.querySelector(".seticon") && b.querySelector(".setmain b") && b.querySelector(".setmain small") && b.querySelector(".setchev"));
+ok("FB31-01 each menu row has an icon, a title, a subtitle and a chevron", shaped,
+   root.querySelectorAll("button.setrow").length + " rows checked");
 
 /* --- FB29: an invited person must not be asked to invent a child --- */
 {

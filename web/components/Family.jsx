@@ -32,6 +32,13 @@ import InviteSheet from "./Invite.jsx";
 import Sheet from "./Sheet.jsx";
 
 const roleWord = { admin: "Full access", caregiver: "Can look and add", viewer: "Can look, like and comment" };
+/* The same three roles said as a sentence about you. Gluing the label into
+   "You are ... here" produced "You are can look, like and comment here". */
+const roleHere = {
+  admin: "You run this page — you can invite people and change what they can do.",
+  caregiver: "You can add outings and photos here.",
+  viewer: "You can look, like and comment here.",
+};
 const ACTIVE_KEY = "lr:active-baby";
 
 export default function Family({ profile, visits, plans, say, onSwitchChild, onCloudContext, localChild }) {
@@ -223,7 +230,7 @@ export default function Family({ profile, visits, plans, say, onSwitchChild, onC
               <span className="mline"><b>{localChild.name}</b><span className="nowtag local">this phone only</span></span>
               <small className="msub">Not shared — nobody else can see it</small>
             </span>
-            <span className="uaacts">
+            <span className="mact">
               <button className="mini" title="Share this child with family" onClick={() => run(
                 async () => {
                   const b = await createBaby(localChild, user.id);
@@ -278,7 +285,7 @@ export default function Family({ profile, visits, plans, say, onSwitchChild, onC
         {codes.map((c) => <div className="uarow" key={c.code}>
           <span className="mwho"><b className="codeval">{c.code}</b>
             <small className="msub">{c.label ? c.label + " · " : ""}{roleWord[c.role]} · expires {new Date(c.expires_at).toLocaleDateString()}</small></span>
-          <span className="uaacts">
+          <span className="mact">
             <button className="mini" title="Show this invite again" onClick={() => setReshow(c)}>👁</button>
             <button className="mini danger-mini" title="Cancel this code" onClick={() => {
               if (window.confirm("Cancel code " + c.code + "? Anyone still holding it won't be able to join.")) run(() => revokeInvite(c.code), () => loadMembers(baby));
@@ -322,7 +329,7 @@ export default function Family({ profile, visits, plans, say, onSwitchChild, onC
               {active ? <span className="nowtag">showing</span>
                       : <button className="pillbtn" onClick={() => switchTo(b)}>Open</button>}
             </div>
-            <p className="fine">You are {roleWord[b.role].toLowerCase()} here</p>
+            <p className="fine">{roleHere[b.role] || ""}</p>
 
             {active && <>
               <div className="faces">
@@ -334,8 +341,13 @@ export default function Family({ profile, visits, plans, say, onSwitchChild, onC
                       {avatars[p.userId]
                         ? <img src={avatars[p.userId]} alt="" />
                         : <span className="ph">{(p.name || "?").trim().charAt(0).toUpperCase()}</span>}
-                      <small>{isMe ? "You" : (p.name || "Family")}</small>
-                      <i>{p.role === "admin" ? "admin" : p.role === "caregiver" ? "can add" : "can look"}</i>
+                      {/* FB31-01: what someone is called comes first — "Mum",
+                          "Grandma" — because that is how a family refers to each
+                          other. What they can do is the second line, and "You"
+                          is a marker on your own row rather than a replacement
+                          for your name, which was hiding it. */}
+                      <small>{p.name || (isMe ? "You" : "Family")}</small>
+                      <i>{(isMe ? "you · " : "") + (p.role === "admin" ? "admin" : p.role === "caregiver" ? "can add" : "can look")}</i>
                     </button>
                   );
                 })}

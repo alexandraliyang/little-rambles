@@ -1,6 +1,6 @@
 # DEBT — known-unfixed, deliberately carried
 
-Updated: 2026-08-03 · Governed by [ADR-0014](adr/0014-layered-source-layout-and-feedback-routing.md)
+Updated: 2026-08-04 · Governed by [ADR-0014](adr/0014-layered-source-layout-and-feedback-routing.md)
 
 Debt is a decision, not an accident. Every row states what is wrong, what it costs, and what would close it. Items carried without an owner or a trigger are how a product rots quietly.
 
@@ -26,6 +26,8 @@ Debt is a decision, not an accident. Every row states what is wrong, what it cos
 | T12 | Bundle grew 306KB → 550KB for a feature most users never open | OPEN | medium |
 | T13 | Installed PWAs could silently keep running an old build | **CLOSED** | — |
 | T14 | 155 activities is prototype scale, not product scale | OPEN | high |
+| T15 | Photos never leave the device, so a shared journal cannot be seen | OPEN | high |
+| T16 | Sync is polled, not pushed | GUARDED | low |
 
 ---
 
@@ -212,3 +214,27 @@ Two consequences follow from confirmation being off, and both should be stated r
 4. **Then** the same structural question ADR-0013 already flagged: this scales by curation, not code, until the Places API arrives. Beyond a few hundred rows per city, the answer is a data pipeline and a review queue, not a bigger hand-written file.
 
 **Closes when.** Coverage has no empty cells for the core age bands, and the verification gate passes on the whole library.
+
+---
+
+## T15 — Photos never leave the device · **OPEN** · high
+
+**What is wrong.** Memories, outings, likes and comments sync. Photos do not: they live in IndexedDB on the phone that took them. A grandparent reading the journal sees the words and none of the pictures.
+
+**What it costs.** Most of the emotional value. This is the reason 亲宝宝 gets opened daily, and the reason ours would not be. It is also a silent backup gap — deleting the app loses every photo, which Settings → Your data now says plainly, but saying it is not fixing it.
+
+**Why carried.** It is a real decision, not an oversight: uploading photos of a named child changes the privacy posture, the storage bill, and the data-region argument. The founder consented to upload on 2026-08-03; the build has not been done.
+
+**What would close it.** Supabase Storage under the existing per-baby bucket policy, upload on check-in with a local-first queue, signed URLs on read, and a visible per-photo state so a photo that has not uploaded says so rather than looking synced.
+
+---
+
+## T16 — Sync is polled, not pushed · **GUARDED** · low
+
+**What is wrong.** Updates arrive on a 45-second timer, on foreground, and on a manual Refresh. Two people commenting at the same moment see each other with a lag.
+
+**What it costs.** Little today, at family scale. It costs a request per device per 45 seconds, which is invisible now and would not be at a million users — the founder's stated bar.
+
+**Why carried.** Polling is three lines and works offline-tolerantly; Supabase Realtime is a websocket, a subscription lifecycle, and a reconnection story. Shipping the fix that makes comments appear at all was worth more than shipping the elegant version of it later.
+
+**What would close it.** Supabase Realtime on `memories` and `memory_comments` filtered by `baby_id`, with the poll kept as the fallback for a dropped socket. Trigger: T7 (push notifications), which needs the same server-side change of state.

@@ -28,6 +28,9 @@ Updated: 2026-08-02 · Governed by [ADR-0014](adr/0014-layered-source-layout-and
 | "won't install / stale version / old build on my phone" | `pack.mjs`, `sw.js`, `manifest.webmanifest` | deploy verify |
 | "activity data is wrong (age, hours, tags)" | `content/data.js` | `engine.test` |
 | "version number is wrong" | `package.json` (single source) | `ui.smoke` — FB7-02 |
+| "a screen looks unstyled — text runs together, an image fills the page" | the `CSS` block in `app.jsx` — a class in the markup with no rule | `css.audit` — FB31-01 |
+| "my husband commented and I cannot see it" | `lib/sync.js` (`pullSocial`, `freshSince`), `app.jsx` → `pullAll` and its foreground/timer effect | `engine.test` FB31-04 group · `family.live` |
+| "family / members / roles / invites" | `components/Family.jsx`, `engine/roles.js` | `roles.test` · `family.live` |
 
 ---
 
@@ -57,8 +60,13 @@ main.jsx     mount + error boundary
 | `ui.smoke` | jsdom | rendering, filters, tabs, version | `npm run test:ui` |
 | `device.drive` | real Chrome, real touch | gestures, sheets, PWA, live geocoder + weather | `npm run test:device` |
 | `images.audit` | Node | every image resolves and is verified | `npm run audit:images` |
+| `css.audit` | Node, source only | every class in the markup has a rule behind it | `npm run audit:css` |
+| `roles.test` / `invite.test` | Node | permissions, invite codes | folded into `test:engine` |
+| `family.live` | real database | RLS, membership, invites, comments across two accounts | `npm run test:family` |
 
-`npm test` runs engine + ui. `npm run verify` runs everything.
+`npm test` runs engine + ui. `npm run verify` runs everything. `test:family` is separate because it writes to the real database.
+
+**A passing suite can still ship a broken screen.** FB31 shipped markup with no CSS: every assertion about text and order held, because they were all true. `css.audit` exists because of that, and the general lesson is that tests which only read text cannot see layout — a screenshot is still the check for "does this look like the app".
 
 **Device tests must use touch, not mouse.** Two separate bugs were misdiagnosed by driving synthetic mouse events: `touch-action` does not apply to mouse, so the mouse path exercises code the phone never runs.
 

@@ -1,6 +1,23 @@
 # Changelog
 Format: [Keep a Changelog](https://keepachangelog.com). Versioning: SemVer. Two tracks: **App** and **Dev-Map** (science layer, independent cycle). Docs events recorded here too.
 
+## App — 3.5.1-beta — 2026-08-04
+Founder round FB31, on a phone, against the previous day's build.
+
+### Fixed
+- **The settings menu and the family cards had no CSS at all.** Not a wrong rule — an absent one. Markup was complete and correct, so nothing threw, nothing warned, and all four suites plus 104 device checks passed: a `.setrow` with no rule is still a button with the right text in the right order. On the founder's phone the rows collapsed into run-together text and a member's avatar, having no width, rendered at the full width of the page. Found by a screenshot; now guarded by `tests/css.audit.mjs`, which fails if any class in the markup has no rule behind it. It caught four other dead classes on the way in, including the unstyled brand on the invited person's very first screen.
+- **Comments and likes never arrived.** The journal was pulled once, when the family resolved, and never again — so a comment written on one phone did not exist on the other until the app was killed and relaunched, and there was nothing to pull or press to force it. Now: a pull when the app returns to the foreground, a pull on a timer while it is open, a Refresh you can press, and a line saying when we last heard anything, because "nothing new" and "not checking" look identical otherwise.
+- **What arrived is said out loud.** A banner on Memories names it — "Dad commented on Stanley Park" — and the tab carries an unread count. It never clears itself: something you did not see is not something you have read.
+
+### Changed
+- **Member faces are faces.** A round 48px photo, the name a family actually uses underneath it, and what that person can do under that; your own is ringed amber. "You" is a marker on your own row rather than a replacement for your name, which was hiding it.
+- **Home moved under Child profile.** It is where we search from, so it belongs with who we are ranking for, not on a settings page of its own.
+- **The build stamp folded into "Help build this."** A tester quoting a build is giving feedback; it was never a screen of its own. Six settings rows became four.
+
+### Added
+- `snapshot()` / `freshSince()` / `newsLine()` in `lib/sync.js` — pure, and separate from the pull that feeds them, because that is where the interesting mistakes are: announcing your own writing back to you, announcing a whole journal the first time it loads, or announcing nothing at all. 14 unit cases, including two people who are both called "Mum".
+- `npm run audit:css`, wired into `test:engine`.
+
 ## App — 3.4.0-beta — 2026-08-02
 Founder device rounds FB3–FB11, then a structural change so future rounds cost less.
 

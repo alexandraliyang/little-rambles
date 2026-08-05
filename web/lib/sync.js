@@ -38,6 +38,10 @@ const toLocal = (r) => ({
   note: r.note || "",
   by: r.with_who || null,
   author: r.author_name || null,
+  /* Who wrote it, not just what they are called. FB31-04 needs to tell your own
+     entries from someone else's, and two people may both be "Mum" on different
+     pages — a name cannot answer that, an id can. */
+  authorId: r.author_id || null,
   pin: r.pin_lat != null ? { lat: r.pin_lat, lng: r.pin_lng } : null,
   ts: new Date(r.happened_at).getTime(),
   mediaCount: 0,
@@ -135,6 +139,65 @@ export async function deletePlan(rid) {
   if (!enabled || !rid) return off();
   const { error } = await supa().from("plans").delete().eq("id", rid);
   return error ? fail(error) : { ok: true };
+}
+
+/* ------------------------------------------------------------ what's new -- */
+/* FB31-04. Pure, and separate from the pull that feeds it, because this is the
+   part with the interesting mistakes in it: announcing your own writing back to
+   you, announcing an entire journal the first time it loads, or announcing
+   nothing at all — which is what shipped, and what the founder hit.
+
+   The rule is a snapshot comparison, not a comparison against local state:
+   local state also holds this phone's own entries, and cannot tell "I have not
+   seen this" from "I wrote this". */
+
+export function snapshot(memories, comments) {
+  const s = {};
+  (memories || []).forEach((m) => { if (m.rid) s[m.rid] = ((comments || {})[m.rid] || []).map((c) => c.id); });
+  return s;
+}
+
+export function freshSince(prev, memories, comments, meId) {
+  /* No previous snapshot means this is the first look at this family. Everything
+     is unseen and none of it is news — you are not "notified" of a journal you
+     have just opened for the first time. */
+  if (!prev) return [];
+  const out = [];
+  (memories || []).forEach((m) => {
+    if (!m.rid) return;
+    const known = Object.prototype.hasOwnProperty.call(prev, m.rid);
+    const label = m.place || m.name || "";
+    if (!known) {
+      if (m.authorId && m.authorId !== meId) out.push({ kind: "outing", who: m.author || "Someone", what: label });
+      /* Comments on an outing you are being told about for the first time are
+         part of that news, not five more items on top of it. */
+      return;
+    }
+    const seen = new Set(prev[m.rid] || []);
+    ((comments || {})[m.rid] || []).forEach((c) => {
+      if (!seen.has(c.id) && c.authorId !== meId) out.push({ kind: "comment", who: c.author || "Someone", what: label });
+    });
+  });
+  return out;
+}
+
+/* One line of English. Five identical rows tell you less than "Dad commented on
+   Stanley Park" does, and a number alone tells you nothing worth opening. */
+export function newsLine(news) {
+  if (!news || !news.length) return "";
+  if (news.length === 1) {
+    const n = news[0];
+    return n.kind === "comment"
+      ? n.who + " commented" + (n.what ? " on " + n.what : "") + "."
+      : n.who + " added " + (n.what || "an outing") + ".";
+  }
+  const c = news.filter((n) => n.kind === "comment").length;
+  const o = news.length - c;
+  const bits = [];
+  if (c) bits.push(c + (c === 1 ? " new comment" : " new comments"));
+  if (o) bits.push(o + (o === 1 ? " new outing" : " new outings"));
+  const who = [...new Set(news.map((n) => n.who))];
+  return bits.join(" and ") + (who.length === 1 ? " from " + who[0] : "") + ".";
 }
 
 /* ----------------------------------------------------- likes and comments -- */

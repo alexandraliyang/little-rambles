@@ -11,7 +11,7 @@ import { CMAP, UNDERSTOOD, parseConstraints, cmapFor, cmapForIn } from "./engine
 import { buildCorpus } from "./engine/match.js";
 import Family from "./components/Family.jsx";
 import Join from "./components/Join.jsx";
-import { pullMemories, pushMemory, mergeMemories, pullSocial } from "./lib/sync.js";
+import { pullMemories, pushMemory, mergeMemories, pullSocial, snapshot, freshSince, newsLine } from "./lib/sync.js";
 import { toggleLike, addComment, deleteComment, currentUser as cloudUser, myBabies as listMyBabies, redeemInvite } from "./lib/family.js";
 import { enabled as cloudOn } from "./lib/supa.js";
 import { AGE_BANDS, bandFor, AFF, CAT_META, ACTIVITIES, FEATURED, FEATURED_CITY, AREA_SUGGESTIONS, IMG, KIDQ } from "./data.js";
@@ -229,6 +229,13 @@ export default function App() {
   const [openComments, setOpenComments] = useState(null);
   const [draft, setDraft] = useState("");
   const [syncing, setSyncing] = useState(false);
+  /* FB31-04: what arrived while you were not looking, and when we last heard
+     anything at all. Both are shown — "nothing new" and "not checking" look
+     identical on screen otherwise, and that is exactly the confusion reported. */
+  const [news, setNews] = useState([]);            // [{who, what, kind}]
+  const [lastSync, setLastSync] = useState(0);
+  const seen = useRef(null);                       // rid -> [comment id], as last looked at
+  const cloudRef = useRef(null);
   const [cloudBabies, setCloudBabies] = useState([]);   // FB29: every page this account belongs to
   const locTimer = useRef(null);
   const askedGps = useRef(false);
@@ -688,19 +695,60 @@ export default function App() {
   /* FB28. Pull on open and whenever the family changes. Additive merge: the
      device keeps what it has (its photos live there) and gains whatever the
      server holds that it has not seen. */
-  const pullAll = async (babyId) => {
+  const pullAll = async (babyId, quiet) => {
     if (!cloudOn || !babyId) return;
-    setSyncing(true);
+    if (!quiet) setSyncing(true);
+    const meId = cloudRef.current && cloudRef.current.userId;
     const r = await pullMemories(babyId);
     if (r.ok) {
       setVisits((prev) => mergeMemories(prev, r.memories));
+
       const rids = r.memories.map((m) => m.rid).filter(Boolean);
-      const s = await pullSocial(babyId, rids);
-      if (s.ok) { setLikes(s.likes); setComments(s.comments); }
+      const so = await pullSocial(babyId, rids);
+      if (so.ok) {
+        /* Diff first, then record what we have now — see freshSince(), which is
+           where the rules about whose writing counts as news actually live. */
+        const fresh = freshSince(seen.current, r.memories, so.comments, meId);
+        seen.current = snapshot(r.memories, so.comments);
+        if (fresh.length) setNews((prev) => [...prev, ...fresh]);
+        setLikes(so.likes); setComments(so.comments);
+      }
+      setLastSync(Date.now());
     }
     setSyncing(false);
   };
-  useEffect(() => { if (cloud && cloud.babyId) pullAll(cloud.babyId); }, [cloud && cloud.babyId]);
+  useEffect(() => {
+    if (!(cloud && cloud.babyId)) return;
+    /* A different child is a different journal: the snapshots must not carry
+       over, or every entry on the new page would be reported as brand new. */
+    seen.current = null; setNews([]);
+    pullAll(cloud.babyId);
+  }, [cloud && cloud.babyId]);
+
+  /* FB31-04. THE BUG. The journal was pulled once, when the family resolved,
+     and never again — so a comment written on one phone did not exist on the
+     other until the app was killed and relaunched, and there was nothing to
+     pull or tap to force it. Three things are needed and none is sufficient
+     alone: pull when the app comes back to the foreground (the common case, as
+     you open the phone *because* you were told something happened), pull on a
+     timer while it is open (so a conversation updates while you watch it), and
+     a refresh you can press, because a person who has been told something
+     exists and cannot see it needs somewhere to put that. */
+  useEffect(() => {
+    if (!cloudOn || !(cloud && cloud.babyId)) return;
+    const id = cloud.babyId;
+    const check = () => { if (document.visibilityState === "visible") pullAll(id, true); };
+    const t = setInterval(check, 45000);
+    document.addEventListener("visibilitychange", check);
+    window.addEventListener("focus", check);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", check);
+      window.removeEventListener("focus", check);
+    };
+  }, [cloud && cloud.babyId]);
+
+  cloudRef.current = cloud;
 
   /* ---------------- location ---------------- */
   /* FB12-01. The search watches locText rather than living in the input's
@@ -929,7 +977,7 @@ export default function App() {
     ["discover", "Swipe", "swipe", 0],
     ["explore", "Browse", "browse", 0],
     ["upnext", "Our List", "heart", plans.length],
-    ["story", "Memories", "book", 0],
+    ["story", "Memories", "book", news.length],   // FB31-04: unread, not a total
   ];
   const _unusedPlaceLabel = placeLabel;
   /* FB17-04. Our List grows without bound — it is the only screen with no way
@@ -962,7 +1010,7 @@ export default function App() {
              so it was easy not to notice you were still ranking against last
              weekend's trip. Amber = temporary, plain = home. */
           <button className={"locbar" + (spot ? " temp" : placeLabel ? "" : " unset")} onClick={() => { setLocText(""); setLocOpen(true); }}>
-            <span className="locpin">📍</span>
+            <span>📍</span>
             <span className="loctext">{placeLabel ? (spot ? "Today: " : "Home: ") + placeLabel : "Set your location"}</span>
             <span className="locedit">change</span>
           </button>
@@ -1261,6 +1309,17 @@ export default function App() {
 
           {/* ---------------- STORY ---------------- */}
           {tab === "story" && <div className="pad">
+            {/* FB31-04: said out loud, on the screen it happened on. Tapping it
+                clears it; it never clears itself, because something you did not
+                see is not something you have read. */}
+            {news.length > 0 && <button className="nudge away asbtn" onClick={() => setNews([])}>
+              <span>💬</span><p><b>{newsLine(news)}</b> Tap to dismiss.</p></button>}
+            {cloud && <p className="syncline">
+              <span>{syncing ? "Checking for updates…"
+                : lastSync ? "Up to date as of " + new Date(lastSync).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+                : "Not checked yet"}</span>
+              <button onClick={() => pullAll(cloud.babyId)} disabled={syncing}>↻ Refresh</button>
+            </p>}
             {/* FB16-02. Merging the view switch into the stats made two of four
                 tiles secretly pressable while the others were not — the same
                 shape doing two jobs. The switch is now unmistakably a switch,
@@ -1428,10 +1487,11 @@ export default function App() {
               {[
                 ["child",  "🧒", "Child profile", "Name, age, and what they love"],
                 ["family", "👨‍👩‍👧", "Family & sharing", cloudBabies.length ? cloudBabies.length + (cloudBabies.length === 1 ? " page" : " pages") + " · invite and manage" : "Share this journal with family"],
-                ["home",   "🏠", "Home", profile.home ? profile.home.label : "Not set"],
                 ["data",   "💾", "Your data", "Export, backup, and what is stored where"],
-                ["help",   "💬", "Help build this", "Survey and feedback"],
-                ["build",  "🔧", "This build", "v" + BUILD.version],
+                /* FB31-02/03: home moved under the child it belongs to, and the
+                   build stamp folded into feedback — a tester quoting a build is
+                   giving feedback, so it was never a screen of its own. */
+                ["help",   "💬", "Help build this", "Feedback, survey · v" + BUILD.version],
               ].map(([k, icon, title, sub]) => (
                 <button key={k} className="setrow" onClick={() => setSetPage(k)}>
                   <span className="seticon">{icon}</span>
@@ -1440,7 +1500,7 @@ export default function App() {
                 </button>
               ))}
             </> : <>
-              <button className="ghost full" onClick={() => setSetPage(null)}>‹ Back</button>
+              <button className="backrow" onClick={() => setSetPage(null)}>‹ Settings</button>
               {setPage === "child" && <>
 <div className="lbl">Child profile</div>
             <div className="card hl">
@@ -1470,19 +1530,20 @@ export default function App() {
               </p></div>}
               <p className="fine">These come from the free-text line in the profile and change rankings immediately.</p>
             </div>
-              </>}
-              {setPage === "home" && <>
-<div className="lbl">Home</div>
+
+            {/* FB31-03: home lives with the child, not on a screen of its own.
+                It is where we search from, so it is part of who we are ranking
+                for — the same answer as their age and what they love. */}
+            <div className="lbl">Home area</div>
             <div className="card">
               {/* FB24-01: "Today" was noise here. It is a transient choice made
-                  from the location bar, shown there already, and repeating it in
-                  a settings card implied it was a setting. */}
+                  from the location bar, shown there already. */}
               <p className="why">🏠 <b>{profile.home ? profile.home.label : "not set"}</b></p>
+              <p className="fine">Everything is ranked by how far it is from here.</p>
               <div className="pills"><button className="pillbtn" onClick={() => { setLocText(""); setLocOpen(true); setTab("discover"); }}>Change home address</button></div>
             </div>
               </>}
               {setPage === "family" && <>
-<div className="lbl">Family</div>
             <Family profile={profile} visits={visits} plans={plans} say={say}
               localChild={profile && profile.name && !cloudBabies.some((b) => b.name === profile.name) ? profile : null}
               onCloudContext={(ctx) => setCloud(ctx)}
@@ -1511,13 +1572,11 @@ export default function App() {
 
             {/* FB13-04: the release number answers "which version", the build
                 stamp answers "which bundle" — a tester report needs the second. */}
-              </>}
-              {setPage === "build" && <>
-                <div className="lbl">This build</div>
-                <div className="card">
-                  <p className="why"><b>v{BUILD.version}</b> · build <code>{BUILD.sha}</code> · {BUILD.built} UTC</p>
-                  <p className="fine">Quote the build when you report something — it pins the report to an exact bundle. The version only changes when a release is cut; the build changes every time we deploy.</p>
-                </div>
+            <div className="lbl">This build</div>
+            <div className="card">
+              <p className="why"><b>v{BUILD.version}</b> · build <code>{BUILD.sha}</code> · {BUILD.built} UTC</p>
+              <p className="fine">Quote the build when you report something — it pins the report to an exact bundle. The version only changes when a release is cut; the build changes every time we deploy.</p>
+            </div>
               </>}
               {setPage === "data" && <>
                 <div className="lbl">Your data</div>
@@ -1782,7 +1841,7 @@ function Art({ a, tall }) {
       .catch(() => { if (!live) return; setFailed(true); });
     return () => { live = false; };
   }, [a.id]);
-  if (a.userAdded) return <div className={"art mineart" + (tall ? " tall" : "")}>
+  if (a.userAdded) return <div className={"art" + (tall ? " tall" : "")}>
     <MineArt /><span className="ae">{a.emoji}</span><span className="minetag">💜 Yours</span>
   </div>;
   return <div className={"art" + (tall ? " tall" : "")}>
@@ -2135,6 +2194,7 @@ const CSS = `
 .nudge.reshuf{align-items:flex-start}
 .nudge.reshuf .pills{margin-top:8px}
 .nudge.away{background:#DEEAEF;border:1.5px solid #8FB3C0;align-items:center}
+.nudge.asbtn{width:100%;text-align:left;font-family:'Karla';cursor:pointer}
 .nudge.away p{flex:1}
 .nudge.away .mini.x{background:none;border:none;color:#33606F;font-size:14px;cursor:pointer;padding:4px 6px}
 .stats{display:flex;gap:6px;margin:6px 0 4px}
@@ -2200,6 +2260,42 @@ const CSS = `
 .mavatar.ph{display:flex;align-items:center;justify-content:center;background:#29382F;color:#F6F5EF;font-size:12px;font-weight:700}
 .memberrow .msub,.uarow .mwho .msub{font-weight:400}
 .mini.danger-mini{color:#A14E33}
+/* FB31-01. The settings menu and the family cards shipped with no CSS at all —
+   not a wrong rule, an absent one. So the rows collapsed to inline text and an
+   avatar, having no width, rendered at the full page. Sizes below are the ones
+   the rest of the app already uses, so these screens look like the app rather
+   than like a form. */
+.setrow{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:#FFF;border:1.5px solid #E3E1D6;border-radius:14px;padding:13px 14px;margin-bottom:8px;font-family:'Karla';cursor:pointer}
+.setrow:active{transform:scale(.99)}
+.seticon{font-size:21px;line-height:1;flex:none;width:26px;text-align:center}
+.setmain{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.setmain b{font-size:15px;color:#29382F;line-height:1.3}
+.setmain small{font-size:12.5px;color:#8A8875;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.setchev{flex:none;color:#B5B2A2;font-size:19px;line-height:1}
+.joinpad{padding-top:22px}
+.brandbig{font-family:'Fraunces',Georgia,serif;font-size:30px;color:#29382F;text-align:center;margin:6px 0 18px}
+.mact{display:flex;align-items:center;gap:2px;flex:none}
+.backrow{display:inline-flex;align-items:center;gap:4px;background:none;border:none;padding:8px 2px;margin-bottom:2px;font-family:'Karla';font-size:14px;font-weight:700;color:#6E7A6F;cursor:pointer}
+
+.babycard{background:#FFF;border:1.5px solid #E3E1D6;border-radius:16px;padding:14px;margin-bottom:10px}
+.babycard.on{border-color:#E9A23B;background:#FFFDF7}
+.babytop{display:flex;align-items:center;gap:8px}
+.babytop h3{font-family:'Fraunces',Georgia,serif;font-size:18.5px;color:#29382F;flex:1;min-width:0;line-height:1.25}
+.babytop .nowtag{margin-left:0}
+/* Faces, not a list of names: a family page is people, and a round photo with
+   what someone is called under it is the shape everyone already reads. */
+.faces{display:flex;flex-wrap:wrap;gap:2px;margin:12px 0 2px}
+.face{width:74px;background:none;border:none;padding:4px 0;font-family:'Karla';cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px}
+.face img,.face .ph{width:48px;height:48px;border-radius:99px;object-fit:cover;flex:none;border:2px solid #E3E1D6;box-sizing:border-box}
+.face .ph{display:flex;align-items:center;justify-content:center;background:#29382F;color:#F6F5EF;font-family:'Fraunces',Georgia,serif;font-size:19px;font-weight:700}
+.face.me img,.face.me .ph{border-color:#E9A23B}
+.face small{font-size:12px;font-weight:700;color:#29382F;max-width:74px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.2}
+.face i{font-style:normal;font-size:10px;color:#8A8875;line-height:1.2}
+.face.me i{color:#9A6410}
+/* FB31-04: the journal's own refresh line — what it is doing and when it last
+   heard anything, because "nothing new" and "not checking" look identical. */
+.syncline{display:flex;align-items:center;gap:8px;margin:2px 0 4px;font-size:12px;color:#8A8875}
+.syncline button{background:none;border:none;font-family:'Karla';font-size:12px;font-weight:700;color:#33606F;cursor:pointer;padding:4px 2px}
 .orline{display:flex;align-items:center;gap:10px;margin:14px 0;color:#8A8875;font-size:12px;font-weight:700}
 .orline::before,.orline::after{content:"";flex:1;height:1px;background:#DDDACB}
 .okbox{background:#DDE8DC;color:#2F5138;border-radius:12px;padding:10px 12px;font-size:12.5px;line-height:1.5;margin:8px 0}

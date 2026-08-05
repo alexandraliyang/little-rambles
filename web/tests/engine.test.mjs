@@ -11,6 +11,7 @@ import { ACTIVITIES, KIDQ } from "../data.js";
 buildCorpus(ACTIVITIES, KIDQ);
 import { haversine, fmtKm, directionsTo, venueQuery } from "../lib/geo.js";
 import { fmtHour, fmtAge, monthsOld } from "../lib/format.js";
+import { snapshot, freshSince, newsLine } from "../lib/sync.js";
 
 const fails = [];
 const ok = (name, cond, detail) => {
@@ -188,6 +189,63 @@ const bd = bY + "-" + pad(bM + 1) + "-01";
 eq("age is derived from the birthdate", monthsOld(bd), now.getDate() >= 1 ? 22 : 21);
 eq("a birthdate today reads as 0 months",
    monthsOld(now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate())), 0);
+
+
+/* ---------- FB31-04: what counts as news ----------
+   The bug this replaces was that nothing ever counted, because the journal was
+   pulled once and never again. These cases are the ways the fix can be wrong. */
+const ME = "me-1", DAD = "dad-2";
+const mem = (rid, authorId, place, author) => ({ rid, authorId, author, place, name: place, ts: 1 });
+const M1 = mem("r1", ME, "Stanley Park", "Mum");
+const M2 = mem("r2", DAD, "The library", "Dad");
+const cmt = (id, authorId, author, body) => ({ id, authorId, author, body, at: "" });
+
+ok("the first look is never news — you are not notified of a journal you just opened",
+   freshSince(null, [M1, M2], {}, ME).length === 0);
+
+const snap0 = snapshot([M1], { r1: [cmt("c1", ME, "Mum")] });
+ok("a comment from someone else, on an outing you already had, is news",
+   freshSince(snap0, [M1], { r1: [cmt("c1", ME, "Mum"), cmt("c2", DAD, "Dad")] }, ME).length === 1,
+   JSON.stringify(freshSince(snap0, [M1], { r1: [cmt("c1", ME, "Mum"), cmt("c2", DAD, "Dad")] }, ME)));
+ok("and it says who wrote it and where",
+   newsLine(freshSince(snap0, [M1], { r1: [cmt("c1", ME, "Mum"), cmt("c2", DAD, "Dad")] }, ME)) === "Dad commented on Stanley Park.",
+   newsLine(freshSince(snap0, [M1], { r1: [cmt("c1", ME, "Mum"), cmt("c2", DAD, "Dad")] }, ME)));
+
+ok("YOUR OWN comment is never reported back to you as news",
+   freshSince(snap0, [M1], { r1: [cmt("c1", ME, "Mum"), cmt("c9", ME, "Mum")] }, ME).length === 0);
+ok("your own outing is not news either",
+   freshSince(snapshot([M1], {}), [M1, mem("r3", ME, "The pool", "Mum")], {}, ME).length === 0);
+
+ok("an outing added by someone else IS news",
+   freshSince(snapshot([M1], {}), [M1, M2], {}, ME).length === 1);
+ok("and reads as a sentence", newsLine(freshSince(snapshot([M1], {}), [M1, M2], {}, ME)) === "Dad added The library.",
+   newsLine(freshSince(snapshot([M1], {}), [M1, M2], {}, ME)));
+
+/* An outing you are hearing about for the first time carries its comments with
+   it. Announcing the outing AND each of its comments is five notices for one
+   thing that happened. */
+ok("comments on a brand-new outing do not each become their own notice",
+   freshSince(snapshot([M1], {}), [M1, M2], { r2: [cmt("c5", DAD, "Dad"), cmt("c6", DAD, "Dad")] }, ME).length === 1);
+
+ok("nothing changed means nothing to say",
+   freshSince(snap0, [M1], { r1: [cmt("c1", ME, "Mum")] }, ME).length === 0);
+eq("and no line is offered for it", newsLine([]), "");
+
+const many = freshSince(snapshot([M1], {}), [M1, M2],
+  { r1: [cmt("c2", DAD, "Dad"), cmt("c3", DAD, "Dad")] }, ME);
+ok("several things collapse into one countable line",
+   newsLine(many) === "2 new comments and 1 new outing from Dad.", newsLine(many));
+ok("mixed authors are not falsely attributed to one person",
+   !newsLine([{ kind: "comment", who: "Dad", what: "x" }, { kind: "comment", who: "Nana", what: "x" }]).includes("from"),
+   newsLine([{ kind: "comment", who: "Dad", what: "x" }, { kind: "comment", who: "Nana", what: "x" }]));
+
+/* Two people can both be called "Mum" on different pages, so identity has to be
+   the account, not the label. */
+ok("whose entry it is, is decided by account and not by display name",
+   freshSince(snap0, [M1], { r1: [cmt("c1", ME, "Mum"), cmt("c7", DAD, "Mum")] }, ME).length === 1);
+
+ok("an entry the server has not seen yet carries no rid and is skipped",
+   freshSince(snapshot([M1], {}), [M1, { rid: null, authorId: DAD, place: "local" }], {}, ME).length === 0);
 
 console.log("\n" + (fails.length ? fails.length + " FAILED: " + fails.join(", ") : "all " + "engine" + " checks passed") + "\n");
 process.exit(fails.length ? 1 : 0);
