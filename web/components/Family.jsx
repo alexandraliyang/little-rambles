@@ -34,7 +34,7 @@ import Sheet from "./Sheet.jsx";
 const roleWord = { admin: "Full access", caregiver: "Can look and add", viewer: "Can look, like and comment" };
 const ACTIVE_KEY = "lr:active-baby";
 
-export default function Family({ profile, visits, plans, say, onSwitchChild, onCloudContext }) {
+export default function Family({ profile, visits, plans, say, onSwitchChild, onCloudContext, localChild }) {
   const [user, setUser] = useState(null);
   const [babies, setBabies] = useState([]);
   const [activeId, setActiveId] = useState(() => { try { return localStorage.getItem(ACTIVE_KEY) || ""; } catch (e) { return ""; } });
@@ -213,6 +213,27 @@ export default function Family({ profile, visits, plans, say, onSwitchChild, onC
       <button className="ghost full" onClick={() => setView("home")}>‹ Back</button>
       <div className="lbl">Pages you belong to ({babies.length})</div>
       <div className="card">
+        {/* FB29. A child set up on this device but never shared still belongs
+            here. Joining someone else's page used to make your own disappear
+            with nowhere to go back to — the founder's husband lost his. */}
+        {localChild && !babies.some((b) => b.name === localChild.name) && (
+          <div className="uarow">
+            <span className="mwho">
+              <span className="mline"><b>{localChild.name}</b><span className="nowtag local">this phone only</span></span>
+              <small className="msub">Not shared — nobody else can see it</small>
+            </span>
+            <span className="uaacts">
+              <button className="mini" title="Share this child with family" onClick={() => run(
+                async () => {
+                  const b = await createBaby(localChild, user.id);
+                  if (!b.ok) return b;
+                  if (visits.length || plans.length) { const up = await uploadLocal(b.baby.id, user.id, visits, plans); if (!up.ok) return up; }
+                  return b;
+                },
+                async () => { say(localChild.name + "'s page created."); await loadBabies(); })}>＋</button>
+            </span>
+          </div>
+        )}
         {babies.map((b) => (
           <button key={b.id} className={"familyrow" + (b.id === (baby && baby.id) ? " on" : "")} onClick={() => switchTo(b)}>
             <span className="mwho">

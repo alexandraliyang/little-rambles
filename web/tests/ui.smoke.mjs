@@ -426,6 +426,50 @@ ok("FB23 a newly understood preference appears immediately",
 ok("FB23 and one we cannot model is reported rather than dropped",
    /couldn't place/i.test(text()), (text().match(/couldn't place[^.]*/i) || ["not reported"])[0]);
 
+/* --- FB29: an invited person must not be asked to invent a child --- */
+{
+  /* A virgin profile is exactly what an invited grandparent has. */
+  const dom2 = new JSDOM("<!doctype html><html><body><div id='root'></div></body></html>",
+    { url: "https://localhost/", pretendToBeVisual: true, runScripts: "outside-only" });
+  const w2 = dom2.window;
+  w2.fetch = () => Promise.reject(new Error("offline in test"));
+  w2.scrollTo = () => {};
+  new w2.Function(code)();
+  await new Promise((r) => setTimeout(r, 400));
+  const r2 = w2.document.getElementById("root");
+  const t2 = r2.textContent || "";
+  ok("FB29 a brand-new visitor still gets onboarding", /Child's name/.test(t2));
+  ok("FB29 but is offered the invited path first",
+     /I've been invited/.test(t2), (t2.match(/I've been invited[^.]*/) || ["missing"])[0]);
+  const inv = [...r2.querySelectorAll("button")].find((b) => /I've been invited/.test(b.textContent));
+  if (inv) { inv.dispatchEvent(new w2.MouseEvent("click", { bubbles: true })); await new Promise((r) => setTimeout(r, 400)); }
+  const t3 = r2.textContent || "";
+  ok("FB29 choosing it opens the join screen, not the baby form",
+     /You've been invited/.test(t3) && !/Child's name/.test(t3),
+     t3.split(String.fromCharCode(10)).filter(Boolean).slice(0, 2).join(" | "));
+}
+
+/* --- FB29: a future birthdate must explain itself --- */
+{
+  const kid29 = root.querySelector("button.kidchip");
+  if (kid29) { click(kid29); await settle(); }
+  const edit29 = findByText("button", "Edit name, age & preferences");
+  if (edit29) { click(edit29); await settle(); }
+  const dateInput = root.querySelector('input[type="date"]');
+  if (dateInput) {
+    const setV = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+    const future = new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10);
+    setV.call(dateInput, future);
+    dateInput.dispatchEvent(new window.Event("input", { bubbles: true }));
+    await settle();
+  }
+  ok("FB29 a future birthdate says what is wrong", /in the future/i.test(text()),
+     (text().match(/That date is[^.]*\./) || ["silent"])[0]);
+  ok("FB29 the date field is marked, not merely inert", !!root.querySelector("input.inp.bad"));
+  const cancel29 = findByText("button", "Cancel");
+  if (cancel29) { click(cancel29); await settle(); }
+}
+
 /* --- every tab renders without throwing --- */
 for (const t of ["Swipe", "Browse", "Our List", "Yours", "Memories"]) {
   const b = findByText("button", t);

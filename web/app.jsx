@@ -12,7 +12,7 @@ import { buildCorpus } from "./engine/match.js";
 import Family from "./components/Family.jsx";
 import Join from "./components/Join.jsx";
 import { pullMemories, pushMemory, mergeMemories, pullSocial } from "./lib/sync.js";
-import { toggleLike, addComment, deleteComment, currentUser as cloudUser } from "./lib/family.js";
+import { toggleLike, addComment, deleteComment, currentUser as cloudUser, myBabies as listMyBabies, redeemInvite } from "./lib/family.js";
 import { enabled as cloudOn } from "./lib/supa.js";
 import { AGE_BANDS, bandFor, AFF, CAT_META, ACTIVITIES, FEATURED, FEATURED_CITY, AREA_SUGGESTIONS, IMG, KIDQ } from "./data.js";
 
@@ -219,6 +219,7 @@ export default function App() {
     catch (e) { return ""; }
   });
   const [declinedJoin, setDeclinedJoin] = useState(false);
+  const [wantJoin, setWantJoin] = useState(false);   // FB29: chose "I've been invited"
   /* FB28: the cloud half. `cloud` is the active family context — null when
      signed out, which is the normal state and must stay fully usable. */
   const [cloud, setCloud] = useState(null);        // { babyId, userId, myName }
@@ -227,6 +228,7 @@ export default function App() {
   const [openComments, setOpenComments] = useState(null);
   const [draft, setDraft] = useState("");
   const [syncing, setSyncing] = useState(false);
+  const [cloudBabies, setCloudBabies] = useState([]);   // FB29: every page this account belongs to
   const locTimer = useRef(null);
   const askedGps = useRef(false);
   const [checkIn, setCheckIn] = useState(null);
@@ -652,6 +654,36 @@ export default function App() {
     return () => window.removeEventListener("lr-update-ready", on);
   }, []);
 
+  /* FB29. Resolve the signed-in family AT APP LEVEL, on launch. Previously this
+     only happened inside the Family screen, so someone who joined and then went
+     straight to Memories saw an empty journal — the pull had never been asked
+     for. Whose page you are on is app state, not a detail of one screen. */
+  useEffect(() => {
+    if (!cloudOn) return;
+    let live = true;
+    (async () => {
+      const u = await cloudUser();
+      if (!live || !u) return;
+      const r = await listMyBabies();
+      if (!live || !r.ok || !r.babies.length) return;
+      setCloudBabies(r.babies);
+      let wanted = "";
+      try { wanted = localStorage.getItem("lr:active-baby") || ""; } catch (e) {}
+      const b = r.babies.find((x) => x.id === wanted) || r.babies[0];
+      setCloud((c) => (c && c.babyId === b.id ? c : { babyId: b.id, userId: u.id, myName: b.displayName || null, role: b.role }));
+      try { localStorage.setItem("lr:active-baby", b.id); } catch (e) {}
+      /* Adopt the child's details so recommendations are for the right child
+         even if the Family screen is never opened. */
+      setProfile((prev) => {
+        if (prev && prev.name === b.name) return prev;
+        return { ...(prev || {}), name: b.name, birthdate: b.birthdate || (prev && prev.birthdate) || "",
+                 notes: b.notes || "", home: b.home_label ? { label: b.home_label, lat: b.home_lat, lng: b.home_lng } : (prev && prev.home) || null };
+      });
+      setSignedIn(true);
+    })();
+    return () => { live = false; };
+  }, []);
+
   /* FB28. Pull on open and whenever the family changes. Additive merge: the
      device keeps what it has (its photos live there) and gains whatever the
      server holds that it has not seen. */
@@ -826,19 +858,29 @@ export default function App() {
      baby" form after scanning the QR. This gate comes FIRST, because having no
      local profile is exactly the state an invited person is in — the very
      condition the onboarding check below treats as "new user, set yourself up". */
-  if (joinCode && !declinedJoin)
+  if ((joinCode.trim() || wantJoin) && !declinedJoin)
     return <div className="root"><style>{CSS}</style><div className="phone">
-      <Join code={joinCode} onCancel={() => { setDeclinedJoin(true); setJoinCode(""); }}
+      <Join code={joinCode.trim()} onCancel={() => { setDeclinedJoin(true); setWantJoin(false); setJoinCode(""); }}
         onJoined={(p) => {
           setProfile((prev) => ({ ...(prev || {}), ...p }));
-          setSignedIn(true); setJoinCode(""); setTab("story");
+          setSignedIn(true); setJoinCode(""); setWantJoin(false); setTab("story");
           say("You're in — this is their page.");
         }} />
       {toast && <div className="toast">{toast}</div>}
     </div></div>;
 
+  /* FB29. Someone invited to a page must not have to invent a child to get in.
+     The onboarding form is for a person setting up their OWN child; an invited
+     grandparent has no child to describe, and being asked was the first thing
+     the founder's husband hit. */
   if (!profileComplete || !signedIn || editProfile)
     return <div className="root"><style>{CSS}</style><div className="phone">
+      {!editProfile && <div className="pad joininvite">
+        <button className="wide" onClick={() => { setDeclinedJoin(false); setWantJoin(true); }}>
+          ✉️ I've been invited to someone's page
+        </button>
+        <p className="fine center">Joining a child's page? You don't need to set one up.</p>
+      </div>}
       <Profile near={deviceLoc} profile={profile} signedIn={signedIn} editing={editProfile}
         onDone={(p) => {
           const wasEditing = editProfile;
@@ -1415,6 +1457,7 @@ export default function App() {
 
             <div className="lbl">Family</div>
             <Family profile={profile} visits={visits} plans={plans} say={say}
+              localChild={profile && profile.name && !cloudBabies.some((b) => b.name === profile.name) ? profile : null}
               onCloudContext={(ctx) => setCloud(ctx)}
               onSwitchChild={(p) => {
                 /* FB27: switching family swaps the child the whole app ranks for,
@@ -1751,7 +1794,15 @@ function Profile({ profile, signedIn, editing, onDone, onCancel, constraints, ne
   const [gender, setGender] = useState((profile && profile.gender) || "");
   const complete = !!(profile && profile.name && profile.birthdate);
   const returning = complete && !editing && !signedIn;
-  const ok = String(name || "").trim() && bd && new Date(bd) < new Date();
+  /* FB29. The Save button was simply disabled for a future date, with nothing
+     said. A disabled button with no reason is indistinguishable from a broken
+     one — the founder's husband typed a future birthday and got silence. */
+  const future = !!bd && new Date(bd + "T00:00:00") > new Date();
+  const tooOld = !!bd && new Date(bd + "T00:00:00") < new Date(Date.now() - 12 * 365.25 * 86400000);
+  const bdProblem = future ? "That date is in the future — a birthday, not a due date."
+    : tooOld ? "That's more than 12 years ago. Rambles is built for 0–7."
+    : "";
+  const ok = String(name || "").trim() && bd && !future && !tooOld;
   if (returning) return <div className="pad ob">
     <p className="oblogo">〰️</p><h1 className="obt">Welcome back</h1>
     <p className="obs">{profile.name}'s story is waiting.</p>
@@ -1763,7 +1814,9 @@ function Profile({ profile, signedIn, editing, onDone, onCancel, constraints, ne
     <label className="flab">Child's name</label>
     <input className="inp" value={name} onChange={(e) => setName(e.target.value)} placeholder="Mia" />
     <label className="flab">Birthdate <span className="opt">— required; every recommendation is ranked by age</span></label>
-    <input className="inp" type="date" value={bd} onChange={(e) => setBd(e.target.value)} />
+    <input className={"inp" + (bdProblem ? " bad" : "")} type="date" max={new Date().toISOString().slice(0, 10)}
+      value={bd} onChange={(e) => setBd(e.target.value)} />
+    {bdProblem && <p className="fielderr">{bdProblem}</p>}
     <label className="flab">Gender <span className="opt">— optional, only changes how the app words things</span></label>
     <div className="segs">
       {[["girl", "Girl"], ["boy", "Boy"], ["", "Prefer not to say"]].map(([k, l]) =>
@@ -1780,6 +1833,7 @@ function Profile({ profile, signedIn, editing, onDone, onCancel, constraints, ne
       {constraints.love.map((c) => <span className="badge b-loves" key={c}>likes {c}</span>)}
     </div> : null}
     <p className="fine">I read that line and adjust rankings — you'll see the tags above update as you type.</p>
+    {!ok && (name || bd) && <p className="fine center">{bdProblem || (!String(name || "").trim() ? "A name is needed." : "A birthdate is needed — every recommendation is ranked by age.")}</p>}
     <button className="primary full" disabled={!ok} onClick={() => onDone({ ...(profile || {}), name: String(name || "").trim(), birthdate: bd, notes, gender,
       home: homeObj && homeObj.label === String(home || "").trim() ? homeObj : (String(home || "").trim() ? { label: String(home || "").trim() } : (profile && profile.home) || null),
       caregivers: String(cg || "").split(",").map((s) => s.trim()).filter(Boolean), cOff: (profile && profile.cOff) || [] })}>
@@ -2092,6 +2146,9 @@ const CSS = `
 .mline{display:flex;align-items:center;gap:8px;min-width:0}
 .mavatar{width:28px;height:28px;border-radius:99px;object-fit:cover;flex:none;border:1.5px solid #E3E1D6}
 /* FB28 social */
+.inp.bad{border-color:#A14E33;background:#FBEEEA}
+.fielderr{color:#A14E33;font-size:12px;font-weight:700;margin:-4px 2px 10px;line-height:1.45}
+.joininvite{padding-bottom:0}
 .monthhead{display:flex;align-items:baseline;justify-content:space-between;margin:22px 2px 10px;padding-bottom:6px;border-bottom:1.5px solid #E3E1D6}
 .monthhead b{font-family:'Fraunces',Georgia,serif;font-size:17px;color:#29382F}
 .monthhead span{font-size:11.5px;color:#8A8875;font-weight:700}
@@ -2107,6 +2164,7 @@ const CSS = `
 .familyrow{display:block;width:100%;text-align:left;background:none;border:none;border-bottom:1px dashed #E3E1D6;padding:11px 0;font-family:'Karla';cursor:pointer}
 .familyrow:last-of-type{border-bottom:none}
 .familyrow.on b{color:#29382F}
+.nowtag.local{background:#ECEAE0;color:#8A8875}
 .nowtag{margin-left:8px;background:#DDE8DC;color:#2F5138;border-radius:99px;padding:2px 8px;font-size:10.5px;font-weight:700}
 .mavatar.ph{display:flex;align-items:center;justify-content:center;background:#29382F;color:#F6F5EF;font-size:12px;font-weight:700}
 .memberrow .msub,.uarow .mwho .msub{font-weight:400}
