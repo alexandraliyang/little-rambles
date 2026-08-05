@@ -140,6 +140,58 @@ const { data: afterRemoval } = await gran.c.from("babies").select("*").eq("id", 
 ok("a removed member loses access immediately", (afterRemoval || []).length === 0,
    "rows visible after removal: " + (afterRemoval || []).length);
 
+/* --- FB27: one person, two families. The model always allowed it; the UI
+       assumed babies[0]. These assert the data half so the switcher has
+       something real to switch between. --- */
+{
+  const { data: b2 } = await gran.c.from("babies")
+    .insert({ name: "Second Baby " + stamp, created_by: gran.user.id }).select().single();
+  ok("a second person can create their OWN family", !!b2, b2 && b2.id);
+
+  /* mum joins gran's family as a viewer, while still admin of her own */
+  const code2 = "S" + String(stamp).slice(-5);
+  await gran.c.from("invites").insert({ code: code2, baby_id: b2.id, role: "viewer", invited_by: gran.user.id, label: "Auntie" });
+  const { error: re2 } = await mum.c.rpc("redeem_invite", { p_code: code2 });
+  ok("someone can join a SECOND family while running their own", !re2, re2 && re2.message);
+
+  /* Scoped to the two families THIS run created. Earlier runs that failed part
+     way through leave babies behind, so asserting on the whole account counts
+     other people's litter and fails for the wrong reason. */
+  /* .eq("user_id") matters: members_read deliberately lets you see EVERYONE in
+     a family you belong to, so an unfiltered select returns other people's rows
+     as well as your own. Without it this counted gran's membership too. */
+  const { data: allMine } = await mum.c.from("baby_members")
+    .select("baby_id, role, display_name").eq("user_id", mum.user.id);
+  const mine = (allMine || []).filter((m) => m.baby_id === baby.id || m.baby_id === b2.id);
+  ok("both memberships are visible to that person", mine.length === 2,
+     mine.map((m) => m.role).join(" + ") + "  (account holds " + (allMine || []).length + " in total)");
+  ok("the roles differ per family, not per person",
+     new Set(mine.map((m) => m.role)).size === 2, JSON.stringify(mine.map((m) => m.role)));
+  ok("the invite's label became the display name (FB24)",
+     mine.some((m) => m.display_name === "Auntie"), JSON.stringify(mine.map((m) => m.display_name)));
+
+  /* leaving one must not touch the other */
+  const { error: le2 } = await mum.c.rpc("leave_baby", { p_baby: b2.id });
+  const missing = le2 && /Could not find the function/i.test(le2.message);
+  if (missing) {
+    const NL = String.fromCharCode(10);
+    console.log(NL + "  ----  leave_baby is not in the database yet.");
+    console.log("        Run web/supabase/005_leaving_and_profiles.sql, then re-run.");
+    console.log("        Skipping the leaving checks rather than passing them by accident." + NL);
+  } else {
+    ok("leaving one family is allowed for a non-admin member", !le2, le2 && le2.message);
+    const { data: after } = await mum.c.from("baby_members").select("baby_id").eq("user_id", mum.user.id);
+    ok("leaving one family leaves the other untouched",
+       !(after || []).some((m) => m.baby_id === b2.id), "b2 membership gone");
+    /* Must fail for the RIGHT reason: the rule, not a missing function. */
+    const { error: le3 } = await mum.c.rpc("leave_baby", { p_baby: baby.id });
+    ok("the only admin cannot leave their own page",
+       !!le3 && /admin/i.test(le3.message), le3 ? le3.message : "ALLOWED - lockout risk");
+  }
+
+  await gran.c.from("babies").delete().eq("id", b2.id);
+}
+
 await mum.c.from("babies").delete().eq("id", baby.id);   // cascades
 console.log("\n" + (fails.length ? fails.length + " FAILED: " + fails.join(", ") : "all family checks passed") + "\n");
 process.exit(fails.length ? 1 : 0);

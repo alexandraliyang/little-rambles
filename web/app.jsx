@@ -1320,7 +1320,15 @@ export default function App() {
             </div>
 
             <div className="lbl">Family</div>
-            <Family profile={profile} visits={visits} plans={plans} say={say} />
+            <Family profile={profile} visits={visits} plans={plans} say={say}
+              onSwitchChild={(p) => {
+                /* FB27: switching family swaps the child the whole app ranks for,
+                   not merely the page you are looking at. Keeping the local
+                   profile in step is what makes Swipe, Browse and the 90-minute
+                   answer follow you to the other child. */
+                setProfile((prev) => ({ ...(prev || {}), ...p }));
+                setTab("settings");
+              }} />
 
 
             <div className="lbl">Help build this</div>
@@ -1988,6 +1996,10 @@ const CSS = `
 .memberrow .mwho,.uarow .mwho{display:flex;flex-direction:column;gap:2px;min-width:0}
 .mline{display:flex;align-items:center;gap:8px;min-width:0}
 .mavatar{width:28px;height:28px;border-radius:99px;object-fit:cover;flex:none;border:1.5px solid #E3E1D6}
+.familyrow{display:block;width:100%;text-align:left;background:none;border:none;border-bottom:1px dashed #E3E1D6;padding:11px 0;font-family:'Karla';cursor:pointer}
+.familyrow:last-of-type{border-bottom:none}
+.familyrow.on b{color:#29382F}
+.nowtag{margin-left:8px;background:#DDE8DC;color:#2F5138;border-radius:99px;padding:2px 8px;font-size:10.5px;font-weight:700}
 .mavatar.ph{display:flex;align-items:center;justify-content:center;background:#29382F;color:#F6F5EF;font-size:12px;font-weight:700}
 .memberrow .msub,.uarow .mwho .msub{font-weight:400}
 .mini.danger-mini{color:#A14E33}
