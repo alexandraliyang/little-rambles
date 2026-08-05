@@ -205,7 +205,8 @@ await page.locator("button.kidchip").click();
 await page.waitForTimeout(400);
 const settings = await txt();
 ok("FB3-04 Settings has no Your-activities list", !/Your activities \(/.test(settings));
-ok("FB3-04 Settings still has data + feedback", settings.includes("Export my data") && settings.includes("survey"));
+ok("FB3-04 data and feedback are still reachable, now as their own pages (FB30)",
+   /Your data/.test(settings) && /Help build this/.test(settings), "menu lists both");
 ok("FB3-04 the stale pointer copy is gone", !settings.includes("your activities →"));
 await shot("05-settings");
 
@@ -781,10 +782,17 @@ const bar = await page.evaluate(() => {
 ok("FB19 an update offers itself instead of waiting to be guessed", !!bar, bar && bar.text);
 ok("FB19 and it can be taken or dismissed",
    !!bar && bar.buttons.some((b) => /Refresh/.test(b)) && bar.buttons.length >= 2, bar && bar.buttons.join("/"));
+/* Dismiss it, or the banner sits over the bottom of every later screen and
+   intercepts clicks — a test failing on a fixture it left behind. */
+const dismiss = page.locator(".updatebar button.x");
+if (await dismiss.count()) { await dismiss.click(); await page.waitForTimeout(200); }
 
 /* ---------- FB20: the family surface renders, signed out ---------- */
+/* FB30: settings is a menu now — walk to the page like a person would. */
 await page.locator("button.kidchip").click();
-await page.waitForTimeout(800);
+await page.waitForTimeout(600);
+await page.locator("button.setrow", { hasText: "Family & sharing" }).click();
+await page.waitForTimeout(900);
 const fam = await page.evaluate(() => {
   const t = document.body.innerText;
   return {

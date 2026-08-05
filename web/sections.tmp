@@ -1,0 +1,94 @@
+<div className="lbl">Child profile</div>
+            <div className="card hl">
+              <h2 className="dtitle">{profile.name}</h2>
+              <p className="dsub">{fmtAge(months)} · born {profile.birthdate}</p>
+              <p className="why">{band.theme}</p>
+              <div className="pills"><button className="pillbtn dark" onClick={() => setEditProfile(true)}>Edit name, age & preferences</button></div>
+            </div>
+
+            <div className="lbl">What we avoid & what {profile.name} loves</div>
+            <div className="card">
+              {(constraints.avoid.length || constraints.love.length)
+                ? <div className="chipline">{constraints.avoid.map((c) => <span className="badge b-paused" key={c}>avoiding {c}</span>)}{constraints.love.map((c) => <span className="badge b-loves" key={c}>likes {c}</span>)}</div>
+                : <p className="why">Nothing set yet. Edit the profile and write a line like “hates water, loves trains, naps at 12:30”.</p>}
+              {/* FB22-03: the note used to be read in silence. Writing "loves
+                  cheese" and seeing nothing gave no way to tell whether it had
+                  been understood, ignored, or misread. */}
+              {/* FB25: a guess is shown as a guess. "I took X to mean Y" invites a
+                  correction; presenting it as fact does not. */}
+              {constraints.inferred && constraints.inferred.length > 0 && <div className="nudge sm"><span>💡</span><p>
+                {constraints.inferred.map((i) => i.how === "typo"
+                  ? `I read “${i.clause}” as “${i.corrected}”.`
+                  : `I took “${i.clause}” to mean ${i.as.join(" and ")}.`).join(" ")} Reword it if that's not right.
+              </p></div>}
+              {constraints.unknown && constraints.unknown.length > 0 && <div className="nudge sm"><span>🤔</span><p>
+                I couldn't place <b>{constraints.unknown.map((u) => "“" + u + "”").join(", ")}</b>. I can act on: {UNDERSTOOD.join(", ")}.
+              </p></div>}
+              <p className="fine">These come from the free-text line in the profile and change rankings immediately.</p>
+            </div>
+
+            
+<<<SPLIT>>>
+<div className="lbl">Home</div>
+            <div className="card">
+              {/* FB24-01: "Today" was noise here. It is a transient choice made
+                  from the location bar, shown there already, and repeating it in
+                  a settings card implied it was a setting. */}
+              <p className="why">🏠 <b>{profile.home ? profile.home.label : "not set"}</b></p>
+              <div className="pills"><button className="pillbtn" onClick={() => { setLocText(""); setLocOpen(true); setTab("discover"); }}>Change home address</button></div>
+            </div>
+
+            
+<<<SPLIT>>>
+<div className="lbl">Family</div>
+            <Family profile={profile} visits={visits} plans={plans} say={say}
+              localChild={profile && profile.name && !cloudBabies.some((b) => b.name === profile.name) ? profile : null}
+              onCloudContext={(ctx) => setCloud(ctx)}
+              onSwitchChild={(p) => {
+                /* FB27: switching family swaps the child the whole app ranks for,
+                   not merely the page you are looking at. Keeping the local
+                   profile in step is what makes Swipe, Browse and the 90-minute
+                   answer follow you to the other child. */
+                setProfile((prev) => ({ ...(prev || {}), ...p }));
+                setTab("settings");
+              }} />
+
+
+            
+<<<SPLIT>>>
+<div className="lbl">Help build this</div>
+            <div className="card hl">
+              <p className="why">You're one of the first testers. Two minutes of honesty changes the product.</p>
+              <div className="btns">
+                <a className="primary sm" href={SURVEY_URL} target="_blank" rel="noreferrer">Take the 5-min survey</a>
+                <a className="ghost sm" href={`mailto:${FEEDBACK_EMAIL}?subject=Little%20Rambles%20feedback&body=What%20I%20tried%3A%0A%0AWhat%20felt%20off%3A%0A%0AWhat%20I'd%20want%20instead%3A%0A`}>Email feedback</a>
+              </div>
+              <p className="fine">Goes straight to {FEEDBACK_EMAIL}.</p>
+            </div>
+
+            {/* FB3-04: the duplicate "Your activities" list lived here. It is now the
+                Yours tab — one home for it, not a settings row that only deleted. */}
+
+            {/* FB13-04: the release number answers "which version", the build
+                stamp answers "which bundle" — a tester report needs the second. */}
+            
+<<<SPLIT>>>
+<div className="lbl">This build</div>
+            <div className="card">
+              <p className="why"><b>v{BUILD.version}</b> · build <code>{BUILD.sha}</code> · {BUILD.built} UTC</p>
+              <p className="fine">Quote the build when you report something — it pins the report to an exact bundle. The version only changes when a release is cut; the build changes every time we deploy.</p>
+            </div>
+
+            <div className="lbl">Your data</div>
+            <div className="card">
+              <p className="why"><b>Where photos live:</b> inside this app on this device (not your iPhone camera roll). They survive app closing and phone restarts, but they are <b>not</b> backed up to iCloud and would be lost if you delete the app or clear site data.</p>
+              <p className="why">Tap any photo → <b>Save</b> to copy it to your device. Use <b>Export</b> for a full backup file of memories and notes. Cloud accounts with real backup arrive in the next build.</p>
+              <div className="btns"><button className="primary sm" onClick={exportData}>Export my data</button></div>
+            </div>
+            {/* FB14-01: a hand-typed version footer that had drifted to v3.3 while
+                the app was on 3.5, contradicting the header two screens up. The
+                "This build" card above is generated and correct; this was not. */}
+          </div>}
+        </main>
+
+        {/* ---------------- modals ---------------- */}

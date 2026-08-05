@@ -55,6 +55,7 @@ export default function Family({ profile, visits, plans, say, onSwitchChild, onC
   const [reshow, setReshow] = useState(null);
   const [editingMe, setEditingMe] = useState(false);
   const [myName, setMyName] = useState("");
+  const [managing, setManaging] = useState(null);   // FB30: member tapped by an admin
 
   const baby = babies.find((b) => b.id === activeId) || babies[0] || null;
   const me = baby && user ? { userId: user.id, role: baby.role } : null;
@@ -297,97 +298,139 @@ export default function Family({ profile, visits, plans, say, onSwitchChild, onC
   );
 
   /* ------------------------------------------------------------------ home */
+  /* FB30. One card per child you follow, rather than a single active page with
+     the rest hidden behind a switcher. The faces are the point: a family page is
+     people, and seeing who is on it — including yourself, ringed — is the first
+     thing anyone looks for. Your own face is the way into your name and photo,
+     because that is where you would tap. */
   return (
     <>
-      {newFolk.length > 0 && <div className="nudge away"><span>👋</span>
+      {newFolk.length > 0 && <div className="nudge away"><span>&#128075;</span>
         <p><b>{newFolk.map((f) => f.name || "Someone").join(", ")} {newFolk.length === 1 ? "has" : "have"} joined {baby.name}'s page.</b></p>
-        <button className="mini x" onClick={() => setNewFolk([])}>✕</button></div>}
+        <button className="mini x" onClick={() => setNewFolk([])}>&#10005;</button></div>}
 
-      <div className="card hl">
-        <h3 className="ctitle">{baby.name}'s family</h3>
-        <p className="why">You're <b>{myName || user.email}</b> here · {roleWord[me.role]}</p>
-        {babies.length > 1 && <div className="pills">
-          <button className="pillbtn" onClick={() => setView("switch")}>Switch child ({babies.length})</button>
-        </div>}
-      </div>
+      <div className="lbl">Pages you follow ({babies.length})</div>
 
-      <div className="lbl">Who can see {baby.name} ({people.length})</div>
-      <div className="card">
-        {people.map((p) => {
-          const isMe = p.userId === user.id;
-          return <div className="uarow memberrow" key={p.userId}>
-            <span className="mwho">
-              <span className="mline">
-                {avatars[p.userId]
-                  ? <img className="mavatar" src={avatars[p.userId]} alt="" />
-                  : <span className="mavatar ph">{(p.name || "?").trim().charAt(0).toUpperCase()}</span>}
-                <b>{p.name || (isMe ? "You" : "Family member")}</b>{isMe ? " (you)" : ""}
-              </span>
-              <small className="msub">{roleWord[p.role]}</small>
-            </span>
-            {isAdmin && !isMe && <span className="uaacts">
-              <select className="rolesel" value={p.role} onChange={(e) => {
-                const check = canChangeMember(me, p, people, e.target.value);
-                if (!check.ok) { setErr(check.why); return; }
-                run(() => setRole(baby.id, p.userId, e.target.value), () => loadMembers(baby));
-              }}>{ROLES.map((r) => <option key={r} value={r}>{roleWord[r]}</option>)}</select>
-              <button className="mini danger-mini" title="Remove" onClick={() => {
-                const check = canRemoveMember(me, p, people);
-                if (!check.ok) { setErr(check.why); return; }
-                if (window.confirm("Remove " + (p.name || "this person") + "? They lose access immediately, including the photos.")) {
-                  run(() => removeMember(baby.id, p.userId), () => loadMembers(baby));
-                }
-              }}>✕</button>
-            </span>}
-          </div>;
-        })}
-        {!isAdmin && <p className="fine">Only an admin can invite or remove people.</p>}
-      </div>
+      {babies.map((b) => {
+        const active = b.id === (baby && baby.id);
+        const folk = active ? people : [];
+        const admin = b.role === "admin";
+        return (
+          <div className={"babycard" + (active ? " on" : "")} key={b.id}>
+            <div className="babytop">
+              <h3>{b.name}</h3>
+              {active ? <span className="nowtag">showing</span>
+                      : <button className="pillbtn" onClick={() => switchTo(b)}>Open</button>}
+            </div>
+            <p className="fine">You are {roleWord[b.role].toLowerCase()} here</p>
 
-      {isAdmin && <div className="card">
-        <button className="primary full" onClick={() => setView("invites")}>
-          ✉️ Invitations{codes.length ? " · " + codes.length + " waiting" : ""} ›
-        </button>
-      </div>}
+            {active && <>
+              <div className="faces">
+                {folk.map((p) => {
+                  const isMe = p.userId === user.id;
+                  return (
+                    <button className={"face" + (isMe ? " me" : "")} key={p.userId}
+                      onClick={() => { if (isMe) setEditingMe(true); else if (admin) setManaging(p); }}>
+                      {avatars[p.userId]
+                        ? <img src={avatars[p.userId]} alt="" />
+                        : <span className="ph">{(p.name || "?").trim().charAt(0).toUpperCase()}</span>}
+                      <small>{isMe ? "You" : (p.name || "Family")}</small>
+                      <i>{p.role === "admin" ? "admin" : p.role === "caregiver" ? "can add" : "can look"}</i>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="fine">{admin
+                ? "Tap a face to change what they can do. Tap yours to change your name or photo."
+                : "Tap your own face to change your name or photo."}</p>
 
-      <div className="lbl">You on this page</div>
-      <div className="card">
-        {!editingMe ? <>
-          <p className="why">You appear as <b>{myName || "Family member"}</b> — the name on your comments and on outings you log.</p>
-          <div className="pills"><button className="pillbtn" onClick={() => setEditingMe(true)}>Change name or photo</button></div>
-        </> : <>
-          <label className="flab">What should people call you?</label>
-          <input className="inp" placeholder="Mum, Dad, Grandma…" value={myName} onChange={(e) => setMyName(e.target.value)} />
-          <div className="btns">
-            <label className="pick main">🖼️ Choose a photo
-              <input type="file" accept="image/*" hidden onChange={async (e) => {
-                const f = e.target.files && e.target.files[0]; e.target.value = "";
-                if (!f) return;
-                await run(async () => {
-                  const up = await uploadAvatar(baby.id, f);
-                  if (!up.ok) return up;
-                  return updateMyProfile(baby.id, { avatarPath: up.path });
-                }, async () => { say("Photo updated."); await loadMembers(baby); });
-              }} /></label>
+              <div className="pills">
+                {admin && <button className="pillbtn dark" onClick={() => { setErr(""); setView("invites"); }}>
+                  Invite{codes.length ? " \u00b7 " + codes.length + " waiting" : ""}</button>}
+                <button className="pillbtn" onClick={() => {
+                  const check = canLeave(me, people);
+                  if (!check.ok) { setErr(check.why); return; }
+                  const msg = "Leave " + b.name + "'s page?" + String.fromCharCode(10, 10) +
+                    "You will stop seeing new outings and photos. Anything you have written stays, with your name on it.";
+                  if (!window.confirm(msg)) return;
+                  run(() => leaveFamily(b.id), async () => { say("You have left " + b.name + "'s page."); await loadBabies(); });
+                }}>Leave</button>
+              </div>
+            </>}
           </div>
-          <button className="primary full" onClick={() => run(() => updateMyProfile(baby.id, { name: myName.trim() || null }),
-            async () => { say("Saved."); setEditingMe(false); await loadMembers(baby); })}>Save</button>
-          <button className="ghost full mt" onClick={() => setEditingMe(false)}>Cancel</button>
-        </>}
-      </div>
+        );
+      })}
 
-      {babies.length === 1 && <button className="ghost full mt" onClick={() => setView("switch")}>Join another child's page</button>}
+      {localChild && !babies.some((b) => b.name === localChild.name) && (
+        <div className="babycard">
+          <div className="babytop"><h3>{localChild.name}</h3><span className="nowtag local">this phone only</span></div>
+          <p className="fine">Set up here but never shared, so nobody else can see it.</p>
+          <div className="pills"><button className="pillbtn dark" onClick={() => run(
+            async () => {
+              const nb = await createBaby(localChild, user.id);
+              if (!nb.ok) return nb;
+              if (visits.length || plans.length) { const up = await uploadLocal(nb.baby.id, user.id, visits, plans); if (!up.ok) return up; }
+              return nb;
+            },
+            async () => { say(localChild.name + "'s page created."); await loadBabies(); })}>Share with family</button></div>
+        </div>
+      )}
+
+      <div className="lbl">Another child</div>
+      {!showJoin
+        ? <button className="wide" onClick={() => setShowJoin(true)}>Join a child's page with an invite code</button>
+        : <JoinBox code={joinCode} setCode={setJoinCode} busy={busy}
+            onJoin={() => run(() => redeemInvite(joinCode, null), async () => {
+              say("You are in."); setJoinCode(""); setShowJoin(false);
+              const known = babies.map((x) => x.id);
+              const list = await loadBabies();
+              const joined = list && list.find((x) => known.indexOf(x.id) < 0);
+              if (joined) switchTo(joined);
+            })}
+            onCancel={() => setShowJoin(false)} />}
+
       {err && <p className="warnbox">{err}</p>}
 
-      {/* Leaving is not removing: anything written stays, attributed. */}
-      <button className="ghost full mt" onClick={() => {
-        const check = canLeave(me, people);
-        if (!check.ok) { setErr(check.why); return; }
-        const msg = "Leave " + baby.name + "'s page?" + String.fromCharCode(10, 10) +
-          "You'll stop seeing new outings and photos. Anything you've written stays, with your name on it.";
-        if (!window.confirm(msg)) return;
-        run(() => leaveFamily(baby.id), async () => { say("You've left " + baby.name + "'s page."); await loadBabies(); });
-      }}>Leave this family</button>
+      {editingMe && <Sheet onClose={() => setEditingMe(false)}>
+        <div className="eyebrow">You on {baby.name}'s page</div>
+        <label className="flab">What should people call you?</label>
+        <input className="inp" placeholder="Mum, Dad, Grandma..." value={myName} onChange={(e) => setMyName(e.target.value)} />
+        <div className="btns">
+          <label className="pick main">Choose a photo
+            <input type="file" accept="image/*" hidden onChange={async (e) => {
+              const f = e.target.files && e.target.files[0]; e.target.value = "";
+              if (!f) return;
+              await run(async () => {
+                const up = await uploadAvatar(baby.id, f);
+                if (!up.ok) return up;
+                return updateMyProfile(baby.id, { avatarPath: up.path });
+              }, async () => { say("Photo updated."); await loadMembers(baby); });
+            }} /></label>
+        </div>
+        <button className="primary full" onClick={() => run(() => updateMyProfile(baby.id, { name: myName.trim() || null }),
+          async () => { say("Saved."); setEditingMe(false); await loadMembers(baby); })}>Save</button>
+        <button className="ghost full mt" onClick={() => setEditingMe(false)}>Cancel</button>
+      </Sheet>}
+
+      {managing && <Sheet onClose={() => setManaging(null)}>
+        <div className="eyebrow">{managing.name || "Family member"}</div>
+        <div className="lbl">What can they do?</div>
+        <div className="chips">
+          {ROLES.map((r) => <button key={r} className={"chip fk" + (managing.role === r ? " on" : "")}
+            onClick={() => {
+              const check = canChangeMember(me, managing, people, r);
+              if (!check.ok) { setErr(check.why); return; }
+              run(() => setRole(baby.id, managing.userId, r), async () => { setManaging(null); await loadMembers(baby); });
+            }}>{roleWord[r]}</button>)}
+        </div>
+        <button className="danger" onClick={() => {
+          const check = canRemoveMember(me, managing, people);
+          if (!check.ok) { setErr(check.why); return; }
+          if (!window.confirm("Remove " + (managing.name || "this person") + "? They lose access immediately, including the photos.")) return;
+          run(() => removeMember(baby.id, managing.userId), async () => { setManaging(null); await loadMembers(baby); });
+        }}>Remove from {baby.name}'s page</button>
+        <button className="ghost full mt" onClick={() => setManaging(null)}>Close</button>
+      </Sheet>}
 
       <button className="ghost full mt" onClick={() => run(() => signOut(), () => say("Signed out. Your journal is still on this phone."))}>Sign out</button>
     </>

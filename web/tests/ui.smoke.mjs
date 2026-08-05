@@ -66,6 +66,17 @@ const root = window.document.getElementById("root");
 const text = () => root.textContent || "";
 const findByText = (sel, s) => [...root.querySelectorAll(sel)].find((e) => (e.textContent || "").includes(s));
 const click = (el) => { el.dispatchEvent(new window.MouseEvent("click", { bubbles: true })); };
+/* FB30: settings became a menu of sub-pages, so a test that wants one has to
+   walk there like a person does. */
+const openSetting = async (title) => {
+  const kid = root.querySelector("button.kidchip");
+  if (kid) { click(kid); await settle(); }
+  const back = findByText("button", "Back");
+  if (back) { click(back); await settle(); }
+  const row = [...root.querySelectorAll("button.setrow")].find((b) => (b.textContent || "").includes(title));
+  if (row) { click(row); await settle(); }
+  return !!row;
+};
 
 console.log("\nFB2 smoke test\n");
 
@@ -146,11 +157,13 @@ if (mineTab) { click(mineTab); await settle(); }
 ok("FB3-05 an add action lives with them", !!findByText("button", "We went somewhere"));
 ok("FB3-05 custom activities are not ALSO a tab (one home, not two)",
    ![...root.querySelectorAll("nav.topnav .tl")].some((t) => t.textContent === "Yours"));
-/* FB22-01: one entry point now — the child chip opens profile AND settings. */
+/* FB22-01: one entry point — the child chip. FB30: it opens a MENU, so the data
+   section is a page away rather than further down the same scroll. */
 const gear = root.querySelector("button.kidchip");
 if (gear) { click(gear); await settle(); }
 ok("FB3-04 Settings no longer carries a Your-activities list", !text().includes("Your activities ("));
-ok("FB3-04 Settings still carries the data section", text().includes("Export my data"));
+ok("FB3-04 the data section is still reachable (now its own page)",
+   (await openSetting("Your data")) && text().includes("Export my data"));
 
 /* --- FB3-07: the v0-13 four-action capture row is back on Our List --- */
 const listTab = findByText("button", "Our List");
@@ -404,10 +417,9 @@ if (photosView) { click(photosView); await settle(); }
 ok("FB13-02 memory cards carry an anchor id", root.querySelectorAll("[id^=mem-]").length >= 0);
 
 /* --- FB23: editing the notes line must actually change what is displayed --- */
-const kid = root.querySelector("button.kidchip");
-if (kid) { click(kid); await settle(); }
-ok("FB23 profile and settings are one screen", text().includes("Child profile") && text().includes("Export my data"));
-
+ok("FB30 settings is a menu of one-job pages, not one long scroll",
+   (await openSetting("Child profile")) && root.querySelectorAll("button.setrow").length === 0,
+   "in a sub-page");
 const editBtn = findByText("button", "Edit name, age & preferences");
 if (editBtn) { click(editBtn); await settle(); }
 const ta = [...root.querySelectorAll("textarea")].find((t) => /Hates water|know/i.test(t.placeholder || ""));
@@ -451,8 +463,7 @@ ok("FB23 and one we cannot model is reported rather than dropped",
 
 /* --- FB29: a future birthdate must explain itself --- */
 {
-  const kid29 = root.querySelector("button.kidchip");
-  if (kid29) { click(kid29); await settle(); }
+  await openSetting("Child profile");
   const edit29 = findByText("button", "Edit name, age & preferences");
   if (edit29) { click(edit29); await settle(); }
   const dateInput = root.querySelector('input[type="date"]');

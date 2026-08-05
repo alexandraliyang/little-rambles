@@ -219,7 +219,8 @@ export default function App() {
     catch (e) { return ""; }
   });
   const [declinedJoin, setDeclinedJoin] = useState(false);
-  const [wantJoin, setWantJoin] = useState(false);   // FB29: chose "I've been invited"
+  const [wantJoin, setWantJoin] = useState(false);
+  const [setPage, setSetPage] = useState(null);   // FB30: which settings sub-page   // FB29: chose "I've been invited"
   /* FB28: the cloud half. `cloud` is the active family context — null when
      signed out, which is the normal state and must stay fully usable. */
   const [cloud, setCloud] = useState(null);        // { babyId, userId, myName }
@@ -1416,8 +1417,32 @@ export default function App() {
 
           {/* ---------------- PROFILE (its own place, not buried in settings) ---------------- */}
           {/* ---------------- PROFILE & SETTINGS (one screen, FB21-03) ------- */}
+          {/* ---------------- PROFILE & SETTINGS (FB30) ----------------
+              Was one long scroll holding the child, the home address, family
+              sharing, feedback and the build stamp — five unrelated jobs with
+              nothing but a heading between them. Now a menu of sub-pages, so
+              each screen is about one thing and the shape says where to look. */}
           {tab === "settings" && <div className="pad">
-            <div className="lbl">Child profile</div>
+            {!setPage ? <>
+              <div className="lbl">{profile.name}</div>
+              {[
+                ["child",  "🧒", "Child profile", "Name, age, and what they love"],
+                ["family", "👨‍👩‍👧", "Family & sharing", cloudBabies.length ? cloudBabies.length + (cloudBabies.length === 1 ? " page" : " pages") + " · invite and manage" : "Share this journal with family"],
+                ["home",   "🏠", "Home", profile.home ? profile.home.label : "Not set"],
+                ["data",   "💾", "Your data", "Export, backup, and what is stored where"],
+                ["help",   "💬", "Help build this", "Survey and feedback"],
+                ["build",  "🔧", "This build", "v" + BUILD.version],
+              ].map(([k, icon, title, sub]) => (
+                <button key={k} className="setrow" onClick={() => setSetPage(k)}>
+                  <span className="seticon">{icon}</span>
+                  <span className="setmain"><b>{title}</b><small>{sub}</small></span>
+                  <span className="setchev">›</span>
+                </button>
+              ))}
+            </> : <>
+              <button className="ghost full" onClick={() => setSetPage(null)}>‹ Back</button>
+              {setPage === "child" && <>
+<div className="lbl">Child profile</div>
             <div className="card hl">
               <h2 className="dtitle">{profile.name}</h2>
               <p className="dsub">{fmtAge(months)} · born {profile.birthdate}</p>
@@ -1445,8 +1470,9 @@ export default function App() {
               </p></div>}
               <p className="fine">These come from the free-text line in the profile and change rankings immediately.</p>
             </div>
-
-            <div className="lbl">Home</div>
+              </>}
+              {setPage === "home" && <>
+<div className="lbl">Home</div>
             <div className="card">
               {/* FB24-01: "Today" was noise here. It is a transient choice made
                   from the location bar, shown there already, and repeating it in
@@ -1454,8 +1480,9 @@ export default function App() {
               <p className="why">🏠 <b>{profile.home ? profile.home.label : "not set"}</b></p>
               <div className="pills"><button className="pillbtn" onClick={() => { setLocText(""); setLocOpen(true); setTab("discover"); }}>Change home address</button></div>
             </div>
-
-            <div className="lbl">Family</div>
+              </>}
+              {setPage === "family" && <>
+<div className="lbl">Family</div>
             <Family profile={profile} visits={visits} plans={plans} say={say}
               localChild={profile && profile.name && !cloudBabies.some((b) => b.name === profile.name) ? profile : null}
               onCloudContext={(ctx) => setCloud(ctx)}
@@ -1467,9 +1494,9 @@ export default function App() {
                 setProfile((prev) => ({ ...(prev || {}), ...p }));
                 setTab("settings");
               }} />
-
-
-            <div className="lbl">Help build this</div>
+              </>}
+              {setPage === "help" && <>
+<div className="lbl">Help build this</div>
             <div className="card hl">
               <p className="why">You're one of the first testers. Two minutes of honesty changes the product.</p>
               <div className="btns">
@@ -1484,25 +1511,29 @@ export default function App() {
 
             {/* FB13-04: the release number answers "which version", the build
                 stamp answers "which bundle" — a tester report needs the second. */}
-            <div className="lbl">This build</div>
-            <div className="card">
-              <p className="why"><b>v{BUILD.version}</b> · build <code>{BUILD.sha}</code> · {BUILD.built} UTC</p>
-              <p className="fine">Quote the build when you report something — it pins the report to an exact bundle. The version only changes when a release is cut; the build changes every time we deploy.</p>
-            </div>
-
-            <div className="lbl">Your data</div>
-            <div className="card">
-              <p className="why"><b>Where photos live:</b> inside this app on this device (not your iPhone camera roll). They survive app closing and phone restarts, but they are <b>not</b> backed up to iCloud and would be lost if you delete the app or clear site data.</p>
-              <p className="why">Tap any photo → <b>Save</b> to copy it to your device. Use <b>Export</b> for a full backup file of memories and notes. Cloud accounts with real backup arrive in the next build.</p>
-              <div className="btns"><button className="primary sm" onClick={exportData}>Export my data</button></div>
-            </div>
-            {/* FB14-01: a hand-typed version footer that had drifted to v3.3 while
-                the app was on 3.5, contradicting the header two screens up. The
-                "This build" card above is generated and correct; this was not. */}
+              </>}
+              {setPage === "build" && <>
+                <div className="lbl">This build</div>
+                <div className="card">
+                  <p className="why"><b>v{BUILD.version}</b> · build <code>{BUILD.sha}</code> · {BUILD.built} UTC</p>
+                  <p className="fine">Quote the build when you report something — it pins the report to an exact bundle. The version only changes when a release is cut; the build changes every time we deploy.</p>
+                </div>
+              </>}
+              {setPage === "data" && <>
+                <div className="lbl">Your data</div>
+                <div className="card">
+                  <p className="why"><b>Where photos live:</b> inside this app on this device. They are not uploaded yet, so they are not backed up and would be lost if you delete the app.</p>
+                  <p className="why">Memories, outings and comments <b>are</b> shared with your family and stored in the cloud. Photos are the piece still to come.</p>
+                  <div className="btns"><button className="primary sm" onClick={exportData}>Export my data</button></div>
+                </div>
+              </>}
+            </>}
           </div>}
         </main>
 
         {/* ---------------- modals ---------------- */}
+
+
         {checkIn && <Sheet onClose={() => setCheckIn(null)}>
           <div className="eyebrow">Log this outing</div>
           <h3 className="ctitle">{checkIn.place || checkIn.name}</h3>
